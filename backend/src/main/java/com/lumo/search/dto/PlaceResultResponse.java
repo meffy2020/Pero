@@ -7,6 +7,8 @@ public record PlaceResultResponse(
         String name,
         String category,
         String district,
+        String address,
+        String roadAddress,
         String summary,
         List<String> tags,
         double latitude,

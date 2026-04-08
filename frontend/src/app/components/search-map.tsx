@@ -132,7 +132,7 @@ export function SearchMap({
   if (!results.length) {
     return (
       <div className="map-panel empty">
-        <p>표시할 검색 결과가 없습니다. 필터를 조정하거나 다시 검색해보세요.</p>
+        <p>지도에 표시할 장소가 없습니다. 필터를 풀거나 다시 검색해 보세요.</p>
       </div>
     );
   }
@@ -140,9 +140,10 @@ export function SearchMap({
   return (
     <div className="map-panel map-panel-live">
       <div className="map-title">
-        <strong>Live Search Map</strong>
+        <strong>검색 지도</strong>
         <span>
-          OpenStreetMap 기반 실제 결과 지도입니다. 마커와 카드가 함께 반응합니다.
+          검색된 장소를 지도에서 비교할 수 있습니다. 카드를 누르면 해당 위치로
+          이동합니다.
         </span>
       </div>
       <div className="leaflet-stage" ref={containerRef} />

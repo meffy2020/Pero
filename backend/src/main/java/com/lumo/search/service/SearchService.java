@@ -155,6 +155,8 @@ public class SearchService {
                 bundle.place().name(),
                 bundle.place().category(),
                 bundle.place().district(),
+                bundle.place().address(),
+                bundle.place().roadAddress(),
                 bundle.place().summary(),
                 bundle.place().tags(),
                 bundle.place().latitude(),

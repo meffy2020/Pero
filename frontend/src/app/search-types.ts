@@ -5,6 +5,8 @@ export type PlaceResult = {
   name: string;
   category: string;
   district: string;
+  address: string;
+  roadAddress: string;
   summary: string;
   tags: string[];
   latitude: number;
