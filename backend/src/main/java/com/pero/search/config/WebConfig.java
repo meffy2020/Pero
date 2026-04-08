@@ -1,4 +1,4 @@
-package com.lumo.search.config;
+package com.pero.search.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;

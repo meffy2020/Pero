@@ -1,6 +1,6 @@
-package com.lumo.search.dto;
+package com.pero.search.dto;
 
-import com.lumo.search.model.SearchMode;
+import com.pero.search.model.SearchMode;
 
 import java.time.OffsetDateTime;
 import java.util.List;

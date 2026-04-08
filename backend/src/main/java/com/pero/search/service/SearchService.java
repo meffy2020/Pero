@@ -1,11 +1,11 @@
-package com.lumo.search.service;
+package com.pero.search.service;
 
-import com.lumo.search.dto.PlaceResultResponse;
-import com.lumo.search.dto.SearchRequest;
-import com.lumo.search.dto.SearchResponse;
-import com.lumo.search.model.IndexedPlace;
-import com.lumo.search.model.IndexedReview;
-import com.lumo.search.repository.PlaceRepository;
+import com.pero.search.dto.PlaceResultResponse;
+import com.pero.search.dto.SearchRequest;
+import com.pero.search.dto.SearchResponse;
+import com.pero.search.model.IndexedPlace;
+import com.pero.search.model.IndexedReview;
+import com.pero.search.repository.PlaceRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 

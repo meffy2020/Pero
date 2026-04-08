@@ -1,12 +1,12 @@
-package com.lumo.search.repository;
+package com.pero.search.repository;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.lumo.search.model.IndexedPlace;
-import com.lumo.search.model.IndexedReview;
-import com.lumo.search.model.PlaceSeed;
-import com.lumo.search.service.EmbeddingService;
-import com.lumo.search.service.TextNormalizer;
+import com.pero.search.model.IndexedPlace;
+import com.pero.search.model.IndexedReview;
+import com.pero.search.model.PlaceSeed;
+import com.pero.search.service.EmbeddingService;
+import com.pero.search.service.TextNormalizer;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Repository;
 

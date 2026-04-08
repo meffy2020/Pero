@@ -1,4 +1,4 @@
-package com.lumo.search.service;
+package com.pero.search.service;
 
 import org.springframework.stereotype.Component;
 

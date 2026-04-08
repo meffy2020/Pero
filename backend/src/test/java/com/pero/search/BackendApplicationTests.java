@@ -1,8 +1,8 @@
-package com.lumo.search;
+package com.pero.search;
 
-import com.lumo.search.dto.SearchRequest;
-import com.lumo.search.model.SearchMode;
-import com.lumo.search.service.SearchService;
+import com.pero.search.dto.SearchRequest;
+import com.pero.search.model.SearchMode;
+import com.pero.search.service.SearchService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

@@ -115,7 +115,7 @@ a {
 .hero-visual {
   background:
     linear-gradient(180deg, rgba(10, 16, 25, 0.06), rgba(10, 16, 25, 0.12)),
-    url("/lumo-hero-scene.svg");
+    url("/pero-hero-scene.svg");
   background-size: cover;
   background-position: center;
   animation: hero-drift 20s ease-in-out infinite alternate;

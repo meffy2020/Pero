@@ -1,4 +1,4 @@
-package com.lumo.search.model;
+package com.pero.search.model;
 
 import java.util.List;
 import java.util.Map;

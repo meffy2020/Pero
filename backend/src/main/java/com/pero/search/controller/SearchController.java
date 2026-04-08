@@ -1,8 +1,8 @@
-package com.lumo.search.controller;
+package com.pero.search.controller;
 
-import com.lumo.search.dto.SearchRequest;
-import com.lumo.search.dto.SearchResponse;
-import com.lumo.search.service.SearchService;
+import com.pero.search.dto.SearchRequest;
+import com.pero.search.dto.SearchResponse;
+import com.pero.search.service.SearchService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,7 +27,7 @@ public class SearchController {
     @GetMapping("/health")
     public Map<String, Object> health() {
         return Map.of(
-                "service", "lumo-backend",
+                "service", "pero-backend",
                 "status", "ok",
                 "time", OffsetDateTime.now()
         );

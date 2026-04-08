@@ -190,7 +190,7 @@ export default function Home() {
         <div className="hero-scrim" />
 
         <div className="hero-copy">
-          <p className="hero-brand">Lumo</p>
+          <p className="hero-brand">Pero</p>
           <h1 className="hero-title">주변에서 원하는 분위기의 장소를 찾는 검색 서비스</h1>
           <p className="hero-support">
             리뷰 내용과 현재 위치를 함께 반영해 지금 가기 좋은 카페, 브런치,

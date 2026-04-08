@@ -1,4 +1,4 @@
-package com.lumo.search.dto;
+package com.pero.search.dto;
 
 import java.util.List;
 

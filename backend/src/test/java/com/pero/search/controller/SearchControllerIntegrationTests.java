@@ -1,7 +1,7 @@
-package com.lumo.search.controller;
+package com.pero.search.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.lumo.search.dto.SearchResponse;
+import com.pero.search.dto.SearchResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -29,7 +29,7 @@ class SearchControllerIntegrationTests {
     void healthEndpointReturnsServiceStatus() throws Exception {
         mockMvc.perform(get("/api/health"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.service").value("lumo-backend"))
+                .andExpect(jsonPath("$.service").value("pero-backend"))
                 .andExpect(jsonPath("$.status").value("ok"));
     }
 
