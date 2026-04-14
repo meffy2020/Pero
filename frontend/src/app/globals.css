@@ -245,6 +245,7 @@ blockquote {
 }
 
 .settings-section,
+.recommendation-section,
 .results-section {
   display: grid;
   gap: 20px;
@@ -314,6 +315,21 @@ blockquote {
 .settings-meta {
   display: grid;
   gap: 8px;
+}
+
+.recommendation-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.section-note {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #eff6ff;
+  color: #1d4ed8;
 }
 
 .inline-link {
@@ -458,6 +474,73 @@ blockquote {
   gap: 14px;
 }
 
+.recommendation-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.discovery-card,
+.date-course-panel,
+.date-course-stop {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.discovery-card,
+.date-course-stop {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  border-radius: 20px;
+  animation: card-appear 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.date-course-panel {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+  border-radius: 24px;
+}
+
+.date-course-header {
+  display: grid;
+  gap: 8px;
+}
+
+.date-course-header h3,
+.discovery-header h3 {
+  color: var(--text-strong);
+}
+
+.date-course-header p,
+.discovery-header p,
+.discovery-eyebrow {
+  color: var(--text-soft);
+}
+
+.discovery-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+
+.discovery-eyebrow {
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.date-course-list {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .result-card {
   display: grid;
   gap: 14px;
@@ -587,6 +670,11 @@ blockquote {
     grid-template-columns: 1fr;
   }
 
+  .recommendation-grid,
+  .date-course-list {
+    grid-template-columns: 1fr;
+  }
+
   .map-shell {
     position: static;
   }
@@ -614,6 +702,10 @@ blockquote {
   .hero-primary,
   .hero-secondary {
     width: 100%;
+  }
+
+  .recommendation-toolbar {
+    align-items: stretch;
   }
 
   .map-header {

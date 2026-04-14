@@ -20,6 +20,9 @@
 - HYBRID 검색 붙였음.
 - 거리 기반 반경 필터 붙였음.
 - 검색 근거 문장 반환 붙였음.
+- 랜덤 장소 추천 붙였음.
+- 근처 식사 추천 붙였음.
+- 랜덤 데이트 코스 추천 붙였음.
 - 주소 정보 응답에 포함했음.
 - 프론트 lint 통과시켰음.
 - 프론트 build 통과시켰음.
@@ -53,6 +56,7 @@ cd backend
 
 - health: `http://localhost:8080/api/health`
 - search: `http://localhost:8080/api/search`
+- recommendations: `http://localhost:8080/api/recommendations`
 
 ### 프론트 실행했음
 
@@ -90,12 +94,32 @@ curl -X POST http://localhost:8080/api/search \
 - 검색 근거 문장 들어감.
 - 점수 정보 들어감.
 
+### 추천 요청
+
+```bash
+curl -X POST http://localhost:8080/api/recommendations \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "latitude": 37.5535,
+    "longitude": 126.9221,
+    "radiusKm": 3
+  }'
+```
+
+### 추천 응답에 들어감
+
+- 랜덤 장소 1건 들어감.
+- 근처 식사 추천 1건 들어감.
+- 데이트 코스 3단계 들어감.
+- 각 추천에 거리와 추천 이유 들어감.
+
 ## 최근 변경했음
 
 - 서비스명 `Pero`로 맞췄음.
 - 첫 화면 구조 단순화했음.
 - 검색 기준 UI 단순화했음.
 - 결과 카드 정보 줄였음.
+- 탐색형 추천 섹션 추가했음.
 
 ## 다음 작업
 

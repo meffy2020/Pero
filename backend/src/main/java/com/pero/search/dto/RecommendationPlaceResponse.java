@@ -1,0 +1,18 @@
+package com.pero.search.dto;
+
+import java.util.List;
+
+public record RecommendationPlaceResponse(
+        String id,
+        String name,
+        String category,
+        String district,
+        String roadAddress,
+        String summary,
+        List<String> tags,
+        double latitude,
+        double longitude,
+        Double distanceKm,
+        String reason
+) {
+}

@@ -3,7 +3,14 @@
 import { startTransition, useEffect, useEffectEvent, useState } from "react";
 import type { FormEvent } from "react";
 import { SearchMap } from "./components/search-map";
-import type { PlaceResult, SearchResponse } from "./search-types";
+import type {
+  DateCourse,
+  PlaceResult,
+  RecommendationCard as RecommendationCardData,
+  RecommendationPlace,
+  RecommendationResponse,
+  SearchResponse,
+} from "./search-types";
 
 const DEFAULT_QUERY = "조용하게 오래 머물 수 있는 카페";
 
@@ -72,9 +79,15 @@ export default function Home() {
   );
   const [radiusKm, setRadiusKm] = useState("3");
   const [response, setResponse] = useState<SearchResponse | null>(null);
+  const [recommendation, setRecommendation] =
+    useState<RecommendationResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [recommending, setRecommending] = useState(false);
   const [locating, setLocating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [recommendationError, setRecommendationError] = useState<string | null>(
+    null,
+  );
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
 
   function applyLocation(location: ServiceLocation) {
@@ -115,6 +128,7 @@ export default function Home() {
         setResponse(data);
         setSelectedPlaceId(data.results[0]?.id ?? null);
       });
+      void runRecommendations();
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -123,6 +137,43 @@ export default function Home() {
       );
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function runRecommendations() {
+    setRecommending(true);
+    setRecommendationError(null);
+
+    try {
+      const result = await fetch("/api/recommendations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          latitude: Number(latitude),
+          longitude: Number(longitude),
+          radiusKm: Number(radiusKm),
+        }),
+      });
+
+      if (!result.ok) {
+        const message = await result.text();
+        throw new Error(message || "추천 요청에 실패했습니다.");
+      }
+
+      const data = (await result.json()) as RecommendationResponse;
+      startTransition(() => {
+        setRecommendation(data);
+      });
+    } catch (requestError) {
+      setRecommendationError(
+        requestError instanceof Error
+          ? requestError.message
+          : "추천 요청 중 오류가 발생했습니다.",
+      );
+    } finally {
+      setRecommending(false);
     }
   }
 
@@ -301,6 +352,65 @@ export default function Home() {
         {error ? <p className="error-box">{error}</p> : null}
       </section>
 
+      <section className="recommendation-section">
+        <div className="section-intro">
+          <h2>탐색형 추천</h2>
+          <p>
+            검색어 없이도 현재 위치와 반경을 기준으로 바로 갈 만한 후보를
+            추천합니다.
+          </p>
+        </div>
+
+        <div className="recommendation-toolbar">
+          <div className="settings-meta">
+            <p>기준 위치: {locationLabel}</p>
+            <p>반경 {radiusKm}km 안에서 랜덤 탐색과 코스 조합을 생성합니다.</p>
+          </div>
+
+          <button
+            className="solid-button"
+            type="button"
+            onClick={() => void runRecommendations()}
+            disabled={recommending}
+          >
+            {recommending ? "추천 생성 중..." : "추천 다시 뽑기"}
+          </button>
+        </div>
+
+        {recommendation?.fallbackUsed ? (
+          <p className="section-note">
+            반경 안 후보가 적어 가장 가까운 후보권까지 일부 확장했습니다.
+          </p>
+        ) : null}
+
+        {recommendationError ? (
+          <p className="error-box">{recommendationError}</p>
+        ) : null}
+
+        {recommendation ? (
+          <div className="recommendation-grid">
+            <RecommendationFeatureCard
+              card={recommendation.nearbyPick}
+              eyebrow="랜덤 장소"
+            />
+            <RecommendationFeatureCard
+              card={recommendation.mealPick}
+              eyebrow="식사 추천"
+            />
+            <DateCoursePanel course={recommendation.dateCourse} />
+          </div>
+        ) : (
+          <div className="empty-state">
+            <strong>
+              {recommending
+                ? "추천 후보를 계산하고 있습니다."
+                : "추천 결과가 아직 없습니다."}
+            </strong>
+            <p>위치와 반경을 정한 뒤 추천을 생성해 보세요.</p>
+          </div>
+        )}
+      </section>
+
       <section className="results-section">
         <div className="section-intro">
           <h2>검색 결과</h2>
@@ -362,6 +472,130 @@ export default function Home() {
   );
 }
 
+function RecommendationFeatureCard({
+  card,
+  eyebrow,
+}: {
+  card: RecommendationCardData;
+  eyebrow: string;
+}) {
+  const mapUrl = buildMapUrl(card.place.latitude, card.place.longitude);
+
+  return (
+    <article className="discovery-card">
+      <div className="result-meta-row">
+        <span className="rank-badge">{eyebrow}</span>
+        {card.place.distanceKm !== null ? (
+          <span className="distance-pill">{card.place.distanceKm.toFixed(2)}km</span>
+        ) : null}
+      </div>
+
+      <div className="discovery-header">
+        <div>
+          <p className="discovery-eyebrow">{card.title}</p>
+          <h3>{card.place.name}</h3>
+          <p>
+            {card.place.category} · {card.place.district}
+          </p>
+        </div>
+      </div>
+
+      <p className="summary">{card.description}</p>
+      <p className="summary">{card.place.summary}</p>
+      <p className="address-line">{card.place.roadAddress}</p>
+
+      <div className="tag-row">
+        {card.place.tags.slice(0, 4).map((tag) => (
+          <span className="tag" key={`${card.key}-${tag}`}>
+            {tag}
+          </span>
+        ))}
+      </div>
+
+      <div className="reason-block">
+        <span>추천 이유</span>
+        <blockquote>{card.place.reason}</blockquote>
+      </div>
+
+      <div className="card-actions">
+        <a className="text-action" href={mapUrl} target="_blank" rel="noreferrer">
+          길찾기
+        </a>
+      </div>
+    </article>
+  );
+}
+
+function DateCoursePanel({ course }: { course: DateCourse }) {
+  return (
+    <section className="date-course-panel">
+      <div className="date-course-header">
+        <div>
+          <p className="discovery-eyebrow">{course.title}</p>
+          <h3>현재 위치 기반 3단계 코스</h3>
+        </div>
+        <p>{course.description}</p>
+      </div>
+
+      <div className="date-course-list">
+        {course.stops.map((stop) => (
+          <DateCourseStopCard key={`${stop.slot}-${stop.place.id}`} stop={stop} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function DateCourseStopCard({
+  stop,
+}: {
+  stop: { slot: string; place: RecommendationPlace };
+}) {
+  const mapUrl = buildMapUrl(stop.place.latitude, stop.place.longitude);
+
+  return (
+    <article className="date-course-stop">
+      <div className="result-meta-row">
+        <span className="rank-badge">{stop.slot}</span>
+        {stop.place.distanceKm !== null ? (
+          <span className="distance-pill">{stop.place.distanceKm.toFixed(2)}km</span>
+        ) : null}
+      </div>
+
+      <div className="result-heading">
+        <div>
+          <h3>{stop.place.name}</h3>
+          <p>
+            {stop.place.category} · {stop.place.district}
+          </p>
+        </div>
+      </div>
+
+      <p className="summary">{stop.place.summary}</p>
+      <p className="address-line">{stop.place.roadAddress}</p>
+
+      <div className="tag-row">
+        {stop.place.tags.slice(0, 4).map((tag) => (
+          <span className="tag" key={`${stop.slot}-${stop.place.id}-${tag}`}>
+            {tag}
+          </span>
+        ))}
+      </div>
+
+      <div className="reason-block">
+        <span>코스 배치 이유</span>
+        <blockquote>{stop.place.reason}</blockquote>
+      </div>
+
+      <div className="card-actions">
+        <a className="text-action" href={mapUrl} target="_blank" rel="noreferrer">
+          길찾기
+        </a>
+      </div>
+    </article>
+  );
+}
+
 function ResultCard({
   index,
   place,
@@ -373,7 +607,7 @@ function ResultCard({
   active: boolean;
   onSelect: () => void;
 }) {
-  const mapUrl = `https://www.google.com/maps/search/?api=1&query=${place.latitude},${place.longitude}`;
+  const mapUrl = buildMapUrl(place.latitude, place.longitude);
 
   return (
     <article
@@ -425,4 +659,8 @@ function ResultCard({
       </div>
     </article>
   );
+}
+
+function buildMapUrl(latitude: number, longitude: number) {
+  return `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
 }
