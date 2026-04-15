@@ -1,5 +1,7 @@
 package com.pero.search.controller;
 
+import com.pero.search.dto.RecommendationRequest;
+import com.pero.search.dto.RecommendationResponse;
 import com.pero.search.dto.SearchRequest;
 import com.pero.search.dto.SearchResponse;
 import com.pero.search.service.SearchService;
@@ -41,5 +43,10 @@ public class SearchController {
     @PostMapping("/search")
     public SearchResponse search(@Valid @RequestBody SearchRequest request) {
         return searchService.search(request);
+    }
+
+    @PostMapping("/recommendations")
+    public RecommendationResponse recommend(@Valid @RequestBody RecommendationRequest request) {
+        return searchService.recommend(request);
     }
 }

@@ -1,18 +1,18 @@
-package com.pero.search.model;
+package com.pero.search.dto;
 
 import java.util.List;
 
-public record PlaceSeed(
+public record RecommendationPlaceResponse(
         String id,
         String name,
         String category,
         String district,
-        String address,
         String roadAddress,
-        double latitude,
-        double longitude,
         String summary,
         List<String> tags,
-        List<String> searchHints
+        double latitude,
+        double longitude,
+        Double distanceKm,
+        String reason
 ) {
 }

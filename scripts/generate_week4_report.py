@@ -12,7 +12,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
 OUTPUT_DIR = PROJECT_ROOT / "docs" / "reports" / "weekly"
-OUTPUT_PATH = OUTPUT_DIR / "SW캡스톤I_4주차_주간보고서.pdf"
+OUTPUT_PATH = OUTPUT_DIR / "SW캡스톤I_6주차_주간보고서.pdf"
 
 
 def register_font() -> str:
@@ -116,7 +116,7 @@ def main() -> None:
 
     story = [
         p("졸업프로젝트 주간보고서", styles["title"]),
-        p("SW 캡스톤 I 4 주차 주간 보고서", styles["subtitle"]),
+        p("SW 캡스톤 I 6 주차 주간 보고서", styles["subtitle"]),
     ]
 
     info_data = [
@@ -128,7 +128,7 @@ def main() -> None:
         ],
         [
             p("프로젝트명", styles["header"]),
-            p("Lumo", styles["cell"]),
+            p("Pero", styles["cell"]),
             p("담당 교수", styles["header"]),
             p("김원빈", styles["cell"]),
         ],
@@ -144,7 +144,7 @@ def main() -> None:
     info_table.setStyle(base_table_style())
     story.extend([info_table, Spacer(1, 10)])
 
-    story.append(p("금주 진행 사항 (기간 : 2월 22일 - 2월 28일)", styles["section"]))
+    story.append(p("금주 진행 사항 (기간 : 4월 14일 - 4월 20일)", styles["section"]))
 
     progress_data = [
         [
@@ -155,43 +155,43 @@ def main() -> None:
         ],
         [
             p("강승진", styles["cell"]),
-            p("키워드 검색 구현", styles["cell"]),
+            p("핵심 후보 검수", styles["cell"]),
             p(
-                "BM25 기반 질의 처리와 기본 검색 API를 구성하고 샘플 장소 데이터에서 "
-                "키워드 검색 결과와 랭킹 동작을 확인함.",
-                styles["body"],
-            ),
-            p("85%", styles["cell"]),
-        ],
-        [
-            p("강승진", styles["cell"]),
-            p("벡터 검색 실험", styles["cell"]),
-            p(
-                "Sentence Transformers 기반 질의/문장 임베딩 흐름을 정리하고 "
-                "OpenSearch k-NN 인덱스 연동 방식과 의미 검색 실험 환경을 구축함.",
-                styles["body"],
-            ),
-            p("75%", styles["cell"]),
-        ],
-        [
-            p("강승진", styles["cell"]),
-            p("검색 결과 비교", styles["cell"]),
-            p(
-                "키워드 검색과 벡터 검색 결과를 비교하여 질의 유형별 장단점을 정리하고 "
-                "Hybrid Search 적용 기준을 도출함.",
+                "5주차 검증 대상 후보 중 상위 20건을 중심으로 질의별 적합성, "
+                "지역 편차, 지도 반응 속도를 수동으로 확인하고 오류 케이스를 정리함.",
                 styles["body"],
             ),
             p("70%", styles["cell"]),
         ],
         [
             p("강승진", styles["cell"]),
-            p("구조 구체화", styles["cell"]),
+            p("품질 평가셋 설계", styles["cell"]),
             p(
-                "FastAPI, OpenSearch, Kakao Map 기반 서비스 흐름을 정리하고 "
-                "Lumo 프로젝트의 기술 스택 및 인프라 아키텍처 초안을 문서화함.",
+                "대표 질의셋을 구조화하고, KEYWORD/VECTOR/HYBRID 결과를 "
+                "점수 기반으로 비교할 수 있는 평가 항목 초안을 작성함.",
                 styles["body"],
             ),
-            p("65%", styles["cell"]),
+            p("50%", styles["cell"]),
+        ],
+        [
+            p("강승진", styles["cell"]),
+            p("검색 로그 저장 설계", styles["cell"]),
+            p(
+                "요청 로그에 query, mode, 위치 파라미터, topK, 반환 점수 스냅샷을 "
+                "기록할 최소 스키마를 정리하여 운영 로그 연동 항목을 확정함.",
+                styles["body"],
+            ),
+            p("35%", styles["cell"]),
+        ],
+        [
+            p("강승진", styles["cell"]),
+            p("시연 안정성 정비", styles["cell"]),
+            p(
+                "서비스 시작/종료, 에러 예외, 지도/검색 동기화 케이스를 한 번에 점검할 "
+                "시연 전 체크리스트를 갱신함.",
+                styles["body"],
+            ),
+            p("78%", styles["cell"]),
         ],
     ]
 
@@ -216,30 +216,30 @@ def main() -> None:
             p("비고", styles["header"]),
         ],
         [
-            p("Hybrid Search 구현", styles["cell"]),
+            p("로그 저장 구현", styles["cell"]),
             p(
-                "BM25 검색과 벡터 검색 결과를 RRF 방식으로 결합하여 "
-                "장소 단위 통합 랭킹 로직을 구현함.",
+                "검색 요청/응답 로그를 파일 기반으로 저장하고, 주간 보고에 반영 가능한 "
+                "지표(raw score, top 순위, 응답시간)를 추출하도록 구현함.",
                 styles["body"],
             ),
             p("강승진", styles["cell"]),
             p("핵심", styles["cell"]),
         ],
         [
-            p("Geo Ranking 설계", styles["cell"]),
+            p("평가 지표 자동화", styles["cell"]),
             p(
-                "사용자 위치를 반영한 거리 기반 가중치와 반경 필터를 적용하여 "
-                "검색 결과 재정렬 기준을 설계함.",
+                "대표 질의셋 정답셋과 정렬 지표를 반영해 수동 비교만으로도 "
+                "재현 가능한 품질 점검 스크립트를 준비함.",
                 styles["body"],
             ),
             p("강승진", styles["cell"]),
             p("구현", styles["cell"]),
         ],
         [
-            p("API · UI 연결", styles["cell"]),
+            p("배포/운영 문서 정비", styles["cell"]),
             p(
-                "FastAPI 응답 형식을 정리하고 지도 UI 연동을 위한 결과 데이터 구조와 "
-                "표시 항목을 구체화함.",
+                "Docker 실행, 환경변수, 데모 점검 절차를 한 문서로 통합해 "
+                "오류 대응 및 재시작 흐름을 정리함.",
                 styles["body"],
             ),
             p("강승진", styles["cell"]),

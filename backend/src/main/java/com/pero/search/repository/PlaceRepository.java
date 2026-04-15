@@ -3,7 +3,7 @@ package com.pero.search.repository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pero.search.model.IndexedPlace;
-import com.pero.search.model.IndexedReview;
+import com.pero.search.model.IndexedEvidence;
 import com.pero.search.model.PlaceSeed;
 import com.pero.search.service.EmbeddingService;
 import com.pero.search.service.TextNormalizer;
@@ -50,16 +50,18 @@ public class PlaceRepository {
             List<IndexedPlace> indexedPlaces = new ArrayList<>();
             for (PlaceSeed seed : seeds) {
                 List<String> tags = seed.tags() == null ? List.of() : List.copyOf(seed.tags());
-                List<String> reviewSentences = seed.reviewSentences() == null ? List.of() : List.copyOf(seed.reviewSentences());
+                List<String> searchHints = seed.searchHints() == null ? List.of() : List.copyOf(seed.searchHints());
 
                 String searchableText = String.join(
                         " ",
                         seed.name(),
                         seed.category(),
                         seed.district(),
+                        seed.address(),
+                        seed.roadAddress(),
                         seed.summary(),
                         String.join(" ", tags),
-                        String.join(" ", reviewSentences)
+                        String.join(" ", searchHints)
                 );
 
                 List<String> searchableTokens = normalizer.tokenizeForSearch(searchableText);
@@ -70,10 +72,10 @@ public class PlaceRepository {
 
                 Set<String> featureTokens = new LinkedHashSet<>(normalizer.tokenizeForSearch(seed.summary()));
                 tags.forEach(tag -> featureTokens.addAll(normalizer.tokenizeForSearch(tag)));
+                featureTokens.addAll(normalizer.tokenizeForSearch(seed.category()));
+                searchHints.forEach(hint -> featureTokens.addAll(normalizer.tokenizeForSearch(hint)));
 
-                List<IndexedReview> indexedReviews = reviewSentences.stream()
-                        .map(sentence -> new IndexedReview(sentence, embeddingService.embed(sentence)))
-                        .toList();
+                List<IndexedEvidence> evidenceCandidates = buildEvidenceCandidates(seed, tags, searchHints, embeddingService);
 
                 indexedPlaces.add(new IndexedPlace(
                         seed.id(),
@@ -86,7 +88,7 @@ public class PlaceRepository {
                         seed.longitude(),
                         seed.summary(),
                         tags,
-                        indexedReviews,
+                        evidenceCandidates,
                         Collections.unmodifiableMap(termFrequencies),
                         Collections.unmodifiableSet(featureTokens),
                         searchableTokens.size(),
@@ -97,5 +99,27 @@ public class PlaceRepository {
         } catch (IOException exception) {
             throw new UncheckedIOException("샘플 장소 데이터를 불러오지 못했습니다.", exception);
         }
+    }
+
+    private List<IndexedEvidence> buildEvidenceCandidates(
+            PlaceSeed seed,
+            List<String> tags,
+            List<String> searchHints,
+            EmbeddingService embeddingService
+    ) {
+        List<String> candidates = new ArrayList<>();
+        candidates.add(seed.summary());
+        candidates.add(seed.category() + " · " + seed.district());
+        tags.stream()
+                .limit(4)
+                .map(tag -> tag + " 관련 특징이 있는 장소")
+                .forEach(candidates::add);
+        candidates.addAll(searchHints);
+
+        return candidates.stream()
+                .filter(candidate -> candidate != null && !candidate.isBlank())
+                .distinct()
+                .map(text -> new IndexedEvidence(text, embeddingService.embed(text)))
+                .toList();
     }
 }
