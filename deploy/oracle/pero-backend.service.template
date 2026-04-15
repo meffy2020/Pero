@@ -1,0 +1,18 @@
+[Unit]
+Description=Pero Backend
+After=network.target
+
+[Service]
+Type=simple
+User=__APP_USER__
+Group=__APP_GROUP__
+WorkingDirectory=__APP_DIR__
+EnvironmentFile=-__ENV_FILE__
+Environment="JAVA_OPTS="
+ExecStart=/bin/sh -c '/usr/bin/java $JAVA_OPTS -jar __APP_DIR__/app.jar'
+SuccessExitStatus=143
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

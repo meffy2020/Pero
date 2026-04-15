@@ -1,5 +1,6 @@
 package com.pero.search;
 
+import com.pero.search.dto.RecommendationRequest;
 import com.pero.search.dto.SearchRequest;
 import com.pero.search.model.SearchMode;
 import com.pero.search.service.SearchService;
@@ -43,6 +44,19 @@ class BackendApplicationTests {
 		assertThat(response.results())
 				.extracting(result -> result.distanceKm())
 				.containsOnlyNulls();
+	}
+
+	@Test
+	void recommendationBuildsDateCourseWithThreeStops() {
+		var request = new RecommendationRequest(37.5535, 126.9221, 5.0);
+		var response = searchService.recommend(request);
+
+		assertThat(response.nearbyPick().place()).isNotNull();
+		assertThat(response.mealPick().place()).isNotNull();
+		assertThat(response.dateCourse().stops()).hasSize(3);
+		assertThat(response.dateCourse().stops())
+				.extracting(stop -> stop.place().id())
+				.doesNotHaveDuplicates();
 	}
 
 }

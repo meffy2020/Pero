@@ -29,3 +29,14 @@ pnpm-debug.log*
 .env
 .env.*
 !.env.example
+
+# Generated reports / submission artifacts
+docs/reports/
+docs/proposals/
+*.pdf
+*.docx
+*.hwp
+*.hwpx
+*.pptx
+*.xlsx
+~$*

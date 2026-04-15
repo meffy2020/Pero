@@ -31,9 +31,18 @@ export function SearchMap({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const markersRef = useRef<LayerGroup | null>(null);
+  const selectedPlace = results.find((place) => place.id === selectedPlaceId) ?? null;
+  const hasResults = results.length > 0;
+  const activeTitle = selectedPlace?.name ?? (hasResults ? `${results.length} places in view` : "No places in view");
+  const activeCopy = selectedPlace
+    ? "Selected result is centered on the map."
+    : hasResults
+      ? "Pick a result to anchor the map and compare nearby places."
+      : "Run a search to populate the map surface.";
 
   useEffect(() => {
     let cancelled = false;
+    let resizeObserver: ResizeObserver | null = null;
 
     async function bootMap() {
       if (!containerRef.current || mapRef.current) {
@@ -47,16 +56,38 @@ export function SearchMap({
 
       const map = L.map(containerRef.current, {
         zoomControl: false,
+        preferCanvas: true,
+        scrollWheelZoom: false,
+        zoomSnap: 0.5,
+        zoomDelta: 0.5,
       }).setView(DEFAULT_CENTER, DEFAULT_ZOOM);
 
       L.control.zoom({ position: "topright" }).addTo(map);
+      L.control.scale({
+        imperial: false,
+        maxWidth: 120,
+        position: "bottomleft",
+      }).addTo(map);
 
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "&copy; OpenStreetMap contributors",
+        crossOrigin: true,
+        detectRetina: true,
+        keepBuffer: 3,
         maxZoom: 19,
+        maxNativeZoom: 19,
+        updateWhenIdle: true,
+        updateWhenZooming: false,
       }).addTo(map);
 
       markersRef.current = L.layerGroup().addTo(map);
+      resizeObserver = new ResizeObserver(() => {
+        map.invalidateSize({ animate: false });
+      });
+      resizeObserver.observe(containerRef.current);
+      window.requestAnimationFrame(() => {
+        map.invalidateSize({ animate: false });
+      });
       mapRef.current = map;
     }
 
@@ -64,6 +95,8 @@ export function SearchMap({
 
     return () => {
       cancelled = true;
+      resizeObserver?.disconnect();
+      resizeObserver = null;
       markersRef.current?.clearLayers();
       markersRef.current = null;
       mapRef.current?.remove();
@@ -107,11 +140,11 @@ export function SearchMap({
         markerLayer.addLayer(marker);
       }
 
-      const selectedPlace = results.find((place) => place.id === selectedPlaceId);
       if (selectedPlace) {
         map.flyTo([selectedPlace.latitude, selectedPlace.longitude], 15, {
           animate: true,
-          duration: 0.45,
+          duration: 0.55,
+          easeLinearity: 0.2,
         });
         return;
       }
@@ -119,7 +152,10 @@ export function SearchMap({
       const bounds = L.latLngBounds(
         results.map((place) => [place.latitude, place.longitude] as [number, number]),
       );
-      map.fitBounds(bounds.pad(0.22), { animate: true });
+      map.fitBounds(bounds.pad(0.22), {
+        animate: true,
+        duration: 0.6,
+      });
     }
 
     void syncMarkers();
@@ -127,18 +163,27 @@ export function SearchMap({
     return () => {
       cancelled = true;
     };
-  }, [onSelectPlace, results, selectedPlaceId]);
+  }, [onSelectPlace, results, selectedPlace, selectedPlaceId]);
 
   if (!results.length) {
     return (
-      <div className="map-panel empty">
-        <p>지도에 표시할 장소가 없습니다. 필터를 풀거나 다시 검색해 보세요.</p>
+      <div className="map-panel map-panel-live map-panel-empty">
+        <div className="map-title">
+          <strong>검색 지도</strong>
+          <span>OpenStreetMap 기반 지도 표면을 유지한 채 검색 결과를 기다립니다.</span>
+        </div>
+        <div className="leaflet-stage" ref={containerRef} />
+        <div className="map-overlay map-overlay-empty">
+          <span className="map-overlay-badge">OpenStreetMap</span>
+          <strong>No places in view</strong>
+          <p>Run a search to populate the map surface.</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="map-panel map-panel-live">
+    <div className="map-panel map-panel-live map-panel-has-results">
       <div className="map-title">
         <strong>검색 지도</strong>
         <span>
@@ -147,6 +192,15 @@ export function SearchMap({
         </span>
       </div>
       <div className="leaflet-stage" ref={containerRef} />
+      <div className="map-overlay map-overlay-top">
+        <span className="map-overlay-badge">OpenStreetMap</span>
+        <strong>{activeTitle}</strong>
+        <p>{activeCopy}</p>
+      </div>
+      <div className="map-overlay map-overlay-bottom">
+        <span className="map-overlay-chip">{selectedPlace ? "Focused" : "Browsing"}</span>
+        <span className="map-overlay-chip">{results.length} results</span>
+      </div>
     </div>
   );
 }

@@ -1,13 +1,13 @@
 # Pero Project Agents
 
-이 문서는 `Pero / Lumo` 졸업작품을 병렬로 진행할 때 사용할 서브에이전트 역할과 작업 경계를 정의한다.
+이 문서는 `Pero` 졸업작품을 병렬로 진행할 때 사용할 서브에이전트 역할과 작업 경계를 정의한다.
 
 ## Shared Context
 
-- 제품 목표: 자연어 질의 + 위치 정보를 기반으로 장소를 검색하고, 결과 근거를 리뷰 문장으로 보여준다.
+- 제품 목표: 자연어 질의 + 위치 정보를 기반으로 장소를 검색하고, 장소 메타데이터 기반 검색 근거를 보여준다.
 - 현재 상태:
   - 백엔드: Spring Boot 기반 검색 API, 샘플 JSON 데이터 8건, KEYWORD / VECTOR / HYBRID 랭킹 실험 구현
-  - 프론트엔드: Next.js 단일 페이지 검색 실험 UI, `/api/search` 호출, 가상 좌표 시각화
+  - 프론트엔드: Next.js 단일 페이지 검색 UI, `/api/search` 호출, 실제 지도 시각화
   - 문서: 아키텍처 초안과 주간보고서 존재, 실제 구현 로드맵은 `docs/project-roadmap.md` 기준
 - 형상관리 규칙:
   - 개인 레포 작업은 `main -> origin`
@@ -15,6 +15,9 @@
   - 작업 중간 업로드는 커밋 메시지 `.`
   - 함수/모듈 단위 완료는 해당 이름으로 커밋
   - 화요일 또는 중간 단위 구현 완료 시 `ksj -> dev` PR
+  - PR 제목은 짧고 결과 중심으로 적음
+  - PR 제목과 description은 한국어로 적음
+  - PR description은 변경 내용, 검증 내용만 짧게 적음
 
 ## Agent Roles
 
@@ -29,9 +32,9 @@
 
 - 목표: 검색 API, 랭킹 로직, 요청 검증, 결과 스키마 고도화
 - 담당 범위:
-  - `backend/src/main/java/com/lumo/search/controller/`
-  - `backend/src/main/java/com/lumo/search/service/`
-  - `backend/src/main/java/com/lumo/search/dto/`
+  - `backend/src/main/java/com/pero/search/controller/`
+  - `backend/src/main/java/com/pero/search/service/`
+  - `backend/src/main/java/com/pero/search/dto/`
 - 완료 기준:
   - API 계약이 안정적일 것
   - 검색 결과 품질을 설명할 수 있을 것

@@ -15,7 +15,7 @@ public record IndexedPlace(
         double longitude,
         String summary,
         List<String> tags,
-        List<IndexedReview> reviews,
+        List<IndexedEvidence> evidenceCandidates,
         Map<String, Integer> termFrequencies,
         Set<String> featureTokens,
         int documentLength,
