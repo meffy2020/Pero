@@ -1,0 +1,77 @@
+name: Sync KoreaTour Places Cache
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_places:
+        description: "Maximum number of places to sync."
+        required: false
+        default: "120"
+  schedule:
+    - cron: "0 18 * * 0"
+
+concurrency:
+  group: sync-koreatour-cache
+  cancel-in-progress: false
+
+jobs:
+  sync-places-cache:
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Sync places cache from KoreaTour
+        env:
+          KOREA_TOUR_API_SERVICE_KEY: ${{ secrets.KOREA_TOUR_API_SERVICE_KEY }}
+          KOREA_TOUR_ENDPOINT: https://apis.data.go.kr/B551011/KorService2
+        run: |
+          if [ -z "${KOREA_TOUR_API_SERVICE_KEY}" ]; then
+            echo "::error title=Missing secret::KOREA_TOUR_API_SERVICE_KEY is required."
+            exit 1
+          fi
+          python3 scripts/etl/sync_places.py \
+            --endpoint "${KOREA_TOUR_ENDPOINT}" \
+            --max-places "${{ github.event.inputs.max_places || '120' }}" \
+            --pause 0.2
+
+      - name: Detect cache changes
+        id: changes
+        run: |
+          if git diff --quiet -- \
+            backend/src/main/resources/data/places.json \
+            backend/src/main/resources/data/places.json.meta.json; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "No cache changes detected."
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            git status --short -- \
+              backend/src/main/resources/data/places.json \
+              backend/src/main/resources/data/places.json.meta.json
+          fi
+
+      - name: Open PR with refreshed cache
+        if: steps.changes.outputs.has_changes == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "chore(data): 한국관광공사 장소 캐시 갱신"
+          title: "데이터: 한국관광공사 장소 캐시 갱신"
+          body: |
+            ## 요약
+
+            - 변경: 한국관광공사 KorService2 기준으로 places.json, places.json.meta.json 갱신
+            - 검증: GitHub Actions `Sync KoreaTour Places Cache` 실행, 대상 파일 변경 여부 확인
+          branch: automation/koreatour-cache-sync
+          delete-branch: true
+          add-paths: |
+            backend/src/main/resources/data/places.json
+            backend/src/main/resources/data/places.json.meta.json
