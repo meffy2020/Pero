@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from datetime import datetime, timezone, timedelta
 import time
 import urllib.parse
 import urllib.request
@@ -19,34 +20,67 @@ KAKAO_KEYWORD_URL = "https://dapi.kakao.com/v2/local/search/keyword.json"
 
 TARGETS = [
     {
-        "area": "홍대입구",
-        "latitude": 37.5535,
-        "longitude": 126.9221,
+        "area": "서울",
+        "latitude": 37.5665,
+        "longitude": 126.9780,
+        "radius": "30000",
         "keywords": ["카페", "브런치 카페", "북카페", "스터디카페", "애견카페", "베이커리 카페"],
     },
     {
-        "area": "연남",
-        "latitude": 37.5628,
-        "longitude": 126.9258,
-        "keywords": ["카페", "브런치", "북카페", "디저트 카페", "반려동물 카페"],
+        "area": "부산",
+        "latitude": 35.1796,
+        "longitude": 129.0756,
+        "radius": "30000",
+        "keywords": ["카페", "브런치", "북카페", "디저트", "반려동물 카페"],
     },
     {
-        "area": "성수",
-        "latitude": 37.5448,
-        "longitude": 127.0557,
-        "keywords": ["카페", "브런치 카페", "베이커리", "디저트", "데이트 카페"],
+        "area": "인천",
+        "latitude": 37.4563,
+        "longitude": 126.7052,
+        "radius": "25000",
+        "keywords": ["카페", "브런치 카페", "베이커리", "키즈 카페", "데이트 카페"],
     },
     {
-        "area": "잠실",
-        "latitude": 37.5131,
-        "longitude": 127.1025,
-        "keywords": ["브런치", "패밀리 레스토랑", "카페", "베이커리", "키즈 카페"],
+        "area": "대구",
+        "latitude": 35.8714,
+        "longitude": 128.6017,
+        "radius": "25000",
+        "keywords": ["카페", "브런치", "레스토랑", "베이커리", "커피숍"],
     },
     {
-        "area": "서촌",
-        "latitude": 37.5787,
-        "longitude": 126.9692,
-        "keywords": ["카페", "북카페", "브런치", "디저트", "데이트 카페"],
+        "area": "광주",
+        "latitude": 35.1595,
+        "longitude": 126.8526,
+        "radius": "25000",
+        "keywords": ["카페", "브런치", "디저트", "키즈 카페", "북카페"],
+    },
+    {
+        "area": "대전",
+        "latitude": 36.3504,
+        "longitude": 127.3845,
+        "radius": "25000",
+        "keywords": ["카페", "브런치", "스터디카페", "디저트", "데이트 카페"],
+    },
+    {
+        "area": "울산",
+        "latitude": 35.5384,
+        "longitude": 129.3114,
+        "radius": "20000",
+        "keywords": ["카페", "브런치", "베이커리", "식사", "디저트"],
+    },
+    {
+        "area": "세종",
+        "latitude": 36.4800,
+        "longitude": 127.2890,
+        "radius": "22000",
+        "keywords": ["카페", "브런치", "북카페", "디저트", "가족 카페"],
+    },
+    {
+        "area": "제주",
+        "latitude": 33.4996,
+        "longitude": 126.5312,
+        "radius": "25000",
+        "keywords": ["카페", "브런치", "디저트", "공원형 카페", "펜션"],
     },
 ]
 
@@ -68,7 +102,7 @@ def request_keyword(api_key: str, keyword: str, target: dict[str, Any], page: in
         "query": keyword,
         "x": str(target["longitude"]),
         "y": str(target["latitude"]),
-        "radius": "5000",
+        "radius": str(target["radius"]),
         "size": "15",
         "page": str(page),
         "sort": "distance",
@@ -219,6 +253,7 @@ def main() -> None:
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT), help="Output places.json path")
     parser.add_argument("--max-places", type=int, default=100, help="Maximum places to write")
     parser.add_argument("--pause", type=float, default=0.12, help="Delay between API calls")
+    parser.add_argument("--no-meta", action="store_true", help="Skip metadata sidecar generation")
     parser.add_argument("--dry-run", action="store_true", help="Print count and sample without writing")
     args = parser.parse_args()
 
@@ -235,6 +270,16 @@ def main() -> None:
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(places, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    if not args.no_meta:
+        meta_path = output.with_suffix(output.suffix + ".meta.json")
+        metadata = {
+            "providerId": "koreaTour",
+            "providerName": "한국관광공사 캐시(임시:카카오 수집)",
+            "generatedAt": datetime.now(timezone(timedelta(hours=9))).isoformat(timespec="seconds"),
+            "status": "ok",
+            "count": len(places),
+        }
+        meta_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"Wrote {len(places)} places to {output}")
 
 

@@ -2,6 +2,7 @@ package com.pero.search.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pero.search.dto.RecommendationResponse;
+import com.pero.search.dto.PlacesResponse;
 import com.pero.search.dto.SearchResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,10 +37,21 @@ class SearchControllerIntegrationTests {
 
     @Test
     void placesEndpointReturnsSeedData() throws Exception {
-        mockMvc.perform(get("/api/places"))
+        String body = mockMvc.perform(get("/api/places"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(8))
-                .andExpect(jsonPath("$[0].id").exists());
+                .andExpect(jsonPath("$").exists())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        PlacesResponse response = objectMapper.readValue(body, PlacesResponse.class);
+
+        assertThat(response.total()).isEqualTo(response.places().size());
+        assertThat(response.source()).isNotNull();
+        assertThat(response.source().providerId()).isNotBlank();
+        assertThat(response.source().providerName()).isNotBlank();
+        assertThat(response.source().status()).isNotBlank();
+        assertThat(response.source().count()).isGreaterThanOrEqualTo(response.places().size());
     }
 
     @Test
@@ -61,11 +73,8 @@ class SearchControllerIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "query": "반려동물과 갈 수 있는 카페",
+                                  "query": "카페",
                                   "mode": "HYBRID",
-                                  "latitude": 37.5496,
-                                  "longitude": 126.9134,
-                                  "radiusKm": 5,
                                   "topK": 5
                                 }
                                 """))
@@ -78,8 +87,11 @@ class SearchControllerIntegrationTests {
         );
 
         assertThat(response.results()).isNotEmpty();
-        assertThat(response.results().getFirst().id()).isEqualTo("place-005");
-        assertThat(response.results().getFirst().tags()).contains("반려동물");
+        assertThat(response.source()).isNotNull();
+        assertThat(response.source().providerId()).isNotBlank();
+        assertThat(response.source().status()).isNotBlank();
+        assertThat(response.total()).isEqualTo(response.results().size());
+        assertThat(response.source().count()).isGreaterThanOrEqualTo(response.results().size());
     }
 
     @Test

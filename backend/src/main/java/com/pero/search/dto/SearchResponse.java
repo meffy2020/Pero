@@ -11,6 +11,7 @@ public record SearchResponse(
         int total,
         int topK,
         OffsetDateTime generatedAt,
+        SearchSourceMeta source,
         List<PlaceResultResponse> results
 ) {
 }

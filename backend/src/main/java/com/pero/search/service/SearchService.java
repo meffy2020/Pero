@@ -9,6 +9,9 @@ import com.pero.search.dto.RecommendationRequest;
 import com.pero.search.dto.RecommendationResponse;
 import com.pero.search.dto.SearchRequest;
 import com.pero.search.dto.SearchResponse;
+import com.pero.search.dto.PlacesResponse;
+import com.pero.search.dto.SearchSourceMeta;
+import com.pero.search.data.PlaceDataLoadResult;
 import com.pero.search.model.IndexedPlace;
 import com.pero.search.model.IndexedEvidence;
 import com.pero.search.repository.PlaceRepository;
@@ -58,8 +61,10 @@ public class SearchService {
 
     public SearchResponse search(SearchRequest request) {
         validateLocation(request);
+        var allPlaces = placeRepository.findAll();
+        SearchSourceMeta sourceMeta = toSourceMeta(placeRepository.source());
 
-        List<IndexedPlace> candidates = placeRepository.findAll().stream()
+        List<IndexedPlace> candidates = allPlaces.stream()
                 .filter(place -> withinRadius(place, request))
                 .toList();
 
@@ -95,17 +100,52 @@ public class SearchService {
                 results.size(),
                 request.resolvedTopK(),
                 OffsetDateTime.now(),
+                sourceMeta,
                 results
         );
     }
 
     public RecommendationResponse recommend(RecommendationRequest request) {
         validateLocation(request.latitude(), request.longitude());
+        List<IndexedPlace> allPlaces = placeRepository.findAll();
 
-        List<IndexedPlace> nearbyCandidates = findNearbyCandidates(request);
+        if (allPlaces.isEmpty()) {
+            RecommendationPlaceResponse unavailablePlace = unavailableRecommendationPlace(
+                    request,
+                    "현재 캐시 데이터가 비어 있어 추천 결과를 만들 수 없습니다."
+            );
+
+            return new RecommendationResponse(
+                    OffsetDateTime.now(),
+                    true,
+                    new RecommendationCardResponse(
+                            "nearby-random",
+                            "근처 추천 준비중",
+                            "현재 후보 데이터가 없어 랜덤 추천은 보류했습니다.",
+                            unavailablePlace
+                    ),
+                    new RecommendationCardResponse(
+                            "meal-nearby",
+                            "식사 추천 준비중",
+                            "현재 후보 데이터가 없어 식사 추천은 보류했습니다.",
+                            unavailablePlace
+                    ),
+                    new DateCourseResponse(
+                            "데이터 준비중",
+                            "현재 데이터 적재를 기다리고 있어 데이트 코스는 보류했습니다.",
+                            List.of(
+                                    new DateCourseStopResponse("현재", unavailablePlace),
+                                    new DateCourseStopResponse("대안", unavailablePlace),
+                                    new DateCourseStopResponse("기다림", unavailablePlace)
+                            )
+                    )
+            );
+        }
+
+        List<IndexedPlace> nearbyCandidates = findNearbyCandidates(request, allPlaces);
         boolean fallbackUsed = nearbyCandidates.isEmpty();
         List<IndexedPlace> effectiveCandidates = fallbackUsed
-                ? nearestPlaces(placeRepository.findAll(), request, 5)
+                ? nearestPlaces(allPlaces, request, 5)
                 : nearbyCandidates;
 
         RecommendationCardResponse nearbyPick = new RecommendationCardResponse(
@@ -157,10 +197,51 @@ public class SearchService {
                 .toList();
     }
 
+    public PlacesResponse places() {
+        SearchSourceMeta sourceMeta = toSourceMeta(placeRepository.source());
+        List<Map<String, Object>> places = getPlaces();
+        return new PlacesResponse(sourceMeta, places.size(), places);
+    }
+
     private DateCourseResponse buildDateCourse(List<IndexedPlace> candidates, RecommendationRequest request) {
+        if (candidates.isEmpty()) {
+            RecommendationPlaceResponse fallback = unavailableRecommendationPlace(
+                    request,
+                    "현재 후보 데이터가 부족해 데이트 코스 조합을 만들지 못했습니다."
+            );
+
+            return new DateCourseResponse(
+                    "랜덤 데이트 코스",
+                    "데이터가 부족해 데이트 코스는 임시로 보류했습니다.",
+                    List.of(
+                            new DateCourseStopResponse("준비", fallback),
+                            new DateCourseStopResponse("재확인", fallback),
+                            new DateCourseStopResponse("대기", fallback)
+                    )
+            );
+        }
+
         Set<String> usedIds = new HashSet<>();
 
         IndexedPlace meal = pickRandomTop(candidates, request, 4, this::isMealPlace);
+        meal = meal == null
+                ? pickRandomTop(candidates, request, 4, place -> true)
+                : meal;
+        if (meal == null) {
+            RecommendationPlaceResponse fallback = unavailableRecommendationPlace(
+                    request,
+                    "현재 조건에서 후보를 찾지 못했습니다."
+            );
+            return new DateCourseResponse(
+                    "랜덤 데이트 코스",
+                    "현재 조건에서 후보를 찾지 못해 임시 구성했습니다.",
+                    List.of(
+                            new DateCourseStopResponse("준비", fallback),
+                            new DateCourseStopResponse("보정", fallback),
+                            new DateCourseStopResponse("완료", fallback)
+                    )
+            );
+        }
         usedIds.add(meal.id());
 
         IndexedPlace cafe = pickRandomTop(
@@ -169,6 +250,9 @@ public class SearchService {
                 4,
                 place -> isCafePlace(place) && !usedIds.contains(place.id())
         );
+        if (cafe == null) {
+            cafe = meal;
+        }
         usedIds.add(cafe.id());
 
         IndexedPlace finish = pickRandomTop(
@@ -219,6 +303,44 @@ public class SearchService {
         );
     }
 
+    private RecommendationPlaceResponse unavailableRecommendationPlace(RecommendationRequest request, String reason) {
+        double latitude = request.latitude() == null ? 0.0 : request.latitude();
+        double longitude = request.longitude() == null ? 0.0 : request.longitude();
+
+        return new RecommendationPlaceResponse(
+                "unavailable",
+                "데이터 없음",
+                "안내",
+                "미확정",
+                "데이터 적재 대기",
+                reason,
+                List.of("데이터 없음", "캐시 준비"),
+                latitude,
+                longitude,
+                null,
+                reason
+        );
+    }
+
+    private SearchSourceMeta toSourceMeta(PlaceDataLoadResult source) {
+        if (source == null) {
+            return new SearchSourceMeta(
+                    "unknown",
+                    "미지정",
+                    "no-source",
+                    null,
+                    0
+            );
+        }
+        return new SearchSourceMeta(
+                source.providerId(),
+                source.providerName(),
+                source.sourceStatus(),
+                source.generatedAt(),
+                source.places().size()
+        );
+    }
+
     private ScoreBundle buildBundle(
             IndexedPlace place,
             SearchRequest request,
@@ -237,8 +359,8 @@ public class SearchService {
         return new ScoreBundle(place, keywordRaw, vectorRaw, featureRaw, geoRaw, distanceKm, evidence);
     }
 
-    private List<IndexedPlace> findNearbyCandidates(RecommendationRequest request) {
-        return placeRepository.findAll().stream()
+    private List<IndexedPlace> findNearbyCandidates(RecommendationRequest request, List<IndexedPlace> candidates) {
+        return candidates.stream()
                 .filter(place -> withinRadius(place, request.latitude(), request.longitude(), request.resolvedRadiusKm()))
                 .toList();
     }

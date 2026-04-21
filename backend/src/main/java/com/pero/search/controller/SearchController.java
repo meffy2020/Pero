@@ -4,6 +4,7 @@ import com.pero.search.dto.RecommendationRequest;
 import com.pero.search.dto.RecommendationResponse;
 import com.pero.search.dto.SearchRequest;
 import com.pero.search.dto.SearchResponse;
+import com.pero.search.dto.PlacesResponse;
 import com.pero.search.service.SearchService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.OffsetDateTime;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -36,8 +36,8 @@ public class SearchController {
     }
 
     @GetMapping("/places")
-    public List<Map<String, Object>> places() {
-        return searchService.getPlaces();
+    public PlacesResponse places() {
+        return searchService.places();
     }
 
     @PostMapping("/search")

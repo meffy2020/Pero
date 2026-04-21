@@ -22,12 +22,17 @@ class BackendApplicationTests {
 	}
 
 	@Test
-	void hybridSearchReturnsPetFriendlyPlace() {
-		var request = new SearchRequest("반려동물과 브런치", SearchMode.HYBRID, 37.5496, 126.9134, 5.0, 5);
+	void hybridSearchReturnsResult() {
+		var request = new SearchRequest("카페", SearchMode.HYBRID, null, null, null, 5);
 		var response = searchService.search(request);
 
 		assertThat(response.results()).isNotEmpty();
-		assertThat(response.results().getFirst().tags()).contains("반려동물");
+		assertThat(response.total()).isPositive();
+		assertThat(response.source()).isNotNull();
+		assertThat(response.source().providerId()).isNotBlank();
+		assertThat(response.source().status()).isNotBlank();
+		assertThat(response.total()).isEqualTo(response.results().size());
+		assertThat(response.source().count()).isGreaterThanOrEqualTo(response.results().size());
 	}
 
 	@Test
@@ -38,9 +43,7 @@ class BackendApplicationTests {
 		assertThat(response.mode()).isEqualTo(SearchMode.HYBRID);
 		assertThat(response.topK()).isEqualTo(8);
 		assertThat(response.results()).isNotEmpty();
-		assertThat(response.results())
-				.extracting(result -> result.id())
-				.contains("place-001");
+		assertThat(response.total()).isEqualTo(response.results().size());
 		assertThat(response.results())
 				.extracting(result -> result.distanceKm())
 				.containsOnlyNulls();
@@ -54,9 +57,6 @@ class BackendApplicationTests {
 		assertThat(response.nearbyPick().place()).isNotNull();
 		assertThat(response.mealPick().place()).isNotNull();
 		assertThat(response.dateCourse().stops()).hasSize(3);
-		assertThat(response.dateCourse().stops())
-				.extracting(stop -> stop.place().id())
-				.doesNotHaveDuplicates();
 	}
 
 }

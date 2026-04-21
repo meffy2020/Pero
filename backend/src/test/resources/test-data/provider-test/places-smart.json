@@ -1,0 +1,28 @@
+[
+  {
+    "id": "smart-seoul-1",
+    "name": "스마트서울 데모 카페",
+    "category": "카페",
+    "district": "서울",
+    "address": "서울특별시 마포구 합정동",
+    "roadAddress": "서울특별시 마포구 합정동 12",
+    "latitude": 37.5482,
+    "longitude": 126.9053,
+    "summary": "스마트서울맵 공급자 우선 선택 시 테스트 되는 장소입니다.",
+    "tags": ["카페", "야간", "조용한", "브런치"],
+    "searchHints": ["Smart Seoul 토글 기준 시뮬레이션 데이터입니다.", "도보 이동 중심 검색 시나리오 예시"]
+  },
+  {
+    "id": "smart-seoul-2",
+    "name": "스마트서울 데모 공원",
+    "category": "공원",
+    "district": "서울",
+    "address": "서울특별시 종로구 종로",
+    "roadAddress": "서울특별시 종로구 종로 1",
+    "latitude": 37.5759,
+    "longitude": 126.9789,
+    "summary": "야간 산책과 브런치 이동 동선 테스트를 위한 Smart Seoul 데이터입니다.",
+    "tags": ["산책", "야간", "공원", "동선"],
+    "searchHints": ["Smart Seoul 토글 켜짐 상태에서 우선 노출 검증용 데이터입니다."]
+  }
+]
