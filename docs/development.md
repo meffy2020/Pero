@@ -30,8 +30,8 @@
 
 ## 아직 안 했음
 
-- 데이터 8건밖에 없음.
-- 카카오 Local API 기반 ETL로 장소 100건 생성했음.
+- 데이터 규모를 KorService2 동기화 캐시 기준으로 120건 이상 유지.
+- `scripts/etl/sync_places.py`로 한국관광공사 KorService2 캐시 ETL 실행을 표준화함.
 - OpenSearch 아직 안 붙였음.
 - 실제 임베딩 모델 아직 안 붙였음.
 - 검색 로그 저장 아직 안 붙였음.
@@ -124,7 +124,7 @@ curl -X POST http://localhost:8080/api/recommendations \
 
 ## 다음 작업
 
-1. 데이터 더 넣어야 함.
+1. 스마트서울맵 연동 승인 후 `pero.providers.smartSeoul.enabled=true` 전환 검증.
 2. 핵심 데모 후보 20건 수동 검수해야 함.
 3. 검색 품질 평가셋 만들어야 함.
 4. 검색 로그 저장 붙여야 함.

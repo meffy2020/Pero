@@ -52,12 +52,21 @@ export type DateCourse = {
   stops: DateCourseStop[];
 };
 
+export type SearchSourceMeta = {
+  providerId: string;
+  providerName: string;
+  status: string;
+  generatedAt: string | null;
+  count: number;
+};
+
 export type SearchResponse = {
   query: string;
   mode: SearchMode;
   total: number;
   topK: number;
   generatedAt: string;
+  source?: SearchSourceMeta | null;
   results: PlaceResult[];
 };
 

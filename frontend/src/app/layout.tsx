@@ -1,16 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Manrope } from "next/font/google";
 import "./globals.css";
-
-const manrope = Manrope({
-  subsets: ["latin"],
-  variable: "--font-manrope",
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-});
 
 export const metadata: Metadata = {
   title: "Pero | 메타데이터와 위치로 찾는 장소 검색",
@@ -24,7 +13,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body className={`${manrope.variable} ${inter.variable}`}>{children}</body>
+      <body>{children}</body>
     </html>
   );
 }
