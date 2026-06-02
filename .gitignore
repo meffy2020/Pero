@@ -40,3 +40,6 @@ docs/proposals/
 *.pptx
 *.xlsx
 ~$*
+
+# Swift Package Manager
+**/.build/
