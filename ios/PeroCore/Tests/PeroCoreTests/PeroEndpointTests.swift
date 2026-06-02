@@ -8,7 +8,8 @@ import Testing
 
     #expect(request.httpMethod == "GET")
     #expect(request.url?.path == "/pero/api/events")
-    let components = try #require(URLComponents(url: try #require(request.url), resolvingAgainstBaseURL: false))
+    let url = try #require(request.url)
+    let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
     let items = components.queryItems ?? []
     #expect(items.contains(URLQueryItem(name: "region", value: "서울")))
     #expect(items.contains(URLQueryItem(name: "themeId", value: "pet")))
