@@ -29,6 +29,18 @@ struct NavigationModelTests {
         #expect(cards.first?.reason.contains("현재 위치") == true)
     }
 
+    @Test @MainActor func viewModelKeepsSlotIdentityWhenEarlierRecommendationIsMissing() async {
+        let provider = CapturingRecommendationProvider(response: .missingNearbyForTests)
+        let locationProvider = StaticLocationProvider(latitude: 35.1796, longitude: 129.0756)
+        let viewModel = RecommendationViewModel(provider: provider, locationProvider: locationProvider)
+
+        await viewModel.loadGoNowRecommendations()
+
+        #expect(viewModel.card(forSlotTitle: "랜덤 장소 추천") == nil)
+        #expect(viewModel.card(forSlotTitle: "식당 추천")?.id == "preview-market")
+        #expect(viewModel.card(forSlotTitle: "랜덤 코스 추천")?.id == "preview-gallery")
+    }
+
 
     @Test @MainActor func viewModelRequestsRecommendationsFromCurrentLocation() async {
         let provider = CapturingRecommendationProvider()
@@ -45,6 +57,26 @@ struct NavigationModelTests {
         #expect(provider.lastRequest?.radiusKm == 3)
         #expect(viewModel.cards.count == 3)
         #expect(viewModel.locationLabel.contains("35.1796") == true)
+    }
+
+    @Test @MainActor func viewModelKeepsLastCardsAddressableAfterTransientReloadFailure() async {
+        let provider = CapturingRecommendationProvider()
+        let locationProvider = StaticLocationProvider(latitude: 35.1796, longitude: 129.0756)
+        let viewModel = RecommendationViewModel(provider: provider, locationProvider: locationProvider)
+
+        await viewModel.loadGoNowRecommendations()
+        let firstCardID = try! #require(viewModel.cards.first?.id)
+
+        provider.shouldFailRecommendations = true
+        await viewModel.loadGoNowRecommendations()
+
+        #expect(viewModel.card(for: firstCardID)?.id == firstCardID)
+        #expect(viewModel.cards.isEmpty == false)
+        if case .error = viewModel.state {
+            #expect(true)
+        } else {
+            #expect(Bool(false), "transient failure should be visible without orphaning the last recommendation")
+        }
     }
 
     @Test @MainActor func viewModelStartsAsSpontaneousRecommendationSurface() {
@@ -177,6 +209,25 @@ private extension RecommendationResponse {
             tourApi: nil
         )
     ]
+
+    static let missingNearbyForTests = RecommendationResponse(
+        generatedAt: Date(timeIntervalSince1970: 0),
+        fallbackUsed: false,
+        nearbyPick: nil,
+        mealPick: RecommendationCard(
+            key: "meal",
+            title: "가벼운 식사 후 이동",
+            description: "짧은 식사와 주변 산책을 묶어 지금 가기 좋습니다.",
+            place: places[1]
+        ),
+        dateCourse: DateCourse(
+            title: "지금 출발 코스",
+            description: "실내 전시와 산책을 함께 묶은 설명 우선 코스입니다.",
+            stops: [
+                DateCourseStop(slot: "1차 확인", place: places[2])
+            ]
+        )
+    )
 }
 
 
@@ -184,6 +235,12 @@ private final class CapturingRecommendationProvider: PeroAPIProviding, @unchecke
     private(set) var lastRequest: RecommendationRequest?
     private(set) var recommendationCallCount = 0
     private(set) var searchCallCount = 0
+    var shouldFailRecommendations = false
+    private let response: RecommendationResponse
+
+    init(response: RecommendationResponse = .previewForTests) {
+        self.response = response
+    }
 
     func health() async throws -> HealthResponse {
         HealthResponse(service: "test", status: "ok", time: Date(timeIntervalSince1970: 0))
@@ -211,6 +268,9 @@ private final class CapturingRecommendationProvider: PeroAPIProviding, @unchecke
     func recommendations(_ request: RecommendationRequest) async throws -> RecommendationResponse {
         recommendationCallCount += 1
         lastRequest = request
-        return .previewForTests
+        if shouldFailRecommendations {
+            throw URLError(.notConnectedToInternet)
+        }
+        return response
     }
 }

@@ -111,9 +111,9 @@ struct HomeRecommendationScreen: View {
 
     private var randomSlotSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionTitle("오늘의 랜덤 추천 3칸")
-            ForEach(Array(RandomRecommendationSlot.all.enumerated()), id: \.element.id) { index, slot in
-                RandomRecommendationSlotCard(slot: slot, card: viewModel.cards[safe: index])
+            SectionTitle("오늘의 랜덤 추천 3가지")
+            ForEach(RandomRecommendationSlot.all) { slot in
+                RandomRecommendationSlotCard(slot: slot, card: viewModel.card(forSlotTitle: slot.title))
             }
         }
     }

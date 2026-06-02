@@ -150,13 +150,13 @@ private enum DetailRecommendationSlot {
   case course
 
   init(card: RecommendationCardModel) {
-    let source = "\(card.subtitle) \(card.category) \(card.title)"
-    if source.contains("코스") || source.contains("차") || source.localizedCaseInsensitiveContains("course") {
-      self = .course
-    } else if source.contains("식사") || source.contains("식당") || source.contains("음식") || source.contains("카페") || source.localizedCaseInsensitiveContains("meal") {
-      self = .restaurant
-    } else {
+    switch card.randomSlotKind {
+    case .place:
       self = .place
+    case .restaurant:
+      self = .restaurant
+    case .course:
+      self = .course
     }
   }
 

@@ -106,6 +106,7 @@ final class RecommendationViewModel: ObservableObject {
     @Published private(set) var fallbackUsed = false
 
     @Published private(set) var locationLabel = "현재 위치 확인 전"
+    private var cardsByID: [RecommendationCardModel.ID: RecommendationCardModel] = [:]
 
     private let provider: PeroAPIProviding
     private let locationProvider: LocationProviding
@@ -130,10 +131,11 @@ final class RecommendationViewModel: ObservableObject {
                 )
             )
             fallbackUsed = response.fallbackUsed
-            cards = Self.normalize(response: response)
-            state = cards.isEmpty ? .empty : .results
+            let normalizedCards = Self.normalize(response: response)
+            cards = normalizedCards
+            cache(cards: normalizedCards)
+            state = normalizedCards.isEmpty ? .empty : .results
         } catch {
-            cards = []
             fallbackUsed = false
             locationLabel = "위치 또는 추천 서버 확인 필요"
             state = .error("현재 위치 기반 추천을 불러오지 못했습니다. \(error.localizedDescription)")
@@ -141,7 +143,17 @@ final class RecommendationViewModel: ObservableObject {
     }
 
     func card(for id: RecommendationCardModel.ID) -> RecommendationCardModel? {
-        cards.first { $0.id == id }
+        cards.first { $0.id == id } ?? cardsByID[id]
+    }
+
+    func card(forSlotTitle slotTitle: String) -> RecommendationCardModel? {
+        cards.first { $0.subtitle == slotTitle }
+    }
+
+    private func cache(cards: [RecommendationCardModel]) {
+        for card in cards {
+            cardsByID[card.id] = card
+        }
     }
 
     nonisolated static func normalize(response: RecommendationResponse) -> [RecommendationCardModel] {
@@ -165,12 +177,17 @@ final class RecommendationViewModel: ObservableObject {
 
     nonisolated private static func append(place: RecommendationPlace?, title: String, description: String?, into normalized: inout [RecommendationCardModel], seenIDs: inout Set<String>) {
         guard let place, place.latitude.isFinite, place.longitude.isFinite, seenIDs.insert(place.id).inserted else { return }
+        let reason = if let description, !description.isEmpty {
+            "\(description) \(place.reason)"
+        } else {
+            place.reason
+        }
         normalized.append(
             RecommendationCardModel(
                 id: place.id,
                 title: place.name,
                 subtitle: title,
-                reason: description?.isEmpty == false ? "\(description!) \(place.reason)" : place.reason,
+                reason: reason,
                 category: place.category,
                 district: place.district,
                 roadAddress: place.roadAddress,

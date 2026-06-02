@@ -16,6 +16,21 @@ struct RecommendationCardModel: Identifiable, Hashable {
 }
 
 extension RecommendationCardModel {
+    var randomSlotKind: RecommendationSlotKind {
+        let source = "\(subtitle) \(category) \(title)"
+        if source.contains("코스") || source.contains("차") || source.localizedCaseInsensitiveContains("course") {
+            return .course
+        }
+        if source.contains("식사")
+            || source.contains("식당")
+            || source.contains("음식")
+            || source.contains("카페")
+            || source.localizedCaseInsensitiveContains("meal") {
+            return .restaurant
+        }
+        return .place
+    }
+
     var categoryIconName: String {
         switch category {
         case let value where value.contains("음식") || value.contains("식당"):
@@ -37,6 +52,12 @@ extension RecommendationCardModel {
         ]
         return components.url
     }
+}
+
+enum RecommendationSlotKind: Hashable {
+    case place
+    case restaurant
+    case course
 }
 
 enum AppRoute: Hashable {

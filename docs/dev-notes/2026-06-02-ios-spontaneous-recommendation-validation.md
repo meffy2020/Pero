@@ -4,13 +4,16 @@
 
 - 팀 작업: OMX `implement-pero-ios-ra-1d791323` Task 3.
 - Ultragoal 참조: `.omx/ultragoal/goals.json`의 `G001-reframe-pero-from-search-theme-map-f`는 leader-owned 상태로 유지했다. 이 작업은 팀 증거와 문서/테스트만 추가하며 `.omx/ultragoal`은 변경하지 않는다.
-- 검증 목표: iOS 앱이 검색/테마맵 선행 흐름이 아니라, 현재 위치 기반 “지금 바로 갈 만한 장소” 즉흥 추천 표면으로 시작하고 `/api/recommendations` 계약을 직접 사용한다는 점을 회귀 테스트와 XcodeBuildMCP 증거로 고정한다.
+- 검증 목표: iOS 앱이 검색/테마맵 선행 흐름이 아니라, 현재 위치 기반 “지금 뭐 하지?” 즉흥 추천 표면으로 시작하고 `/api/recommendations` 계약을 직접 사용한다는 점을 회귀 테스트와 XcodeBuildMCP 증거로 고정한다.
 
 ## 추가 회귀 체크
 
 - `ios/PeroTests/NavigationModelTests.swift`
   - `viewModelRequestsRecommendationsFromCurrentLocation()`가 현재 위치 좌표, `themeId = "go-now"`, `radiusKm = 3`으로 추천 요청을 1회만 보내고 search 호출은 하지 않는지 확인한다.
   - `viewModelStartsAsSpontaneousRecommendationSurface()`가 초기 화면 상태를 추천 준비 상태(`.ready`, 카드 없음, “현재 위치 확인 전”)로 고정한다.
+
+  - `viewModelKeepsSlotIdentityWhenEarlierRecommendationIsMissing()`가 optional 응답 누락 시 compacted 배열 인덱스가 슬롯을 오염시키지 않고 `식당 추천` / `랜덤 코스 추천` 정체성을 유지하는지 확인한다.
+  - `viewModelKeepsLastCardsAddressableAfterTransientReloadFailure()`가 일시적 재로딩 실패 후에도 마지막 추천 카드가 detail/map route에서 계속 resolve되는지 확인한다.
 - `ios/PeroCore/Tests/PeroCoreTests/PeroAPIClientTests.swift`
   - `clientEncodesRecommendationRequestAndDecodesResponse()`가 base path를 보존한 `/api/recommendations` POST, JSON body(`themeId`, `latitude`, `longitude`, `radiusKm`), fallback/recommendation response decoding을 확인한다.
   - `previewProviderSuppliesOfflineMVPData()`가 preview provider의 `recommendations(_:)` 미리보기 추천 데이터도 제공하는지 확인한다.
@@ -40,8 +43,8 @@ Session defaults는 worker worktree 기준으로 비영구 설정했다.
   - xcresult: `/Users/ksj/Library/Developer/XcodeBuildMCP/workspaces/worker-2-11c1a2ea459e/result-bundles/test_sim_2026-06-02T12-59-15-614Z_pid94954_cf7ba21f.xcresult`
 - PASS: runtime UI after direct `simctl` install/launch fallback with `SIMCTL_CHILD_PERO_USE_PREVIEW=1`
   - launched: `com.pero.ios: 17574`
-  - XcodeBuildMCP `wait_for_ui(textContains: "지금 바로 갈 만한 장소")` succeeded.
-  - Snapshot also contained `현재 위치 37.5665, 126.9780`, `지도 우선 탐색`, `서울 반려 산책 공원`, `지도에서 확인`, `추천 이유 보기`.
+  - XcodeBuildMCP `wait_for_ui(textContains: "지금 바로 갈 만한 장소")` succeeded in the worker proof; final copy was later tightened to `지금 뭐 하지?` and covered by the pinned smoke run.
+  - Snapshot also contained `현재 위치 37.5665, 126.9780`, `지도 우선 탐색`, `서울 반려 산책 공원`, and route/explainability CTAs; final home CTA copy is `왜 뽑혔는지`.
   - screenshot: `/var/folders/6g/tr708wd138scfd24z7r293d00000gn/T/screenshot_optimized_62404094-24bb-4949-9d46-f20de840a015.jpg`
 
 Caveat/recovery:
@@ -60,7 +63,7 @@ Caveat/recovery:
   - Swift package manifest/build/test passed.
   - Xcode project list found targets `Pero`, `PeroTests` and schemes `Pero`, `PeroCore`.
   - Xcode simulator build passed with `** BUILD SUCCEEDED **`.
-  - Xcode simulator tests passed with `** TEST SUCCEEDED **`; `NavigationModelTests` passed `8` cases.
+  - Xcode simulator tests passed with `** TEST SUCCEEDED **`; `NavigationModelTests` passed `10` cases.
   - Backend API/provider contract tests passed with Gradle `BUILD SUCCESSFUL`.
   - Final script output: `== PASS: Pero iOS MVP smoke ==`.
 
