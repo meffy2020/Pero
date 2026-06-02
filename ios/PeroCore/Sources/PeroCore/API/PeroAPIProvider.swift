@@ -74,9 +74,26 @@ public struct PreviewPeroAPIProvider: PeroAPIProviding {
         RecommendationResponse(
             generatedAt: Date(timeIntervalSince1970: 0),
             fallbackUsed: true,
-            nearbyPick: nil,
-            mealPick: nil,
-            dateCourse: nil
+            nearbyPick: RecommendationCard(
+                key: "nearby",
+                title: "가까운 산책 추천",
+                description: "현재 위치에서 이동 부담이 낮고 바로 설명 가능한 장소입니다.",
+                place: previewRecommendationPlaces[0]
+            ),
+            mealPick: RecommendationCard(
+                key: "meal",
+                title: "가벼운 식사 후 이동",
+                description: "짧은 식사와 주변 산책을 묶어 지금 가기 좋습니다.",
+                place: previewRecommendationPlaces[1]
+            ),
+            dateCourse: DateCourse(
+                title: "지금 출발 코스",
+                description: "실내 전시와 산책을 함께 묶은 설명 우선 코스입니다.",
+                stops: [
+                    DateCourseStop(slot: "1차 확인", place: previewRecommendationPlaces[2]),
+                    DateCourseStop(slot: "2차 산책", place: previewRecommendationPlaces[0])
+                ]
+            )
         )
     }
 
@@ -105,6 +122,59 @@ public struct PreviewPeroAPIProvider: PeroAPIProviding {
                 latitude: 37.5665,
                 longitude: 126.9780,
                 sourceAttribution: "Preview",
+                tourApi: nil
+            )
+        ]
+    }
+
+    private var previewRecommendationPlaces: [RecommendationPlace] {
+        [
+            RecommendationPlace(
+                id: "preview-seoul-park",
+                name: "서울 반려 산책 공원",
+                category: "공원",
+                district: "중구",
+                roadAddress: "서울특별시 중구 세종대로",
+                summary: "현재 위치 기준 산책 동선이 짧은 미리보기 장소입니다.",
+                tags: ["산책", "반려동물"],
+                themeTags: ["go-now"],
+                latitude: 37.5665,
+                longitude: 126.9780,
+                sourceAttribution: "Preview",
+                distanceKm: 0.8,
+                reason: "현재 위치에서 가깝고 야외 동선이 단순합니다.",
+                tourApi: nil
+            ),
+            RecommendationPlace(
+                id: "preview-market",
+                name: "도심 간편 식당가",
+                category: "음식점",
+                district: "중구",
+                roadAddress: "서울특별시 중구 무교로",
+                summary: "식사 후 이동하기 쉬운 미리보기 장소입니다.",
+                tags: ["식사", "도보"],
+                themeTags: ["go-now"],
+                latitude: 37.5677,
+                longitude: 126.9794,
+                sourceAttribution: "Preview",
+                distanceKm: 1.1,
+                reason: "짧은 식사와 다음 장소 이동을 함께 설명할 수 있습니다.",
+                tourApi: nil
+            ),
+            RecommendationPlace(
+                id: "preview-gallery",
+                name: "시청 인근 전시 공간",
+                category: "전시",
+                district: "중구",
+                roadAddress: "서울특별시 중구 세종대로",
+                summary: "날씨 영향을 덜 받는 실내 미리보기 장소입니다.",
+                tags: ["실내", "전시"],
+                themeTags: ["go-now"],
+                latitude: 37.5651,
+                longitude: 126.9759,
+                sourceAttribution: "Preview",
+                distanceKm: 1.4,
+                reason: "비가 와도 설명 가능한 실내 동선을 제공합니다.",
                 tourApi: nil
             )
         ]

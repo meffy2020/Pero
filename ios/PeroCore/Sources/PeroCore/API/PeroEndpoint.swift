@@ -27,7 +27,7 @@ public enum PeroEndpoint: Equatable, Sendable {
         case .themes:
             "/api/themes"
         case .theme(let id):
-            "/api/themes/\(id)"
+            "/api/themes/\(Self.percentEncodedPathSegment(id))"
         case .events:
             "/api/events"
         case .search:
@@ -52,6 +52,12 @@ public enum PeroEndpoint: Equatable, Sendable {
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         return request
+    }
+
+    private static func percentEncodedPathSegment(_ value: String) -> String {
+        var allowed = CharacterSet.urlPathAllowed
+        allowed.remove(charactersIn: "/")
+        return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
     }
 
     private var queryItems: [URLQueryItem]? {

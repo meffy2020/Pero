@@ -24,3 +24,10 @@ import Testing
     #expect(request.url?.path == "/api/search")
     #expect(request.value(forHTTPHeaderField: "Accept") == "application/json")
 }
+
+@Test func themeEndpointPercentEncodesPathSegment() throws {
+    let request = try PeroEndpoint.theme(id: "pet/course 서울")
+        .urlRequest(baseURL: try #require(URL(string: "https://example.com/pero")))
+
+    #expect(request.url?.path == "/pero/api/themes/pet%2Fcourse%20%EC%84%9C%EC%9A%B8")
+}
