@@ -164,7 +164,11 @@ private extension View {
                 .glassEffect(glass, in: .rect(cornerRadius: cornerRadius))
         } else {
             self
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .background(.background, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .stroke(.quaternary, lineWidth: 1)
+                }
         }
     }
 }
