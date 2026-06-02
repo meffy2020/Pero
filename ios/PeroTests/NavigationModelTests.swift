@@ -52,6 +52,14 @@ struct NavigationModelTests {
         #expect(previewProvider is PreviewPeroAPIProvider)
     }
 
+    @Test func previewRuntimeUsesStaticLocationProviderForSimulatorDemos() {
+        let liveLocationProvider = AppRuntimeConfiguration.makeLocationProvider(environment: [:])
+        let previewLocationProvider = AppRuntimeConfiguration.makeLocationProvider(environment: ["PERO_USE_PREVIEW": "1"])
+
+        #expect(liveLocationProvider is CoreLocationProvider)
+        #expect(previewLocationProvider is StaticLocationProvider)
+    }
+
     @Test func invalidRuntimeBaseURLIsNotPreviewFallback() {
         #expect(throws: Never.self) {
             let baseURL = try #require(AppRuntimeConfiguration.resolvedLiveBaseURL("http://localhost:8080"))

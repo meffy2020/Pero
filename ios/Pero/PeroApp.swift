@@ -9,7 +9,7 @@ struct PeroApp: App {
 
     init() {
         provider = AppRuntimeConfiguration.makeProvider()
-        locationProvider = CoreLocationProvider()
+        locationProvider = AppRuntimeConfiguration.makeLocationProvider()
     }
 
     var body: some Scene {
@@ -20,11 +20,15 @@ struct PeroApp: App {
 }
 
 enum AppRuntimeConfiguration {
+    static func usesPreviewData(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
+        environment["PERO_USE_PREVIEW"] == "1"
+    }
+
     static func makeProvider(
         environment: [String: String] = ProcessInfo.processInfo.environment,
         bundle: Bundle = .main
     ) -> PeroAPIProviding {
-        if environment["PERO_USE_PREVIEW"] == "1" {
+        if usesPreviewData(environment: environment) {
             return PeroAPIProviderFactory.preview()
         }
 
@@ -36,6 +40,16 @@ enum AppRuntimeConfiguration {
             preconditionFailure("Invalid PERO_API_BASE_URL: \(baseURLString)")
         }
         return PeroAPIProviderFactory.live(baseURL: baseURL)
+    }
+
+    static func makeLocationProvider(
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) -> LocationProviding {
+        if usesPreviewData(environment: environment) {
+            return StaticLocationProvider.preview
+        }
+
+        return CoreLocationProvider()
     }
 
     static func resolvedLiveBaseURL(_ baseURLString: String) -> URL? {
