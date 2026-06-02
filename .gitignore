@@ -46,3 +46,7 @@ docs/proposals/
 
 # Local design research cache
 .lazyweb/
+# Local Xcode / OMX worker artifacts
+.derivedData/
+.omx/ultragoal/
+.omx/team/
