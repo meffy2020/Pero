@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>FormatVersion</key>
+	<integer>1</integer>
+	<key>Store</key>
+	<dict>
+		<key>PeroTests</key>
+		<dict>
+			<key>NavigationModelTests</key>
+			<dict>
+				<key>invalidRuntimeBaseURLIsNotPreviewFallback</key>
+				<dict>
+					<key>mrnet</key>
+					<real>0.0016210079193115234</real>
+				</dict>
+				<key>recommendationNormalizerPrefersCardsBeforeCourseStopsAndLimitsToThree</key>
+				<dict>
+					<key>mrnet</key>
+					<real>0.0028100013732910156</real>
+				</dict>
+				<key>recommendationStatesExposeKoreanCopy</key>
+				<dict>
+					<key>mrnet</key>
+					<real>0.0015010833740234375</real>
+				</dict>
+				<key>routesCarryStableRecommendationPayloads</key>
+				<dict>
+					<key>mrnet</key>
+					<real>0.0016610622406005859</real>
+				</dict>
+				<key>runtimeConfigurationUsesLiveProviderUnlessPreviewIsExplicit</key>
+				<dict>
+					<key>mrnet</key>
+					<real>0.038129806518554688</real>
+				</dict>
+				<key>viewModelRequestsRecommendationsFromCurrentLocation</key>
+				<dict>
+					<key>mrnet</key>
+					<real>0.02031397819519043</real>
+				</dict>
+			</dict>
+		</dict>
+	</dict>
+</dict>
+</plist>

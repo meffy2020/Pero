@@ -5,6 +5,49 @@
 	<key>logFormatVersion</key>
 	<integer>12</integer>
 	<key>logs</key>
-	<dict/>
+	<dict>
+		<key>2CCEB309-8666-445C-8BE8-EF8A54B42D19</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>2CCEB309-8666-445C-8BE8-EF8A54B42D19.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>S</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>Pero project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>Pero</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Building project Pero for testing with scheme Pero</string>
+			<key>timeStartedRecording</key>
+			<real>802087915.43450701</real>
+			<key>timeStoppedRecording</key>
+			<real>802087922.58171701</real>
+			<key>title</key>
+			<string>Building project Pero for testing with scheme Pero</string>
+			<key>uniqueIdentifier</key>
+			<string>2CCEB309-8666-445C-8BE8-EF8A54B42D19</string>
+		</dict>
+	</dict>
 </dict>
 </plist>
