@@ -39,8 +39,22 @@ struct NavigationModelTests {
         #expect(provider.lastRequest?.themeId == "go-now")
         #expect(provider.lastRequest?.latitude == 35.1796)
         #expect(provider.lastRequest?.longitude == 129.0756)
+        #expect(provider.recommendationCallCount == 1)
+        #expect(provider.searchCallCount == 0)
+        #expect(provider.lastRequest?.radiusKm == 3)
         #expect(viewModel.cards.count == 3)
         #expect(viewModel.locationLabel.contains("35.1796") == true)
+    }
+
+    @Test @MainActor func viewModelStartsAsSpontaneousRecommendationSurface() {
+        let viewModel = RecommendationViewModel(
+            provider: CapturingRecommendationProvider(),
+            locationProvider: StaticLocationProvider.preview
+        )
+
+        #expect(viewModel.state == .ready)
+        #expect(viewModel.cards.isEmpty)
+        #expect(viewModel.locationLabel == "현재 위치 확인 전")
     }
 
     @Test func runtimeConfigurationUsesLiveProviderUnlessPreviewIsExplicit() {
@@ -167,6 +181,8 @@ private extension RecommendationResponse {
 
 private final class CapturingRecommendationProvider: PeroAPIProviding, @unchecked Sendable {
     private(set) var lastRequest: RecommendationRequest?
+    private(set) var recommendationCallCount = 0
+    private(set) var searchCallCount = 0
 
     func health() async throws -> HealthResponse {
         HealthResponse(service: "test", status: "ok", time: Date(timeIntervalSince1970: 0))
@@ -187,10 +203,12 @@ private final class CapturingRecommendationProvider: PeroAPIProviding, @unchecke
     }
 
     func search(_ request: SearchRequest) async throws -> SearchResponse {
-        SearchResponse(query: request.query, themeId: request.themeId, mode: request.mode ?? .hybrid, total: 0, topK: request.topK ?? 0, generatedAt: Date(timeIntervalSince1970: 0), source: SearchSourceMeta(providerId: "test", providerName: "test", status: "loaded", generatedAt: Date(timeIntervalSince1970: 0), count: 0), results: [])
+        searchCallCount += 1
+        return SearchResponse(query: request.query, themeId: request.themeId, mode: request.mode ?? .hybrid, total: 0, topK: request.topK ?? 0, generatedAt: Date(timeIntervalSince1970: 0), source: SearchSourceMeta(providerId: "test", providerName: "test", status: "loaded", generatedAt: Date(timeIntervalSince1970: 0), count: 0), results: [])
     }
 
     func recommendations(_ request: RecommendationRequest) async throws -> RecommendationResponse {
+        recommendationCallCount += 1
         lastRequest = request
         return .previewForTests
     }
