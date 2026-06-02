@@ -4,11 +4,7 @@ import PeroCore
 
 struct HomeRecommendationScreen: View {
     @ObservedObject var viewModel: RecommendationViewModel
-    @State private var selectedTheme = DiscoveryTheme.all.first?.id ?? "walk"
-
-    private var selectedThemeModel: DiscoveryTheme {
-        DiscoveryTheme.all.first { $0.id == selectedTheme } ?? DiscoveryTheme.all[0]
-    }
+    @State private var rerollTask: Task<Void, Never>?
 
     var body: some View {
         ZStack {
@@ -21,7 +17,9 @@ struct HomeRecommendationScreen: View {
             await viewModel.loadGoNowRecommendations()
         }
         .animation(.default, value: viewModel.state)
-        .animation(.snappy, value: selectedTheme)
+        .onDisappear {
+            rerollTask?.cancel()
+        }
     }
 
     private var recommendationBackdrop: some View {
@@ -41,10 +39,8 @@ struct HomeRecommendationScreen: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 18) {
                 heroSection
-                themeSelector
-                mapFirstEntry
+                randomSlotSection
                 stateSection
-                recommendationSection
             }
             .padding(.horizontal, 20)
             .padding(.top, 24)
@@ -65,7 +61,7 @@ struct HomeRecommendationScreen: View {
     }
 
     private var heroSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 16) {
             Label(viewModel.locationLabel, systemImage: "location.fill")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.blue)
@@ -73,10 +69,33 @@ struct HomeRecommendationScreen: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .homeRecommendationGlass(cornerRadius: 16, tint: .cyan.opacity(0.24))
-            Text("지금 바로 갈 만한 장소")
-                .font(.title2.weight(.bold))
-            Text("지도에서 먼저 감을 잡고, 각 카드에서 왜 지금 맞는지 바로 확인해요.")
-                .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("지금 뭐 하지?")
+                    .font(.largeTitle.weight(.bold))
+                    .minimumScaleFactor(0.82)
+                Text("근처 후보에서 장소·식당·코스를 바로 뽑고, 왜 추천됐는지는 카드에서 확인해요.")
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            HStack(spacing: 10) {
+                Button {
+                    rerollRecommendations()
+                } label: {
+                    Label(viewModel.state == .loading ? "다시 뽑는 중" : "다시 뽑기", systemImage: "arrow.triangle.2.circlepath")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .disabled(viewModel.state == .loading)
+
+                Text("검색 조건을 바꾸지 않고 현재 위치 기준 추천만 새로 불러옵니다.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
             if viewModel.fallbackUsed {
                 Label("추천 반경을 넓혀 보완한 결과입니다", systemImage: "info.circle")
                     .font(.caption)
@@ -90,77 +109,20 @@ struct HomeRecommendationScreen: View {
         .homeRecommendationGlass(cornerRadius: 28, tint: .blue.opacity(0.14))
     }
 
-    private var themeSelector: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SectionTitle("오늘의 발견 테마")
-            ScrollView(.horizontal) {
-                LazyHStack(spacing: 10) {
-                    ForEach(DiscoveryTheme.all) { theme in
-                        Button {
-                            selectedTheme = theme.id
-                        } label: {
-                            ThemePill(theme: theme, isSelected: selectedTheme == theme.id)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal, 4)
-                .padding(.vertical, 2)
+    private var randomSlotSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle("오늘의 랜덤 추천 3칸")
+            ForEach(Array(RandomRecommendationSlot.all.enumerated()), id: \.element.id) { index, slot in
+                RandomRecommendationSlotCard(slot: slot, card: viewModel.cards[safe: index])
             }
-            .scrollIndicators(.hidden)
-            Text("선택한 테마는 현재 화면의 탐색 맥락만 바꾸는 시각적 진입점입니다.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 4)
         }
     }
 
-    private var mapFirstEntry: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: selectedThemeModel.symbol)
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(.blue)
-                    .frame(width: 42, height: 42)
-                    .homeRecommendationGlass(cornerRadius: 16, tint: .blue.opacity(0.12))
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("지도에서 먼저 둘러보기")
-                        .font(.headline)
-                    Text(selectedThemeModel.prompt)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            MapPreviewCard(card: viewModel.cards.first)
-                .frame(height: 210)
-                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-
-            if let firstCard = viewModel.cards.first {
-                HStack(spacing: 10) {
-                    NavigationLink(value: AppRoute.mapFocus(cardID: firstCard.id)) {
-                        Label("지도에서 확인", systemImage: "map.fill")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-
-                    NavigationLink(value: AppRoute.recommendationDetail(cardID: firstCard.id)) {
-                        Label("추천 이유 보기", systemImage: "sparkles")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                }
-            } else {
-                Label("추천 후보를 불러오면 지도 진입이 활성화됩니다", systemImage: "clock")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 9)
-                    .homeRecommendationGlass(cornerRadius: 14, tint: .white.opacity(0.18))
-            }
+    private func rerollRecommendations() {
+        rerollTask?.cancel()
+        rerollTask = Task {
+            await viewModel.loadGoNowRecommendations()
         }
-        .padding(16)
-        .homeRecommendationGlass(cornerRadius: 28, tint: .white.opacity(0.16))
     }
 
     @ViewBuilder
@@ -198,41 +160,36 @@ struct HomeRecommendationScreen: View {
     }
 }
 
-private struct DiscoveryTheme: Identifiable, Equatable {
+private struct RandomRecommendationSlot: Identifiable, Equatable {
     let id: String
     let title: String
-    let symbol: String
-    let prompt: String
+    let userPrompt: String
+    let systemImage: String
+    let tint: Color
 
     static let all = [
-        DiscoveryTheme(id: "walk", title: "산책", symbol: "figure.walk", prompt: "가볍게 움직이기 좋은 주변 장소부터 보여드릴게요."),
-        DiscoveryTheme(id: "culture", title: "문화", symbol: "theatermasks", prompt: "전시, 공연, 동네 문화 공간을 발견하는 흐름입니다."),
-        DiscoveryTheme(id: "event", title: "행사", symbol: "calendar.badge.clock", prompt: "오늘 들러볼 만한 지역 이벤트 감각으로 정리했어요."),
-        DiscoveryTheme(id: "pet", title: "반려동물", symbol: "pawprint", prompt: "함께 걷기 편한 야외형 장소를 먼저 살펴봐요."),
-        DiscoveryTheme(id: "meal", title: "식사", symbol: "fork.knife", prompt: "이동 부담이 낮은 식사 전후 코스로 이어집니다.")
+        RandomRecommendationSlot(
+            id: "nearby",
+            title: "랜덤 장소 추천",
+            userPrompt: "근처 아무 데나 하나 골라줘",
+            systemImage: "shuffle.circle.fill",
+            tint: .blue
+        ),
+        RandomRecommendationSlot(
+            id: "meal",
+            title: "식당 추천",
+            userPrompt: "지금 밥 먹을 만한 곳 추천해줘",
+            systemImage: "fork.knife.circle.fill",
+            tint: .orange
+        ),
+        RandomRecommendationSlot(
+            id: "course",
+            title: "랜덤 코스 추천",
+            userPrompt: "한 번에 갈 코스 짜줘",
+            systemImage: "point.topleft.down.curvedto.point.bottomright.up.fill",
+            tint: .purple
+        )
     ]
-}
-
-private struct ThemePill: View {
-    let theme: DiscoveryTheme
-    let isSelected: Bool
-
-    var body: some View {
-        Label(theme.title, systemImage: theme.symbol)
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(isSelected ? .white : .primary)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background {
-                Capsule(style: .continuous)
-                    .fill(isSelected ? Color.blue.gradient : Color.white.opacity(0.42).gradient)
-            }
-            .overlay {
-                Capsule(style: .continuous)
-                    .stroke(isSelected ? Color.blue.opacity(0.45) : Color.primary.opacity(0.08), lineWidth: 1)
-            }
-            .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
 }
 
 private struct MapPreviewCard: View {
@@ -302,29 +259,60 @@ private struct MapPreviewCard: View {
     }
 }
 
-private struct RecommendationCard: View {
-    let card: RecommendationCardModel
+private struct RandomRecommendationSlotCard: View {
+    let slot: RandomRecommendationSlot
+    let card: RecommendationCardModel?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            RecommendationCardRow(card: card)
-            HStack(spacing: 10) {
-                NavigationLink(value: AppRoute.mapFocus(cardID: card.id)) {
-                    Label("지도에서 확인", systemImage: "map")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: slot.systemImage)
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(slot.tint)
+                    .frame(width: 46, height: 46)
+                    .homeRecommendationGlass(cornerRadius: 18, tint: slot.tint.opacity(0.14))
 
-                NavigationLink(value: AppRoute.recommendationDetail(cardID: card.id)) {
-                    Label("추천 이유", systemImage: "sparkles")
-                        .frame(maxWidth: .infinity)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(slot.title)
+                        .font(.headline)
+                    Text("“\(slot.userPrompt)”")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-                .buttonStyle(.borderedProminent)
+                Spacer(minLength: 0)
             }
-            .font(.caption.weight(.semibold))
+
+            if let card {
+                MapPreviewCard(card: card)
+                    .frame(height: 170)
+                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+
+                RecommendationCardRow(card: card)
+
+                HStack(spacing: 10) {
+                    NavigationLink(value: AppRoute.mapFocus(cardID: card.id)) {
+                        Label("지도에서 확인", systemImage: "map")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+
+                    NavigationLink(value: AppRoute.recommendationDetail(cardID: card.id)) {
+                        Label("왜 뽑혔는지", systemImage: "sparkles")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .font(.caption.weight(.semibold))
+            } else {
+                StateMessageView(
+                    icon: "clock",
+                    title: "추천 준비 중",
+                    message: "다시 뽑기를 누르거나 추천 응답이 도착하면 이 슬롯이 채워집니다."
+                )
+            }
         }
         .padding(16)
-        .homeRecommendationGlass(cornerRadius: 24, tint: .blue.opacity(0.12), interactive: true)
+        .homeRecommendationGlass(cornerRadius: 26, tint: slot.tint.opacity(0.12), interactive: card != nil)
     }
 }
 
@@ -430,6 +418,13 @@ struct StateMessageView: View {
         }
         .padding(16)
         .homeRecommendationGlass(cornerRadius: 20, tint: .white.opacity(0.18))
+    }
+}
+
+
+private extension Collection {
+    subscript(safe index: Index) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }
 
