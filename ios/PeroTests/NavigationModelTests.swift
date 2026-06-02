@@ -24,6 +24,7 @@ struct NavigationModelTests {
         let response = RecommendationResponse.previewForTests
         let cards = RecommendationViewModel.normalize(response: response)
         #expect(cards.map(\.id) == ["preview-seoul-park", "preview-market", "preview-gallery"])
+        #expect(cards.map(\.subtitle) == ["랜덤 장소 추천", "식당 추천", "랜덤 코스 추천"])
         #expect(cards.count == 3)
         #expect(cards.first?.reason.contains("현재 위치") == true)
     }

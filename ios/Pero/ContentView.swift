@@ -148,19 +148,19 @@ final class RecommendationViewModel: ObservableObject {
         var normalized: [RecommendationCardModel] = []
         var seenIDs: Set<String> = []
 
-        append(card: response.nearbyPick, into: &normalized, seenIDs: &seenIDs)
-        append(card: response.mealPick, into: &normalized, seenIDs: &seenIDs)
+        append(card: response.nearbyPick, slotTitle: "랜덤 장소 추천", into: &normalized, seenIDs: &seenIDs)
+        append(card: response.mealPick, slotTitle: "식당 추천", into: &normalized, seenIDs: &seenIDs)
         response.dateCourse?.stops.forEach { stop in
             guard normalized.count < 3 else { return }
-            append(place: stop.place, title: stop.slot, description: response.dateCourse?.description, into: &normalized, seenIDs: &seenIDs)
+            append(place: stop.place, title: "랜덤 코스 추천", description: response.dateCourse?.description, into: &normalized, seenIDs: &seenIDs)
         }
 
         return Array(normalized.prefix(3))
     }
 
-    nonisolated private static func append(card: RecommendationCard?, into normalized: inout [RecommendationCardModel], seenIDs: inout Set<String>) {
+    nonisolated private static func append(card: RecommendationCard?, slotTitle: String, into normalized: inout [RecommendationCardModel], seenIDs: inout Set<String>) {
         guard normalized.count < 3, let card else { return }
-        append(place: card.place, title: card.title, description: card.description, into: &normalized, seenIDs: &seenIDs)
+        append(place: card.place, title: slotTitle, description: card.description, into: &normalized, seenIDs: &seenIDs)
     }
 
     nonisolated private static func append(place: RecommendationPlace?, title: String, description: String?, into normalized: inout [RecommendationCardModel], seenIDs: inout Set<String>) {

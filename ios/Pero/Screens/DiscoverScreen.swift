@@ -150,17 +150,9 @@ struct HomeRecommendationScreen: View {
         }
     }
 
-    private var recommendationSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionTitle(viewModel.state.title)
-            ForEach(viewModel.cards) { card in
-                RecommendationCard(card: card)
-            }
-        }
-    }
 }
 
-private struct RandomRecommendationSlot: Identifiable, Equatable {
+private struct RandomRecommendationSlot: Identifiable {
     let id: String
     let title: String
     let userPrompt: String
