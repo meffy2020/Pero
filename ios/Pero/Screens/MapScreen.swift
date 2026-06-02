@@ -17,14 +17,18 @@ struct MapScreen: View {
     )
   }
 
+  private var slot: RandomRecommendationSlot {
+    RandomRecommendationSlot(card: card)
+  }
+
   var body: some View {
     ZStack(alignment: .bottom) {
       Map(initialPosition: position) {
         Annotation(card.title, coordinate: coordinate) {
           VStack(spacing: 6) {
-            Image(systemName: "pawprint.circle.fill")
+            Image(systemName: slot.symbolName)
               .font(.system(size: 34, weight: .bold))
-              .foregroundStyle(.white, .blue.gradient)
+              .foregroundStyle(.white, slot.accent.gradient)
               .shadow(color: .black.opacity(0.22), radius: 10, y: 4)
             Text(card.title)
               .font(.caption.weight(.bold))
@@ -57,6 +61,7 @@ struct MapScreen: View {
 
   private var topContextBar: some View {
     HStack(spacing: 8) {
+      Label(slot.mapEyebrow, systemImage: slot.symbolName)
       Label(card.distanceLabel, systemImage: "figure.walk")
       Label(card.district, systemImage: "mappin.and.ellipse")
       Spacer(minLength: 0)
@@ -65,33 +70,34 @@ struct MapScreen: View {
     .foregroundStyle(.primary)
     .padding(.horizontal, 12)
     .padding(.vertical, 10)
-    .mapScreenGlass(cornerRadius: 18, tint: .cyan.opacity(0.20))
+    .mapScreenGlass(cornerRadius: 18, tint: slot.accent.opacity(0.20))
   }
 
   private var bottomSummaryPanel: some View {
     VStack(alignment: .leading, spacing: 16) {
       HStack(alignment: .top, spacing: 12) {
         VStack(alignment: .leading, spacing: 7) {
-          Text(card.subtitle)
+          Text(slot.detailEyebrow)
             .font(.caption.weight(.bold))
-            .foregroundStyle(.blue)
+            .foregroundStyle(slot.accent)
           Text(card.title)
             .font(.title2.weight(.bold))
-          Text(card.reason)
+          Text(slot.mapSummary(for: card))
             .font(.subheadline)
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
         }
         Spacer()
-        Image(systemName: card.categoryIconName)
+        Image(systemName: slot.symbolName)
           .font(.title2.weight(.bold))
-          .foregroundStyle(.blue)
+          .foregroundStyle(slot.accent)
           .frame(width: 48, height: 48)
-          .mapScreenGlass(cornerRadius: 18, tint: .blue.opacity(0.14))
+          .mapScreenGlass(cornerRadius: 18, tint: slot.accent.opacity(0.14))
       }
 
       VStack(alignment: .leading, spacing: 8) {
         Label(card.roadAddress, systemImage: "road.lanes")
+        Label(slot.explainabilityCopy, systemImage: "sparkles")
         Label("출처: \(card.sourceAttribution)", systemImage: "doc.text.magnifyingglass")
       }
       .font(.caption)
@@ -126,6 +132,67 @@ struct MapScreen: View {
     .shadow(color: .black.opacity(0.14), radius: 24, y: 14)
   }
 
+}
+
+private enum RandomRecommendationSlot {
+  case place
+  case restaurant
+  case course
+
+  init(card: RecommendationCardModel) {
+    let source = "\(card.subtitle) \(card.category) \(card.title)"
+    if source.contains("코스") || source.contains("차") || source.localizedCaseInsensitiveContains("course") {
+      self = .course
+    } else if source.contains("식사") || source.contains("식당") || source.contains("음식") || source.contains("카페") || source.localizedCaseInsensitiveContains("meal") {
+      self = .restaurant
+    } else {
+      self = .place
+    }
+  }
+
+  var mapEyebrow: String {
+    switch self {
+    case .place: "랜덤 장소"
+    case .restaurant: "식당 추천"
+    case .course: "랜덤 코스"
+    }
+  }
+
+  var detailEyebrow: String {
+    switch self {
+    case .place: "오늘 뽑힌 랜덤 장소"
+    case .restaurant: "지금 먹기 좋은 식당 추천"
+    case .course: "바로 이어지는 랜덤 코스"
+    }
+  }
+
+  var explainabilityCopy: String {
+    switch self {
+    case .place: "장소성, 거리, 태그를 함께 보고 뽑은 결과입니다"
+    case .restaurant: "식사 맥락과 다음 이동 부담을 함께 보고 뽑은 결과입니다"
+    case .course: "첫 목적지와 다음 동선을 함께 상상할 수 있게 뽑은 결과입니다"
+    }
+  }
+
+  var symbolName: String {
+    switch self {
+    case .place: "sparkles.square.filled.on.square"
+    case .restaurant: "fork.knife.circle.fill"
+    case .course: "point.topleft.down.curvedto.point.bottomright.up.fill"
+    }
+  }
+
+  var accent: Color {
+    switch self {
+    case .place: .blue
+    case .restaurant: .orange
+    case .course: .purple
+    }
+  }
+
+  func mapSummary(for card: RecommendationCardModel) -> String {
+    "\(explainabilityCopy) \(card.reason)"
+  }
 }
 
 extension View {
