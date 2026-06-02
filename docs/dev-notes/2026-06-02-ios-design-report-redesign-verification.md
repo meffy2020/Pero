@@ -37,36 +37,38 @@
 - Home: `.omx/evidence/ios-design-g002/home.jpg`
 - Map: `.omx/evidence/ios-design-g002/map.jpg`
 - Detail: `.omx/evidence/ios-design-g002/detail.jpg`
-- G003 XcodeBuildMCP home screenshot: `/var/folders/6g/tr708wd138scfd24z7r293d00000gn/T/screenshot_optimized_3948e346-0331-42a9-905e-35d7c3be7dc0.jpg`
+- G003 post-review Home: `.omx/evidence/ios-design-g002/home-post-review.jpg`
 
 ### Checks
 
-- PASS: XcodeBuildMCP `build_run_sim` on `Pero` / `iPhone 17 Pro` / iOS `26.5`, runtime env `PERO_USE_PREVIEW=1`
-  - log: `/Users/ksj/Library/Developer/XcodeBuildMCP/workspaces/Pero-51ba591fe951/logs/build_run_sim_2026-06-02T11-25-35-022Z_pid13526_d07abf52.log`
-- PASS: XcodeBuildMCP `screenshot(returnFormat: path)`
-  - screenshot: `/var/folders/6g/tr708wd138scfd24z7r293d00000gn/T/screenshot_optimized_3948e346-0331-42a9-905e-35d7c3be7dc0.jpg`
-- PASS: UI snapshot/tap flow from G002 evidence: Home recommendation card -> Map CTA -> Detail CTA
-- PASS: post-route-boundary `swift test --package-path ios/PeroCore` — 6 passed, 0 failed
-- PASS: post-route-boundary `xcodebuild -project ios/Pero.xcodeproj -scheme Pero -destination 'generic/platform=iOS Simulator' build` — `** BUILD SUCCEEDED **`
-- PASS: post-cleaner fixed-destination smoke
-  - command: `IOS_TEST_DESTINATION='id=78867352-14AD-4092-BDF0-46DE89BD3A79' scripts/smoke_ios_core.sh`
-  - result: `== PASS: Pero iOS MVP smoke ==`
-  - included: Swift package build/test, Xcode project list, generic iOS simulator build, iPhone 17 Pro `NavigationModelTests` 7/7, backend Gradle tests.
+- PASS: XcodeBuildMCP `build_sim` on `Pero` / `iPhone 17 Pro` / iOS `26.5`
+  - log: `/Users/ksj/Library/Developer/XcodeBuildMCP/workspaces/Pero-51ba591fe951/logs/build_sim_2026-06-02T11-48-44-366Z_pid5033_2bef7277.log`
+- PASS: XcodeBuildMCP `build_run_sim` after CoreSimulator recovery
+  - log: `/Users/ksj/Library/Developer/XcodeBuildMCP/workspaces/Pero-51ba591fe951/logs/build_run_sim_2026-06-02T11-56-21-639Z_pid5033_cb0a8297.log`
+- PASS: XcodeBuildMCP `launch_app_sim(env: { PERO_USE_PREVIEW: 1 })`
+  - runtime log: `/Users/ksj/Library/Developer/XcodeBuildMCP/workspaces/Pero-51ba591fe951/logs/com.pero.ios_2026-06-02T11-58-10-343Z_helperpid65632_ownerpid5033_0d03f8c3.log`
+- PASS: XcodeBuildMCP `wait_for_ui(textContains: 지도 우선 탐색)` and preview recommendation snapshot containing `현재 위치 37.5665, 126.9780`, `서울 반려 산책 공원`, `지도에서 확인`, `추천 이유 보기`
+- PASS: XcodeBuildMCP `screenshot(returnFormat: path)` copied to `.omx/evidence/ios-design-g002/home-post-review.jpg`
+- PASS: XcodeBuildMCP `test_sim` — 7 passed, 0 failed
+  - log: `/Users/ksj/Library/Developer/XcodeBuildMCP/workspaces/Pero-51ba591fe951/logs/test_sim_2026-06-02T11-58-32-400Z_pid5033_f6c5cc99.log`
+  - xcresult: `/Users/ksj/Library/Developer/XcodeBuildMCP/workspaces/Pero-51ba591fe951/result-bundles/test_sim_2026-06-02T11-58-32-400Z_pid5033_7245f704.xcresult`
+- PASS: `swift test --package-path ios/PeroCore` — 6 passed, 0 failed
 - PASS: `git diff --check`
 
 ### Simulator caveat
 
-- A broad `scripts/smoke_ios_core.sh` run without `IOS_TEST_DESTINATION` selected an unrelated iPad simulator and hit CoreSimulator `Invalid device state` / `NSMachErrorDomain Code=-308`; this was not treated as app failure.
-- Re-running the same smoke with the required iPhone 17 Pro simulator id passed.
-- A later XcodeBuildMCP post-route `build_run_sim` retry timed out during simulator install/boot after the fixed-destination smoke had already passed. Source/build/test evidence is therefore anchored to the post-route fixed-destination smoke plus the earlier XcodeBuildMCP build/run+screenshot pass.
+- Earlier post-review XcodeBuildMCP launch/test attempts hung in CoreSimulator `simctl` install/terminate calls.
+- Recovery used local simulator-process cleanup, then `build_run_sim`, explicit `launch_app_sim(env: PERO_USE_PREVIEW=1)`, screenshot, and `test_sim` all passed on the same `iPhone 17 Pro` simulator.
 
 ## Cleanup / review gate
 
 - AI slop cleanup scope was limited to the G002/G003 changed files.
 - Cleanup finding: `MapScreen` pre-iOS fallback used `.regularMaterial`; changed to plain `.background.opacity(0.92)` + stroke to keep the non-glass fallback plain.
 - Cleanup finding: route payload carried full `RecommendationCardModel`; changed to stable `cardID` and destination lookup to reduce navigation coupling.
-- Code review lane: independent `code-reviewer` result `APPROVE`; no critical/high/medium issues.
-- Architecture lane: initial `WATCH` on full-model routes; after route ID refactor and shared Apple Maps helper confirmation, re-review result `CLEAR`.
+- Code review lane: independent `code-reviewer` found only LOW/COMMENT items.
+  - Visible English copy `Map-first discovery` was changed to `지도 우선 탐색`.
+  - duplicated force-unwrapped Apple Maps URL construction was replaced with shared optional `RecommendationCardModel.appleMapsURL`.
+- Architecture lane: `WATCH` risks were addressed by stable route IDs, shared category icon / Apple Maps helpers, preview-runtime documentation, and explicit visual-only theme rail copy.
 
 ## 리뷰 메모
 
