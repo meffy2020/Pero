@@ -5,10 +5,8 @@ struct HomeRecommendationScreen: View {
     @ObservedObject var viewModel: RecommendationViewModel
 
     var body: some View {
-        List {
-            heroSection
-            stateSection
-            recommendationSection
+        recommendationGlassContainer {
+            recommendationList
         }
         .refreshable {
             await viewModel.loadGoNowRecommendations()
@@ -16,12 +14,35 @@ struct HomeRecommendationScreen: View {
         .animation(.default, value: viewModel.state)
     }
 
+    private var recommendationList: some View {
+        List {
+            heroSection
+            stateSection
+            recommendationSection
+        }
+        .listStyle(.insetGrouped)
+    }
+
+    @ViewBuilder
+    private func recommendationGlassContainer<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        if #available(iOS 26, *) {
+            GlassEffectContainer(spacing: 18) {
+                content()
+            }
+        } else {
+            content()
+        }
+    }
+
     private var heroSection: some View {
         Section {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 14) {
                 Label("현재 위치 기준", systemImage: "location.fill")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.blue)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .homeRecommendationGlass(cornerRadius: 14, tint: .blue.opacity(0.16))
                 Text("지금 바로 갈 만한 장소")
                     .font(.title2.weight(.bold))
                 Text("가까운 순서만 보여주지 않고, 왜 이 장소가 지금 맞는지 먼저 설명합니다.")
@@ -30,10 +51,15 @@ struct HomeRecommendationScreen: View {
                     Label("추천 반경을 넓혀 보완한 결과입니다", systemImage: "info.circle")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .homeRecommendationGlass(cornerRadius: 12)
                 }
             }
-            .padding(.vertical, 6)
+            .padding(16)
+            .homeRecommendationGlass(cornerRadius: 24, tint: .blue.opacity(0.08))
         }
+        .listRowBackground(Color.clear)
     }
 
     @ViewBuilder
@@ -50,7 +76,8 @@ struct HomeRecommendationScreen: View {
                     Text("장소 메타데이터와 추천 이유를 정리하고 있습니다.")
                         .foregroundStyle(.secondary)
                 }
-                .padding(.vertical, 8)
+                .padding(14)
+                .homeRecommendationGlass(cornerRadius: 18)
             }
         case .results:
             EmptyView()
@@ -70,7 +97,10 @@ struct HomeRecommendationScreen: View {
             ForEach(viewModel.cards) { card in
                 NavigationLink(value: AppRoute.recommendationDetail(card)) {
                     RecommendationCardRow(card: card)
+                        .padding(12)
+                        .homeRecommendationGlass(cornerRadius: 20, tint: .blue.opacity(0.06), interactive: true)
                 }
+                .listRowBackground(Color.clear)
             }
         }
     }
@@ -119,7 +149,23 @@ struct StateMessageView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
-        .padding(.vertical, 8)
+        .padding(14)
+        .homeRecommendationGlass(cornerRadius: 18)
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func homeRecommendationGlass(cornerRadius: CGFloat, tint: Color? = nil, interactive: Bool = false) -> some View {
+        if #available(iOS 26, *) {
+            let glass = interactive ? Glass.regular.tint(tint).interactive() : Glass.regular.tint(tint)
+
+            self
+                .glassEffect(glass, in: .rect(cornerRadius: cornerRadius))
+        } else {
+            self
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        }
     }
 }
 
