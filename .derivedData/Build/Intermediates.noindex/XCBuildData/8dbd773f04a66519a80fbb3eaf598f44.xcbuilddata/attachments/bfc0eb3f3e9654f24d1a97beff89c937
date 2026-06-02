@@ -1,4 +1,0 @@
-module PeroCore {
-header "PeroCore-Swift.h"
-export *
-}
