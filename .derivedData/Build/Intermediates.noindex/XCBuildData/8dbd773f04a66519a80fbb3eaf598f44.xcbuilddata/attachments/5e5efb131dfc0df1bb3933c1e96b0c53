@@ -1,0 +1,79 @@
+{
+  "" : {
+    "diagnostics" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/Pero-primary.dia",
+    "emit-module-dependencies" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/Pero-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/Pero-primary-emit-module.dia",
+    "pch" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/Pero-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/Pero-primary.swiftdeps"
+  },
+  "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/GeneratedAssetSymbols~partial.swiftmodule"
+  },
+  "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/ios/Pero/AppRoute.swift" : {
+    "const-values" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/AppRoute.swiftconstvalues",
+    "dependencies" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/AppRoute.d",
+    "diagnostics" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/AppRoute.dia",
+    "index-unit-output-path" : "/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/AppRoute.o",
+    "llvm-bc" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/AppRoute.bc",
+    "object" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/AppRoute.o",
+    "swift-dependencies" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/AppRoute.swiftdeps",
+    "swiftmodule" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/AppRoute~partial.swiftmodule"
+  },
+  "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/ios/Pero/ContentView.swift" : {
+    "const-values" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/ContentView.swiftconstvalues",
+    "dependencies" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/ContentView.d",
+    "diagnostics" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/ContentView.dia",
+    "index-unit-output-path" : "/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/ContentView.o",
+    "llvm-bc" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/ContentView.bc",
+    "object" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/ContentView.o",
+    "swift-dependencies" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/ContentView.swiftdeps",
+    "swiftmodule" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/ContentView~partial.swiftmodule"
+  },
+  "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/ios/Pero/PeroApp.swift" : {
+    "const-values" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/PeroApp.swiftconstvalues",
+    "dependencies" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/PeroApp.d",
+    "diagnostics" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/PeroApp.dia",
+    "index-unit-output-path" : "/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/PeroApp.o",
+    "llvm-bc" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/PeroApp.bc",
+    "object" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/PeroApp.o",
+    "swift-dependencies" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/PeroApp.swiftdeps",
+    "swiftmodule" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/PeroApp~partial.swiftmodule"
+  },
+  "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/ios/Pero/Screens/DiscoverScreen.swift" : {
+    "const-values" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/DiscoverScreen.swiftconstvalues",
+    "dependencies" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/DiscoverScreen.d",
+    "diagnostics" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/DiscoverScreen.dia",
+    "index-unit-output-path" : "/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/DiscoverScreen.o",
+    "llvm-bc" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/DiscoverScreen.bc",
+    "object" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/DiscoverScreen.o",
+    "swift-dependencies" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/DiscoverScreen.swiftdeps",
+    "swiftmodule" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/DiscoverScreen~partial.swiftmodule"
+  },
+  "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/ios/Pero/Screens/MapScreen.swift" : {
+    "const-values" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/MapScreen.swiftconstvalues",
+    "dependencies" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/MapScreen.d",
+    "diagnostics" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/MapScreen.dia",
+    "index-unit-output-path" : "/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/MapScreen.o",
+    "llvm-bc" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/MapScreen.bc",
+    "object" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/MapScreen.o",
+    "swift-dependencies" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/MapScreen.swiftdeps",
+    "swiftmodule" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/MapScreen~partial.swiftmodule"
+  },
+  "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/ios/Pero/Screens/PlaceholderDetailScreen.swift" : {
+    "const-values" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/PlaceholderDetailScreen.swiftconstvalues",
+    "dependencies" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/PlaceholderDetailScreen.d",
+    "diagnostics" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/PlaceholderDetailScreen.dia",
+    "index-unit-output-path" : "/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/PlaceholderDetailScreen.o",
+    "llvm-bc" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/PlaceholderDetailScreen.bc",
+    "object" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/PlaceholderDetailScreen.o",
+    "swift-dependencies" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/PlaceholderDetailScreen.swiftdeps",
+    "swiftmodule" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/.derivedData/Build/Intermediates.noindex/Pero.build/Debug-iphonesimulator/Pero.build/Objects-normal/arm64/PlaceholderDetailScreen~partial.swiftmodule"
+  }
+}

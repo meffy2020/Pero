@@ -1,0 +1,56 @@
+{
+  "source": "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/liquid-glass-migratio-1d791323/worktrees/worker-2/ios/Pero/Screens/PlaceholderDetailScreen.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "추천 이유",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 37
+        }
+      },
+      {
+        "comment": "",
+        "key": "추천 근거",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 21
+        }
+      },
+      {
+        "comment": "",
+        "key": "태그",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 27
+        }
+      },
+      {
+        "comment": "",
+        "key": "지도에서 위치 확인",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 33
+        }
+      },
+      {
+        "comment": "",
+        "key": "태그 정보 없음",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 46
+        }
+      },
+      {
+        "comment": "",
+        "key": "#%@",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 51
+        }
+      }
+    ]
+  },
+  "version": 1
+}
