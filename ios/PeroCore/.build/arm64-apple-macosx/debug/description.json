@@ -1,0 +1,716 @@
+{
+  "builtTestProducts" : [
+    {
+      "binaryPath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCorePackageTests.xctest/Contents/MacOS/PeroCorePackageTests",
+      "packagePath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore",
+      "productName" : "PeroCorePackageTests"
+    }
+  ],
+  "copyCommands" : {
+
+  },
+  "explicitTargetDependencyImportCheckingMode" : {
+    "none" : {
+
+    }
+  },
+  "generatedSourceTargetSet" : [
+
+  ],
+  "pluginDescriptions" : [
+
+  ],
+  "swiftCommands" : {
+    "C.PeroCore-arm64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/sources",
+      "importPath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/API/PeroAPIClient.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/API/PeroAPIProvider.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/API/PeroEndpoint.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/Models/PlaceModels.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/Models/SearchModels.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/Models/ThemeModels.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "PeroCore",
+      "moduleOutputPath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/Modules/PeroCore.swiftmodule",
+      "objects" : [
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/PeroAPIClient.swift.o",
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/PeroAPIProvider.swift.o",
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/PeroEndpoint.swift.o",
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/PlaceModels.swift.o",
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/SearchModels.swift.o",
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/ThemeModels.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j8",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/include/PeroCore-Swift.h",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "perocore"
+      ],
+      "outputFileMapPath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/PeroAPIClient.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/PeroAPIProvider.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/PeroEndpoint.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/PlaceModels.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/SearchModels.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/ThemeModels.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/Modules/PeroCore.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/API/PeroAPIClient.swift",
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/API/PeroAPIProvider.swift",
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/API/PeroEndpoint.swift",
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/Models/PlaceModels.swift",
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/Models/SearchModels.swift",
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/Models/ThemeModels.swift"
+      ],
+      "tempsPath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.PeroCorePackageTests-arm64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCorePackageTests.build/sources",
+      "importPath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCorePackageTests.derived/runner.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/Modules/PeroCoreTests.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCorePackageTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "PeroCorePackageTests",
+      "moduleOutputPath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/Modules/PeroCorePackageTests.swiftmodule",
+      "objects" : [
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCorePackageTests.build/runner.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j8",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCorePackageTests.build/include/PeroCorePackageTests-Swift.h",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "perocore"
+      ],
+      "outputFileMapPath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCorePackageTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCorePackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/Modules/PeroCorePackageTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCorePackageTests.derived/runner.swift"
+      ],
+      "tempsPath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCorePackageTests.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.PeroCoreTests-arm64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCoreTests.build/sources",
+      "importPath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Tests/PeroCoreTests/PeroAPIClientTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Tests/PeroCoreTests/PeroEndpointTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/Modules/PeroCore.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCoreTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "PeroCoreTests",
+      "moduleOutputPath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/Modules/PeroCoreTests.swiftmodule",
+      "objects" : [
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCoreTests.build/PeroAPIClientTests.swift.o",
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCoreTests.build/PeroEndpointTests.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j8",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "perocore"
+      ],
+      "outputFileMapPath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCoreTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCoreTests.build/PeroAPIClientTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCoreTests.build/PeroEndpointTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/Modules/PeroCoreTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Tests/PeroCoreTests/PeroAPIClientTests.swift",
+        "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Tests/PeroCoreTests/PeroEndpointTests.swift"
+      ],
+      "tempsPath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCoreTests.build",
+      "wholeModuleOptimization" : false
+    }
+  },
+  "swiftFrontendCommands" : {
+
+  },
+  "swiftTargetScanArgs" : {
+    "PeroCore" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "PeroCore",
+      "-package-name",
+      "perocore",
+      "-c",
+      "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/API/PeroAPIClient.swift",
+      "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/API/PeroAPIProvider.swift",
+      "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/API/PeroEndpoint.swift",
+      "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/Models/PlaceModels.swift",
+      "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/Models/SearchModels.swift",
+      "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/Models/ThemeModels.swift",
+      "-I",
+      "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j8",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/include/PeroCore-Swift.h",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "perocore",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "PeroCorePackageTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "PeroCorePackageTests",
+      "-package-name",
+      "perocore",
+      "-c",
+      "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCorePackageTests.derived/runner.swift",
+      "-I",
+      "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j8",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCorePackageTests.build/include/PeroCorePackageTests-Swift.h",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "perocore",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "PeroCoreTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "PeroCoreTests",
+      "-package-name",
+      "perocore",
+      "-c",
+      "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Tests/PeroCoreTests/PeroAPIClientTests.swift",
+      "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Tests/PeroCoreTests/PeroEndpointTests.swift",
+      "-I",
+      "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j8",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "perocore",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ]
+  },
+  "targetDependencyMap" : {
+    "PeroCore" : [
+
+    ],
+    "PeroCorePackageTests" : [
+      "PeroCoreTests",
+      "PeroCore"
+    ],
+    "PeroCoreTests" : [
+      "PeroCore"
+    ]
+  },
+  "testDiscoveryCommands" : {
+
+  },
+  "testEntryPointCommands" : {
+    "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCorePackageTests.derived/runner.swift" : {
+      "inputs" : [
+
+      ],
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCorePackageTests.derived/runner.swift"
+        }
+      ]
+    }
+  },
+  "traitConfiguration" : {
+    "default" : {
+
+    }
+  },
+  "writeCommands" : {
+    "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/API/PeroAPIClient.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/API/PeroAPIProvider.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/API/PeroEndpoint.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/Models/PlaceModels.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/Models/SearchModels.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Sources/PeroCore/Models/ThemeModels.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/sources"
+    },
+    "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCorePackageTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCorePackageTests.derived/runner.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCorePackageTests.build/sources"
+    },
+    "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCorePackageTests.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/PeroAPIClient.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/PeroAPIProvider.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/PeroEndpoint.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/PlaceModels.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/SearchModels.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCore.build/ThemeModels.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCorePackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCoreTests.build/PeroAPIClientTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCoreTests.build/PeroEndpointTests.swift.o"
+        }
+      ],
+      "outputFilePath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCorePackageTests.product/Objects.LinkFileList"
+    },
+    "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCoreTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Tests/PeroCoreTests/PeroAPIClientTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/Tests/PeroCoreTests/PeroEndpointTests.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/PeroCoreTests.build/sources"
+    },
+    "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt" : {
+      "alwaysOutOfDate" : true,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<swift-get-version>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+        }
+      ],
+      "outputFilePath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/ultragoal-g001-implem-1d791323/worktrees/worker-2/ios/PeroCore/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+    }
+  }
+}
