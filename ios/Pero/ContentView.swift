@@ -26,11 +26,20 @@ struct ContentView: View {
 
     @ViewBuilder
     private func routeView(for route: AppRoute) -> some View {
-        switch route {
-        case .recommendationDetail(let card):
-            PlaceExplanationDetailScreen(card: card)
-        case .mapFocus(let card):
-            MapScreen(card: card)
+        if let selectedCard = viewModel.card(for: route.cardID) {
+            switch route {
+            case .recommendationDetail:
+                PlaceExplanationDetailScreen(card: selectedCard)
+            case .mapFocus:
+                MapScreen(card: selectedCard)
+            }
+        } else {
+            StateMessageView(
+                icon: "exclamationmark.triangle",
+                title: "추천 정보를 다시 불러와 주세요",
+                message: "선택한 추천 카드가 현재 목록에서 사라졌습니다."
+            )
+            .padding()
         }
     }
 }
@@ -129,6 +138,10 @@ final class RecommendationViewModel: ObservableObject {
             locationLabel = "위치 또는 추천 서버 확인 필요"
             state = .error("현재 위치 기반 추천을 불러오지 못했습니다. \(error.localizedDescription)")
         }
+    }
+
+    func card(for id: RecommendationCardModel.ID) -> RecommendationCardModel? {
+        cards.first { $0.id == id }
     }
 
     nonisolated static func normalize(response: RecommendationResponse) -> [RecommendationCardModel] {

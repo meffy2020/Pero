@@ -15,9 +15,40 @@ struct RecommendationCardModel: Identifiable, Hashable {
     let tags: [String]
 }
 
+extension RecommendationCardModel {
+    var categoryIconName: String {
+        switch category {
+        case let value where value.contains("음식") || value.contains("식당"):
+            "fork.knife.circle.fill"
+        case let value where value.contains("전시") || value.contains("문화"):
+            "building.columns.circle.fill"
+        default:
+            "leaf.circle.fill"
+        }
+    }
+
+    var appleMapsURL: URL? {
+        var components = URLComponents()
+        components.scheme = "http"
+        components.host = "maps.apple.com"
+        components.queryItems = [
+            URLQueryItem(name: "ll", value: "\(latitude),\(longitude)"),
+            URLQueryItem(name: "q", value: title)
+        ]
+        return components.url
+    }
+}
+
 enum AppRoute: Hashable {
-    case recommendationDetail(RecommendationCardModel)
-    case mapFocus(RecommendationCardModel)
+    case recommendationDetail(cardID: RecommendationCardModel.ID)
+    case mapFocus(cardID: RecommendationCardModel.ID)
+
+    var cardID: RecommendationCardModel.ID {
+        switch self {
+        case .recommendationDetail(let cardID), .mapFocus(let cardID):
+            cardID
+        }
+    }
 }
 
 enum RecommendationState: Equatable {

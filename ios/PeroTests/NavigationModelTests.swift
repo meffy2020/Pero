@@ -4,13 +4,12 @@ import Testing
 @testable import PeroCore
 
 struct NavigationModelTests {
-    @Test func routesCarryStableRecommendationPayloads() {
+    @Test func routesCarryStableRecommendationIDs() {
         let card = RecommendationCardModel.sample
-        let routes: Set<AppRoute> = [.recommendationDetail(card), .mapFocus(card)]
+        let routes: Set<AppRoute> = [.recommendationDetail(cardID: card.id), .mapFocus(cardID: card.id)]
         #expect(routes.count == 2)
-        #expect(card.id == "preview-seoul-park")
-        #expect(card.latitude.isFinite)
-        #expect(card.longitude.isFinite)
+        #expect(AppRoute.recommendationDetail(cardID: card.id).cardID == "preview-seoul-park")
+        #expect(AppRoute.mapFocus(cardID: card.id).cardID == "preview-seoul-park")
     }
 
     @Test func recommendationStatesExposeKoreanCopy() {

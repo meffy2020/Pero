@@ -83,7 +83,7 @@ struct MapScreen: View {
             .fixedSize(horizontal: false, vertical: true)
         }
         Spacer()
-        Image(systemName: iconName)
+        Image(systemName: card.categoryIconName)
           .font(.title2.weight(.bold))
           .foregroundStyle(.blue)
           .frame(width: 48, height: 48)
@@ -98,14 +98,21 @@ struct MapScreen: View {
       .foregroundStyle(.secondary)
 
       HStack(spacing: 10) {
-        Link(destination: appleMapsURL) {
-          Label("애플 지도 열기", systemImage: "arrow.up.right.square")
+        if let appleMapsURL = card.appleMapsURL {
+          Link(destination: appleMapsURL) {
+            Label("애플 지도 열기", systemImage: "arrow.up.right.square")
+              .frame(maxWidth: .infinity)
+          }
+          .buttonStyle(.borderedProminent)
+          .controlSize(.large)
+        } else {
+          Label("지도 링크 없음", systemImage: "exclamationmark.triangle")
             .frame(maxWidth: .infinity)
+            .buttonStyle(.bordered)
+            .controlSize(.large)
         }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
 
-        NavigationLink(value: AppRoute.recommendationDetail(card)) {
+        NavigationLink(value: AppRoute.recommendationDetail(cardID: card.id)) {
           Label("추천 이유", systemImage: "sparkles")
             .frame(maxWidth: .infinity)
         }
@@ -119,23 +126,6 @@ struct MapScreen: View {
     .shadow(color: .black.opacity(0.14), radius: 24, y: 14)
   }
 
-  private var iconName: String {
-    switch card.category {
-    case let value where value.contains("음식") || value.contains("식당"):
-      "fork.knife.circle.fill"
-    case let value where value.contains("전시") || value.contains("문화"):
-      "building.columns.circle.fill"
-    default:
-      "leaf.circle.fill"
-    }
-  }
-
-  private var appleMapsURL: URL {
-    let encodedTitle =
-      card.title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? card.title
-    return URL(
-      string: "http://maps.apple.com/?ll=\(card.latitude),\(card.longitude)&q=\(encodedTitle)")!
-  }
 }
 
 extension View {
@@ -150,7 +140,8 @@ extension View {
     } else {
       self
         .background(
-          .regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+          .background.opacity(0.92),
+          in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         )
         .overlay {
           RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)

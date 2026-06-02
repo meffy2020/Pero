@@ -3,13 +3,6 @@ import SwiftUI
 struct PlaceExplanationDetailScreen: View {
   let card: RecommendationCardModel
 
-  private var appleMapsURL: URL {
-    let encodedTitle =
-      card.title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? card.title
-    return URL(
-      string: "http://maps.apple.com/?ll=\(card.latitude),\(card.longitude)&q=\(encodedTitle)")!
-  }
-
   var body: some View {
     ZStack {
       detailBackdrop
@@ -60,7 +53,7 @@ struct PlaceExplanationDetailScreen: View {
             .fixedSize(horizontal: false, vertical: true)
         }
         Spacer()
-        CategoryBadge(category: card.category)
+        CategoryBadge(category: card.category, iconName: card.categoryIconName)
       }
 
       HStack(spacing: 10) {
@@ -74,7 +67,7 @@ struct PlaceExplanationDetailScreen: View {
 
   private var actionRow: some View {
     HStack(spacing: 12) {
-      NavigationLink(value: AppRoute.mapFocus(card)) {
+      NavigationLink(value: AppRoute.mapFocus(cardID: card.id)) {
         VStack(alignment: .leading, spacing: 8) {
           Image(systemName: "map.fill")
             .font(.title2.weight(.bold))
@@ -90,21 +83,36 @@ struct PlaceExplanationDetailScreen: View {
       .buttonStyle(.plain)
       .detailScreenGlass(cornerRadius: 24, tint: .blue.opacity(0.16), interactive: true)
 
-      Link(destination: appleMapsURL) {
+      if let appleMapsURL = card.appleMapsURL {
+        Link(destination: appleMapsURL) {
+          VStack(alignment: .leading, spacing: 8) {
+            Image(systemName: "arrow.triangle.turn.up.right.circle.fill")
+              .font(.title2.weight(.bold))
+            Text("길찾기 열기")
+              .font(.headline)
+            Text("애플 지도에서 바로 이동을 이어갑니다.")
+              .font(.caption)
+              .foregroundStyle(.secondary)
+          }
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .padding(16)
+        }
+        .buttonStyle(.plain)
+        .detailScreenGlass(cornerRadius: 24, tint: .cyan.opacity(0.16), interactive: true)
+      } else {
         VStack(alignment: .leading, spacing: 8) {
-          Image(systemName: "arrow.triangle.turn.up.right.circle.fill")
+          Image(systemName: "exclamationmark.triangle.fill")
             .font(.title2.weight(.bold))
-          Text("길찾기 열기")
+          Text("지도 링크 없음")
             .font(.headline)
-          Text("애플 지도에서 바로 이동을 이어갑니다.")
+          Text("장소 좌표를 다시 확인해 주세요.")
             .font(.caption)
             .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
+        .detailScreenGlass(cornerRadius: 24, tint: .gray.opacity(0.12))
       }
-      .buttonStyle(.plain)
-      .detailScreenGlass(cornerRadius: 24, tint: .cyan.opacity(0.16), interactive: true)
     }
   }
 
@@ -132,6 +140,7 @@ struct PlaceExplanationDetailScreen: View {
 
 private struct CategoryBadge: View {
   let category: String
+  let iconName: String
 
   var body: some View {
     VStack(spacing: 6) {
@@ -144,17 +153,6 @@ private struct CategoryBadge: View {
     .foregroundStyle(.blue)
     .frame(width: 70, height: 70)
     .detailScreenGlass(cornerRadius: 22, tint: .blue.opacity(0.14))
-  }
-
-  private var iconName: String {
-    switch category {
-    case let value where value.contains("음식") || value.contains("식당"):
-      "fork.knife.circle.fill"
-    case let value where value.contains("전시") || value.contains("문화"):
-      "building.columns.circle.fill"
-    default:
-      "leaf.circle.fill"
-    }
   }
 }
 

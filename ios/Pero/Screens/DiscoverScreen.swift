@@ -138,13 +138,13 @@ struct HomeRecommendationScreen: View {
 
             if let firstCard = viewModel.cards.first {
                 HStack(spacing: 10) {
-                    NavigationLink(value: AppRoute.mapFocus(firstCard)) {
+                    NavigationLink(value: AppRoute.mapFocus(cardID: firstCard.id)) {
                         Label("지도에서 확인", systemImage: "map.fill")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
 
-                    NavigationLink(value: AppRoute.recommendationDetail(firstCard)) {
+                    NavigationLink(value: AppRoute.recommendationDetail(cardID: firstCard.id)) {
                         Label("추천 이유 보기", systemImage: "sparkles")
                             .frame(maxWidth: .infinity)
                     }
@@ -273,7 +273,7 @@ private struct MapPreviewCard: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Label("Map-first discovery", systemImage: "map")
+                Label("지도 우선 탐색", systemImage: "map")
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.white.opacity(0.88))
                 Text(card?.title ?? "추천 지도를 준비 중입니다")
@@ -309,13 +309,13 @@ private struct RecommendationCard: View {
         VStack(alignment: .leading, spacing: 14) {
             RecommendationCardRow(card: card)
             HStack(spacing: 10) {
-                NavigationLink(value: AppRoute.mapFocus(card)) {
+                NavigationLink(value: AppRoute.mapFocus(cardID: card.id)) {
                     Label("지도에서 확인", systemImage: "map")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
 
-                NavigationLink(value: AppRoute.recommendationDetail(card)) {
+                NavigationLink(value: AppRoute.recommendationDetail(cardID: card.id)) {
                     Label("추천 이유", systemImage: "sparkles")
                         .frame(maxWidth: .infinity)
                 }
