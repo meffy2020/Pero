@@ -12,6 +12,7 @@ from typing import Any
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT = ROOT_DIR / "backend/src/main/resources/data/places.json"
+DEFAULT_SMART_OUTPUT = ROOT_DIR / "backend/src/main/resources/data/places.smartseoul.json"
 KST = timezone(timedelta(hours=9))
 
 _REGION_SHORT_NAMES = {
@@ -109,11 +110,32 @@ def place_completeness_score(place: dict[str, Any]) -> int:
         "address",
         "roadAddress",
         "summary",
+        "sourceAttribution",
     )
     score = sum(1 for field in scalar_fields if normalize_text(place.get(field)))
     score += len(place.get("tags", []))
+    score += len(place.get("themeTags", []))
     score += len(place.get("searchHints", []))
+    tour_api = place.get("tourApi") or {}
+    common = tour_api.get("common") or {}
+    images = tour_api.get("images") or []
+    score += len(common)
+    score += len(images)
     return score
+
+
+def read_generated_at_from_meta(output: Path) -> datetime | None:
+    meta_path = output.with_suffix(output.suffix + ".meta.json")
+    if not meta_path.exists():
+        return None
+    try:
+        payload = json.loads(meta_path.read_text(encoding="utf-8"))
+        generated_at = normalize_text(payload.get("generatedAt"))
+        if not generated_at:
+            return None
+        return datetime.fromisoformat(generated_at)
+    except Exception:
+        return None
 
 
 def write_places_with_metadata(

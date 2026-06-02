@@ -10,15 +10,16 @@ public record PlaceDataLoadResult(
         String providerName,
         OffsetDateTime generatedAt,
         String sourceStatus,
+        int count,
         List<PlaceSeed> places
 ) {
 
     public static PlaceDataLoadResult disabled(String providerId, String providerName) {
-        return new PlaceDataLoadResult(providerId, providerName, null, "disabled", List.of());
+        return new PlaceDataLoadResult(providerId, providerName, null, "disabled", 0, List.of());
     }
 
     public static PlaceDataLoadResult missing(String providerId, String providerName, String status) {
-        return new PlaceDataLoadResult(providerId, providerName, null, status, List.of());
+        return new PlaceDataLoadResult(providerId, providerName, null, status, 0, List.of());
     }
 
     public static PlaceDataLoadResult loaded(
@@ -26,9 +27,13 @@ public record PlaceDataLoadResult(
             String providerName,
             OffsetDateTime generatedAt,
             String status,
+            int count,
             List<PlaceSeed> places
     ) {
-        return new PlaceDataLoadResult(providerId, providerName, generatedAt, status, List.copyOf(places));
+        return new PlaceDataLoadResult(providerId, providerName, generatedAt, status, count, List.copyOf(places));
+    }
+
+    public boolean hasPlaces() {
+        return !places.isEmpty();
     }
 }
-

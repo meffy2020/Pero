@@ -14,7 +14,7 @@ public class SmartSeoulPlaceDataProvider extends AbstractCachedPlaceDataProvider
     public SmartSeoulPlaceDataProvider(
             ObjectMapper objectMapper,
             ResourceLoader resourceLoader,
-            @Value("${pero.providers.smartSeoul.enabled:false}") boolean enabled,
+            @Value("${pero.providers.smartSeoul.enabled:true}") boolean enabled,
             @Value("${pero.providers.smartSeoul.cache-resource:classpath:data/places.smartseoul.json}") String cacheResourceLocation,
             @Value("${pero.providers.smartSeoul.meta-resource:classpath:data/places.smartseoul.json.meta.json}") String metadataResourceLocation
     ) {

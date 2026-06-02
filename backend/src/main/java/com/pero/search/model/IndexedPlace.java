@@ -15,10 +15,13 @@ public record IndexedPlace(
         double longitude,
         String summary,
         List<String> tags,
+        List<String> themeTags,
+        String sourceAttribution,
         List<IndexedEvidence> evidenceCandidates,
         Map<String, Integer> termFrequencies,
         Set<String> featureTokens,
         int documentLength,
-        double[] embedding
+        double[] embedding,
+        TourApiSeed tourApi
 ) {
 }

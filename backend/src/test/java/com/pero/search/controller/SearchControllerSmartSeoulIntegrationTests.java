@@ -85,6 +85,7 @@ class SearchControllerSmartSeoulIntegrationTests {
     @DynamicPropertySource
     static void registerSmartSeoulProperties(DynamicPropertyRegistry registry) {
         registry.add("pero.providers.order", () -> "smartSeoul,koreaTour");
+        registry.add("pero.providers.koreaTour.enabled", () -> "false");
         registry.add("pero.providers.smartSeoul.enabled", () -> "true");
         registry.add("pero.providers.smartSeoul.cache-resource", () -> SMART_CACHE_PATH.toUri().toString());
         registry.add("pero.providers.smartSeoul.meta-resource", () -> SMART_META_PATH.toUri().toString());
@@ -106,7 +107,7 @@ class SearchControllerSmartSeoulIntegrationTests {
         assertThat(response.source().count()).isEqualTo(2);
         assertThat(response.total()).isEqualTo(2);
         assertThat(response.places())
-                .extracting(place -> place.get("id"))
+                .extracting(place -> place.id())
                 .containsExactlyInAnyOrder("smart-night-1", "smart-book-1");
     }
 

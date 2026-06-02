@@ -1,704 +1,657 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import styles from "./page.module.css";
 import type {
+  EventsResponse,
+  PlaceComparisonItem,
   PlaceResult,
-  SearchMode,
   SearchResponse,
-  SearchSourceMeta,
+  ThemeDetail,
+  ThemeEvent,
+  ThemePlace,
+  ThemeSummary,
 } from "./search-types";
 
 const SearchMap = dynamic(
   () => import("./components/search-map").then((module) => module.SearchMap),
   {
     ssr: false,
-    loading: () => <div className={styles.mapLoadingShell}>지도를 준비하는 중입니다.</div>,
+    loading: () => <div className={styles.mapSkeleton}>지도를 불러오는 중입니다.</div>,
   },
 );
 
-const DEFAULT_QUERY = "조용하게 오래 머물 수 있는 카페";
-
-type ServiceLocation = {
-  id: string;
-  label: string;
-  detail: string;
-  latitude: string | null;
-  longitude: string | null;
+type ThemeBootState = "loading" | "ready" | "error";
+type ThemeDetailState = "idle" | "loading" | "ready" | "error";
+type SearchOverrideState = "idle" | "loading" | "active" | "error";
+const INITIAL_PLACE_LIST_LIMIT = 24;
+const HTML_ENTITY_MAP: Record<string, string> = {
+  "&nbsp;": " ",
+  "&amp;": "&",
+  "&quot;": '"',
+  "&#39;": "'",
+  "&lt;": "<",
+  "&gt;": ">",
 };
 
-type SearchUiState = "idle" | "loading" | "success" | "error";
-
-const serviceLocations: ServiceLocation[] = [
-  {
-    id: "all",
-    label: "대한민국 전체",
-    detail: "전국 기반 검색",
-    latitude: null,
-    longitude: null,
-  },
-  {
-    id: "seoul",
-    label: "서울",
-    detail: "서울권 중심 검색",
-    latitude: "37.5665",
-    longitude: "126.978",
-  },
-  {
-    id: "busan",
-    label: "부산",
-    detail: "부산권 중심 검색",
-    latitude: "35.1796",
-    longitude: "129.0756",
-  },
-  {
-    id: "daegu",
-    label: "대구",
-    detail: "대구권 중심 검색",
-    latitude: "35.8714",
-    longitude: "128.6014",
-  },
-];
-
-const radiusOptions = ["1", "3", "5", "8"];
-const searchModes: { value: SearchMode; label: string; helper: string }[] = [
-  { value: "HYBRID", label: "HYBRID", helper: "문맥+키워드+거리" },
-  { value: "KEYWORD", label: "KEYWORD", helper: "명확한 단어 매칭" },
-  { value: "VECTOR", label: "VECTOR", helper: "의도와 분위기 중심" },
-];
-
-const exampleQueries = [
-  "집중해서 공부하기 좋은 카페",
-  "아이와 함께 가기 편한 브런치",
-  "반려동물과 들어갈 수 있는 카페",
-];
-
-function toNumberOrNull(value: string): number | null {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
+function sourceLabel(sourceAttribution: string | null | undefined): string {
+  if (!sourceAttribution) {
+    return "출처 미확인";
+  }
+  if (sourceAttribution === "merged") {
+    return "스마트서울맵 + 한국관광공사";
+  }
+  if (sourceAttribution === "smartSeoul") {
+    return "스마트서울맵";
+  }
+  if (sourceAttribution === "koreaTour") {
+    return "한국관광공사";
+  }
+  return sourceAttribution;
 }
 
-function getDistanceKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
-  const r = 6_371;
-  const toRad = (degree: number) => (degree * Math.PI) / 180;
-  const deltaLat = toRad(bLat - aLat);
-  const deltaLng = toRad(bLng - aLng);
-  const latA = toRad(aLat);
-  const latB = toRad(bLat);
-  const haversine =
-    Math.sin(deltaLat / 2) ** 2 + Math.cos(latA) * Math.cos(latB) * Math.sin(deltaLng / 2) ** 2;
-
-  return 2 * r * Math.asin(Math.min(1, Math.sqrt(haversine)));
+function buildMapUrl(latitude: number, longitude: number): string {
+  return `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
 }
 
-function buildRouteStops(places: PlaceResult[], anchorId: string | null, count = 4): PlaceResult[] {
-  if (places.length < 2) {
-    return places;
-  }
-
-  const ordered: PlaceResult[] = [];
-  const start = places.find((place) => place.id === anchorId) ?? places[0];
-  const remaining = places.filter((place) => place.id !== start.id);
-  ordered.push(start);
-
-  while (ordered.length < Math.min(count, places.length)) {
-    const last = ordered[ordered.length - 1];
-    let nearestIndex = 0;
-    let nearestDistance = Number.POSITIVE_INFINITY;
-
-    remaining.forEach((candidate, index) => {
-      const candidateDistance = getDistanceKm(last.latitude, last.longitude, candidate.latitude, candidate.longitude);
-      if (candidateDistance < nearestDistance) {
-        nearestDistance = candidateDistance;
-        nearestIndex = index;
-      }
-    });
-
-    const nearest = remaining[nearestIndex];
-    ordered.push(nearest);
-    remaining.splice(nearestIndex, 1);
-  }
-
-  return ordered;
+function decodeHtmlEntities(value: string): string {
+  return value.replace(/&nbsp;|&amp;|&quot;|&#39;|&lt;|&gt;/g, (entity) => HTML_ENTITY_MAP[entity] ?? entity);
 }
 
-function getRouteLengthKm(stops: PlaceResult[]): number {
-  if (stops.length < 2) {
-    return 0;
-  }
-
-  let distance = 0;
-  for (let index = 1; index < stops.length; index += 1) {
-    const from = stops[index - 1];
-    const to = stops[index];
-    distance += getDistanceKm(from.latitude, from.longitude, to.latitude, to.longitude);
-  }
-
-  return distance;
-}
-
-function formatGeneratedAt(value: string | undefined | null): string {
+function sanitizeRichText(value: string | null | undefined): string {
   if (!value) {
-    return "미입력";
+    return "";
   }
 
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return parsed.toLocaleString("ko-KR");
+  return decodeHtmlEntities(
+    value
+      .replace(/<\s*br\s*\/?\s*>/gi, "\n")
+      .replace(/<\/(p|div|li)>/gi, "\n")
+      .replace(/<li[^>]*>/gi, "- ")
+      .replace(/\s*※\s*/g, "\n※ ")
+      .replace(/<[^>]+>/g, " "),
+  )
+    .replace(/\r/g, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
 }
 
-function buildSourceBadges(source: SearchSourceMeta | undefined | null): string[] {
-  if (!source) {
+function metadataSegments(value: string | null | undefined): string[] {
+  return sanitizeRichText(value)
+    .split("\n")
+    .map((segment) => segment.replace(/^[\s\-•]+/, "").trim())
+    .filter(Boolean);
+}
+
+function labeledChips(label: string, value: string | null | undefined, limit: number): string[] {
+  return metadataSegments(value)
+    .slice(0, limit)
+    .map((segment) => `${label} ${segment}`);
+}
+
+function getRepresentativeImageUrl(place: ThemePlace | PlaceResult | null): string | null {
+  const image = place?.tourApi?.images?.find((item) => item.originImgUrl || item.smallImageUrl);
+  return image?.originImgUrl ?? image?.smallImageUrl ?? null;
+}
+
+function toComparisonItem(place: ThemePlace | PlaceResult): PlaceComparisonItem {
+  return {
+    id: place.id,
+    name: place.name,
+    category: place.category,
+    district: place.district,
+    roadAddress: place.roadAddress,
+    summary: place.summary,
+    tags: place.tags,
+    themeTags: place.themeTags,
+    latitude: place.latitude,
+    longitude: place.longitude,
+    sourceAttribution: place.sourceAttribution,
+    distanceKm: "distanceKm" in place ? place.distanceKm : null,
+    reason: "reason" in place ? place.reason : null,
+    evidence: "evidence" in place ? place.evidence : null,
+    sourceLabel: sourceLabel(place.sourceAttribution),
+    tourApi: place.tourApi,
+  };
+}
+
+function buildMetaChips(place: ThemePlace | PlaceResult | null): string[] {
+  if (!place) {
     return [];
   }
 
-  return [
-    `출처: ${source.providerName}`,
-    `상태: ${source.status}`,
-    `건수: ${source.count}건`,
-    `갱신: ${formatGeneratedAt(source.generatedAt)}`,
-  ];
+  const chips: string[] = [];
+  const common = place.tourApi?.common;
+  const pet = place.tourApi?.pet;
+
+  if ("distanceKm" in place && place.distanceKm != null) {
+    chips.push(`${place.distanceKm.toFixed(2)}km`);
+  }
+  chips.push(...labeledChips("운영", common?.useTime, 2));
+  chips.push(...labeledChips("휴무", common?.restDate, 1));
+  chips.push(...labeledChips("주차", common?.parking, 2));
+  if (pet?.petTursmInfo || pet?.acmpyPsblCpam) {
+    chips.push(...labeledChips("반려", pet.petTursmInfo ?? pet.acmpyPsblCpam, 1));
+  }
+  for (const tag of place.themeTags ?? []) {
+    if (chips.length >= 4) {
+      break;
+    }
+    const normalizedTag = sanitizeRichText(tag);
+    if (!normalizedTag) {
+      continue;
+    }
+    chips.push(normalizedTag);
+  }
+
+  return chips.slice(0, 4);
+}
+
+function buildSelectionChips(place: ThemePlace | PlaceResult | null): string[] {
+  if (!place) {
+    return [];
+  }
+
+  const common = place.tourApi?.common;
+  const pet = place.tourApi?.pet;
+  const chips = [`지역 ${sanitizeRichText(place.district)}`, `출처 ${sourceLabel(place.sourceAttribution)}`];
+
+  if ("distanceKm" in place && place.distanceKm != null) {
+    chips.push(`거리 ${place.distanceKm.toFixed(2)}km`);
+  }
+
+  chips.push(...labeledChips("운영", common?.useTime, 3));
+  chips.push(...labeledChips("휴무", common?.restDate, 1));
+  chips.push(...labeledChips("주차", common?.parking, 2));
+  chips.push(...labeledChips("요금", common?.useFee, 1));
+
+  if (pet?.petTursmInfo || pet?.acmpyPsblCpam) {
+    chips.push(...labeledChips("반려", pet.petTursmInfo ?? pet.acmpyPsblCpam, 1));
+  }
+
+  return chips.filter(Boolean).slice(0, 8);
+}
+
+function selectedPlaceLead(place: ThemePlace | PlaceResult | null, fallback: string): string {
+  if (!place) {
+    return fallback;
+  }
+  if ("evidence" in place && place.evidence) {
+    return sanitizeRichText(place.evidence);
+  }
+  if ("reason" in place && place.reason) {
+    return sanitizeRichText(place.reason);
+  }
+  return sanitizeRichText(fallback);
 }
 
 export default function Home() {
-  const defaultLocation = serviceLocations[0];
-
-  const [query, setQuery] = useState(DEFAULT_QUERY);
-  const [locationId, setLocationId] = useState(defaultLocation.id);
-  const [latitude, setLatitude] = useState(defaultLocation.latitude ?? "");
-  const [longitude, setLongitude] = useState(defaultLocation.longitude ?? "");
-  const [locationLabel, setLocationLabel] = useState(
-    `${defaultLocation.label} · ${defaultLocation.detail}`,
-  );
-  const [radiusKm, setRadiusKm] = useState("3");
-  const [searchMode, setSearchMode] = useState<SearchMode>("HYBRID");
-  const [response, setResponse] = useState<SearchResponse | null>(null);
-  const [searchState, setSearchState] = useState<SearchUiState>("idle");
-  const [locating, setLocating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [themeBootState, setThemeBootState] = useState<ThemeBootState>("loading");
+  const [themeDetailState, setThemeDetailState] = useState<ThemeDetailState>("idle");
+  const [searchState, setSearchState] = useState<SearchOverrideState>("idle");
+  const [bootError, setBootError] = useState<string | null>(null);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [themes, setThemes] = useState<ThemeSummary[]>([]);
+  const [activeThemeId, setActiveThemeId] = useState<string | null>(null);
+  const [themeDetail, setThemeDetail] = useState<ThemeDetail | null>(null);
+  const [eventsResponse, setEventsResponse] = useState<EventsResponse | null>(null);
+  const [query, setQuery] = useState("");
+  const [searchResponse, setSearchResponse] = useState<SearchResponse | null>(null);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [hoveredPlaceId, setHoveredPlaceId] = useState<string | null>(null);
-  const [clusterMode, setClusterMode] = useState(false);
-  const [routeMode, setRouteMode] = useState(false);
-  const loading = searchState === "loading";
-
-  const handleSelectPlace = useCallback((placeId: string) => {
-    setSelectedPlaceId(placeId);
-    setHoveredPlaceId(placeId);
-  }, []);
-  const handleHoverPlace = useCallback((placeId: string | null) => {
-    setHoveredPlaceId(placeId);
-  }, []);
-
-  function applyLocation(location: ServiceLocation) {
-    setLocationId(location.id);
-    setLatitude(location.latitude ?? "");
-    setLongitude(location.longitude ?? "");
-    setLocationLabel(`${location.label} · ${location.detail}`);
-  }
-
-  const runSearch = useCallback(
-    async (event?: FormEvent<HTMLFormElement>) => {
-      event?.preventDefault();
-      if (!query.trim()) {
-        setError("검색어를 입력해 주세요.");
-        setSearchState("error");
-        setResponse(null);
-        setSelectedPlaceId(null);
-        return;
-      }
-
-      setSearchState("loading");
-      setError(null);
-
-      const hasLocation = latitude !== "" && longitude !== "";
-      const payload = {
-        query,
-        mode: searchMode,
-        latitude: hasLocation ? Number(latitude) : undefined,
-        longitude: hasLocation ? Number(longitude) : undefined,
-        radiusKm: hasLocation ? Number(radiusKm) : undefined,
-        topK: 20,
-      };
-
-      try {
-        const result = await fetch("/api/search", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-        if (!result.ok) {
-          const detail = await result.text();
-          throw new Error(
-            `검색 API 요청 실패 (${result.status})${detail ? `: ${detail}` : ""}`,
-          );
-        }
-
-        const data = (await result.json()) as SearchResponse;
-        setResponse(data);
-        setSearchState("success");
-        setSelectedPlaceId(data.results[0]?.id ?? null);
-      } catch (searchError) {
-        const message =
-          searchError instanceof Error && searchError.message
-            ? searchError.message
-            : "서버 응답을 가져오지 못했습니다.";
-        setError(message);
-        setSearchState("error");
-        setResponse(null);
-        setSelectedPlaceId(null);
-      }
-    },
-    [query, searchMode, latitude, longitude, radiusKm],
-  );
-
-  function requestCurrentLocation() {
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setError("이 브라우저에서는 현재 위치를 가져올 수 없습니다.");
-      return;
-    }
-
-    setLocating(true);
-    setError(null);
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLatitude(position.coords.latitude.toFixed(4));
-        setLongitude(position.coords.longitude.toFixed(4));
-        setLocationId("");
-        setLocationLabel("현재 위치");
-        setLocating(false);
-      },
-      () => {
-        setError("위치 권한을 확인한 뒤 다시 시도해 주세요.");
-        setLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 8000 },
-    );
-  }
-
-  const mapCenter = useMemo(() => {
-    const parsedLatitude = toNumberOrNull(latitude);
-    const parsedLongitude = toNumberOrNull(longitude);
-
-    if (parsedLatitude === null || parsedLongitude === null) {
-      return null;
-    }
-
-    return { latitude: parsedLatitude, longitude: parsedLongitude };
-  }, [latitude, longitude]);
-  const radiusValue = useMemo(() => toNumberOrNull(radiusKm), [radiusKm]);
-  const hasRadiusFilter = mapCenter !== null && radiusValue !== null && radiusValue > 0;
-
-  const searchResults = useMemo(() => response?.results ?? [], [response]);
-  const results = useMemo(() => {
-    if (!hasRadiusFilter || !mapCenter) {
-      return searchResults;
-    }
-
-    return searchResults.filter((place) => {
-      const distance = getDistanceKm(
-        mapCenter.latitude,
-        mapCenter.longitude,
-        place.latitude,
-        place.longitude,
-      );
-      return distance <= radiusValue + 0.001;
-    });
-  }, [hasRadiusFilter, mapCenter, radiusValue, searchResults]);
-
-  const selectedPlace = results.find((place) => place.id === selectedPlaceId) ?? results[0] ?? null;
-  const routeStops = useMemo(
-    () => buildRouteStops(results, selectedPlace?.id ?? null, 4),
-    [results, selectedPlace],
-  );
-  const routeDistanceKm = useMemo(() => getRouteLengthKm(routeStops), [routeStops]);
+  const [isPanelOpen, setIsPanelOpen] = useState(true);
+  const [placeListLimit, setPlaceListLimit] = useState(INITIAL_PLACE_LIST_LIMIT);
+  const resultItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   useEffect(() => {
-    if (!results.length) {
+    let cancelled = false;
+
+    async function bootThemes() {
+      setThemeBootState("loading");
+      setBootError(null);
+
+      try {
+        const result = await fetch("/api/themes");
+        if (!result.ok) {
+          throw new Error(`테마 목록 요청 실패 (${result.status})`);
+        }
+
+        const data = (await result.json()) as ThemeSummary[];
+        if (cancelled) {
+          return;
+        }
+
+        setThemes(data);
+        setActiveThemeId(data[0]?.themeId ?? null);
+        setThemeBootState("ready");
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        setThemes([]);
+        setActiveThemeId(null);
+        setThemeBootState("error");
+        setBootError(error instanceof Error ? error.message : "테마 목록을 불러오지 못했습니다.");
+      }
+    }
+
+    void bootThemes();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!activeThemeId) {
+      setThemeDetailState(themeBootState === "error" ? "error" : "idle");
+      setThemeDetail(null);
+      setEventsResponse(null);
+      setSearchResponse(null);
       setSelectedPlaceId(null);
       return;
     }
 
-    if (!selectedPlaceId || !results.some((place) => place.id === selectedPlaceId)) {
-      setSelectedPlaceId(results[0].id);
-    }
-  }, [results, selectedPlaceId]);
+    let cancelled = false;
 
-  const sourceBadges = useMemo(
-    () => buildSourceBadges(response?.source),
-    [response?.source],
+    async function loadTheme(themeId: string) {
+      setThemeDetailState("loading");
+      setDetailError(null);
+      setSearchState("idle");
+      setSearchError(null);
+      setSearchResponse(null);
+      setQuery("");
+      setHoveredPlaceId(null);
+      setPlaceListLimit(INITIAL_PLACE_LIST_LIMIT);
+
+      try {
+        const detailResult = await fetch(`/api/themes/${themeId}`);
+        if (!detailResult.ok) {
+          throw new Error(`테마 상세 요청 실패 (${detailResult.status})`);
+        }
+
+        const detail = (await detailResult.json()) as ThemeDetail;
+        let events: EventsResponse = {
+          generatedAt: detail.generatedAt,
+          total: detail.events.length,
+          events: detail.events,
+        };
+
+        try {
+          const eventsResult = await fetch(`/api/events?themeId=${encodeURIComponent(themeId)}&limit=8`);
+          if (eventsResult.ok) {
+            events = (await eventsResult.json()) as EventsResponse;
+          }
+        } catch {
+          // fall back to theme detail events
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        setThemeDetail(detail);
+        setEventsResponse(events);
+        setSelectedPlaceId(null);
+        setThemeDetailState("ready");
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        setThemeDetail(null);
+        setEventsResponse(null);
+        setSelectedPlaceId(null);
+        setThemeDetailState("error");
+        setDetailError(error instanceof Error ? error.message : "테마를 불러오지 못했습니다.");
+      }
+    }
+
+    void loadTheme(activeThemeId);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeThemeId, themeBootState]);
+
+  const activeTheme = useMemo(
+    () => themes.find((theme) => theme.themeId === activeThemeId) ?? null,
+    [themes, activeThemeId],
   );
-  const searchResultSummary = useMemo(() => {
-    if (searchState === "loading") {
-      return "검색 중...";
+
+  const activeEvents = useMemo(
+    () => eventsResponse?.events ?? themeDetail?.events ?? [],
+    [eventsResponse, themeDetail],
+  );
+
+  const activePlaces = useMemo<PlaceComparisonItem[]>(() => {
+    const rawPlaces = searchResponse?.results ?? themeDetail?.places ?? [];
+    return rawPlaces.map((place) => toComparisonItem(place));
+  }, [searchResponse, themeDetail]);
+
+  const visiblePlaces = useMemo(() => activePlaces.slice(0, placeListLimit), [activePlaces, placeListLimit]);
+
+  const placeRecords = useMemo(() => {
+    const records = new Map<string, ThemePlace | PlaceResult>();
+    for (const place of themeDetail?.places ?? []) {
+      records.set(place.id, place);
     }
-    if (searchState === "idle") {
-      return "검색 실행 대기";
+    for (const place of searchResponse?.results ?? []) {
+      records.set(place.id, place);
     }
-    if (searchState === "error") {
-      return error ?? "검색 오류";
-    }
-    if (!response) {
-      return "조회 데이터 없음";
+    return records;
+  }, [themeDetail, searchResponse]);
+
+  const selectedPlace =
+    (selectedPlaceId ? placeRecords.get(selectedPlaceId) : null) ??
+    (visiblePlaces[0] ? placeRecords.get(visiblePlaces[0].id) : null) ??
+    null;
+
+  const selectedImage = getRepresentativeImageUrl(selectedPlace);
+  const selectedEvents = useMemo(
+    () => activeEvents.filter((item) => item.relatedPlaceId && item.relatedPlaceId === selectedPlace?.id).slice(0, 2),
+    [activeEvents, selectedPlace?.id],
+  );
+  const searchCenter = themeDetail?.center ?? null;
+  const bannerMessage = bootError ?? detailError ?? searchError;
+  const isThemeReady = themeDetailState === "ready" && !!themeDetail;
+
+  useEffect(() => {
+    if (!selectedPlaceId) {
+      return;
     }
 
-    return hasRadiusFilter
-      ? `반경 안 ${results.length}개 / 전체 ${searchResults.length}개`
-      : `${results.length}개 결과`;
-  }, [searchState, error, hasRadiusFilter, results.length, searchResults.length, response]);
+    const selectedIndex = activePlaces.findIndex((place) => place.id === selectedPlaceId);
+    if (selectedIndex >= 0 && selectedIndex >= placeListLimit) {
+      setPlaceListLimit(Math.ceil((selectedIndex + 1) / INITIAL_PLACE_LIST_LIMIT) * INITIAL_PLACE_LIST_LIMIT);
+    }
+  }, [activePlaces, placeListLimit, selectedPlaceId]);
+
+  useEffect(() => {
+    if (!selectedPlaceId) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      resultItemRefs.current[selectedPlaceId]?.scrollIntoView({
+        block: "nearest",
+        behavior: "smooth",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [placeListLimit, selectedPlaceId]);
+
+  function handleSelectPlace(placeId: string) {
+    setIsPanelOpen(true);
+    setSelectedPlaceId(placeId);
+  }
+
+  async function handleSearchSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!activeThemeId || !themeDetail) {
+      return;
+    }
+
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
+      setSearchResponse(null);
+      setSearchState("idle");
+      setSearchError(null);
+      setSelectedPlaceId(null);
+      setPlaceListLimit(INITIAL_PLACE_LIST_LIMIT);
+      return;
+    }
+
+    setSearchState("loading");
+    setSearchError(null);
+
+    try {
+      const payload: Record<string, unknown> = {
+        query: trimmedQuery,
+        themeId: activeThemeId,
+        mode: "HYBRID",
+        topK: 12,
+      };
+
+      if (activeTheme?.scope === "seoul") {
+        payload.latitude = themeDetail.center.latitude;
+        payload.longitude = themeDetail.center.longitude;
+        payload.radiusKm = 12;
+      }
+
+      const result = await fetch("/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!result.ok) {
+        throw new Error(`테마 검색 요청 실패 (${result.status})`);
+      }
+
+      const data = (await result.json()) as SearchResponse;
+      setSearchResponse(data);
+      setSelectedPlaceId(null);
+      setSearchState("active");
+      setPlaceListLimit(INITIAL_PLACE_LIST_LIMIT);
+    } catch (error) {
+      setSearchResponse(null);
+      setSearchState("error");
+      setSearchError(error instanceof Error ? error.message : "테마 검색에 실패했습니다.");
+    }
+  }
+
+  function handleThemeClick(themeId: string) {
+    setActiveThemeId(themeId);
+    setSelectedPlaceId(null);
+    setHoveredPlaceId(null);
+    setIsPanelOpen(true);
+    setPlaceListLimit(INITIAL_PLACE_LIST_LIMIT);
+  }
 
   return (
-    <div className={styles.page}>
-      <form className={styles.topBar} onSubmit={runSearch}>
-        <div className={styles.brandLine}>
-          <strong className={styles.brandMark}>Pero</strong>
-          <p className={styles.brandCopy}>메타데이터와 위치를 함께 읽는 장소 검색</p>
-        </div>
+    <main className={styles.page} data-panel-open={isPanelOpen}>
+      <div className={styles.mapBackdrop}>
+        <SearchMap
+          results={activePlaces}
+          selectedPlaceId={selectedPlaceId}
+          hoveredPlaceId={hoveredPlaceId}
+          comparedPlaceIds={[]}
+          onSelectPlace={handleSelectPlace}
+          searchCenter={searchCenter}
+          radiusKm={activeTheme?.scope === "seoul" ? 12 : null}
+          routeStops={[]}
+          showClusters={activePlaces.length > 10}
+          activeViewLabel={activeTheme?.title ?? "테마 지도"}
+        />
+      </div>
 
-        <div className={styles.searchRow}>
-          <label className={styles.searchField}>
-            <span className="sr-only">검색어</span>
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="예: 조용하게 오래 머물 수 있는 카페"
-            />
-          </label>
-          <button type="submit" className={styles.searchButton} disabled={loading}>
-            {loading ? "검색 중" : "검색"}
+      <div className={styles.topBar}>
+        {themes.map((theme) => {
+          const active = theme.themeId === activeThemeId;
+          return (
+            <button
+              key={theme.themeId}
+              type="button"
+              className={active ? styles.topChipActive : styles.topChip}
+              onClick={() => handleThemeClick(theme.themeId)}
+            >
+              <strong>{theme.title}</strong>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className={styles.sidebarShell}>
+        <div className={styles.iconRail}>
+          <div className={styles.brandMark}>P</div>
+          <button
+            type="button"
+            className={styles.railButton}
+            onClick={() => setIsPanelOpen((current) => !current)}
+            aria-label={isPanelOpen ? "패널 닫기" : "패널 열기"}
+          >
+            {isPanelOpen ? "←" : "→"}
           </button>
           <button
             type="button"
-            className={styles.locationButton}
-            onClick={requestCurrentLocation}
-            disabled={locating}
+            className={styles.railButton}
+            onClick={() => setSelectedPlaceId(null)}
+            aria-label="전체 장소 보기"
           >
-            {locating ? "위치 가져오는 중" : "현재 위치 사용"}
+            ⌂
           </button>
         </div>
 
-        <div className={styles.quickRows}>
-          {exampleQueries.map((item) => (
-            <button
-              key={item}
-              type="button"
-              className={styles.quickPill}
-              onClick={() => setQuery(item)}
-            >
-              {item}
-            </button>
-            ))}
-        </div>
+        <aside className={isPanelOpen ? styles.sidebar : styles.sidebarClosed}>
+          <div className={styles.sidebarInner}>
+            <div className={styles.sidebarHeader}>
+              <span className={styles.sidebarEyebrow}>페로 테마맵</span>
+              <h1>{activeTheme?.title ?? "테마를 불러오는 중"}</h1>
+              <p>{activeTheme?.summary ?? "관광 테마를 고르면 지도와 장소가 함께 바뀝니다."}</p>
+            </div>
 
-        <div className={styles.statusLine}>
-          <span>{searchMode}</span>
-          <span>{radiusKm}km 반경</span>
-          <span>{locationLabel}</span>
-          <span>{searchResultSummary}</span>
-          <span>{clusterMode ? "클러스터 ON" : "클러스터 OFF"}</span>
-          <span>{routeMode ? "경로 ON" : "경로 OFF"}</span>
-        </div>
-      </form>
+            {bannerMessage ? <div className={styles.errorBanner}>{bannerMessage}</div> : null}
 
-      <main className={styles.workspace}>
-        <SearchMap
-          results={results}
-          selectedPlaceId={selectedPlaceId}
-          hoveredPlaceId={hoveredPlaceId}
-          onSelectPlace={handleSelectPlace}
-          onHoverPlace={handleHoverPlace}
-          searchCenter={mapCenter}
-          radiusKm={hasRadiusFilter ? radiusValue : null}
-          clusterMode={clusterMode}
-          routeModeEnabled={routeMode}
-          routeStops={routeMode ? routeStops : null}
-          routeLengthKm={routeMode ? routeDistanceKm : null}
-        />
+            <form className={styles.searchPanel} onSubmit={handleSearchSubmit}>
+              <input
+                className={styles.searchInput}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="테마 안에서 다시 검색"
+                aria-label="테마 안에서 다시 검색"
+                disabled={!isThemeReady || searchState === "loading"}
+              />
+              <button className={styles.searchButton} type="submit" disabled={!isThemeReady || searchState === "loading"}>
+                {searchState === "loading" ? "검색 중" : "검색"}
+              </button>
+            </form>
 
-        <section className={styles.resultsPanel}>
-          <header className={styles.panelHeader}>
-            <h1>검색 결과</h1>
-            <p>지도 위 결과와 동일한 근거를 함께 확인하세요.</p>
-          </header>
+            <section className={styles.resultSection}>
+              <div className={styles.sectionHeader}>
+                <div>
+                  <span className={styles.sectionLabel}>장소</span>
+                  <strong>{searchState === "active" ? "검색 결과" : "추천 장소"}</strong>
+                </div>
+                <small>
+                  {searchState === "active" && searchResponse
+                    ? `${searchResponse.total}개 중 ${visiblePlaces.length}개`
+                    : `${activePlaces.length}개 중 ${visiblePlaces.length}개`}
+                </small>
+              </div>
 
-          <div className={styles.panelControls}>
-            <label>
-              <span>지역</span>
-              <select
-                value={locationId}
-                onChange={(event) => {
-                  const location = serviceLocations.find(
-                    (item) => item.id === event.target.value,
+              {themeDetailState === "loading" ? <div className={styles.emptyState}>지도를 준비하는 중입니다.</div> : null}
+              {themeDetailState === "ready" && visiblePlaces.length === 0 ? (
+                <div className={styles.emptyState}>현재 조건에 맞는 장소가 없습니다.</div>
+              ) : null}
+
+              <div className={styles.resultList}>
+                {visiblePlaces.map((place, index) => {
+                  const rawPlace = placeRecords.get(place.id) ?? null;
+                  const imageUrl = getRepresentativeImageUrl(rawPlace);
+                  const active = selectedPlace?.id === place.id;
+
+                  return (
+                    <button
+                      key={place.id}
+                      type="button"
+                      ref={(node) => {
+                        resultItemRefs.current[place.id] = node;
+                      }}
+                      className={active ? styles.resultCardActive : styles.resultCard}
+                      onClick={() => handleSelectPlace(place.id)}
+                      onMouseEnter={() => setHoveredPlaceId(place.id)}
+                      onMouseLeave={() => setHoveredPlaceId(null)}
+                    >
+                      {imageUrl ? (
+                        <div className={styles.resultThumb} style={{ backgroundImage: `url(${imageUrl})` }} />
+                      ) : (
+                        <div className={styles.resultThumbFallback}>{String(index + 1).padStart(2, "0")}</div>
+                      )}
+                      <div className={styles.resultBody}>
+                        <div className={styles.resultHead}>
+                          <strong>{place.name}</strong>
+                          <small>{place.category}</small>
+                        </div>
+                        <p>{place.district}</p>
+                        <div className={styles.resultChips}>
+                          {buildMetaChips(rawPlace).map((chip) => (
+                            <span key={chip}>{chip}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </button>
                   );
-                  if (location) {
-                    applyLocation(location);
-                  }
-                }}
-              >
-                {serviceLocations.map((location) => (
-                  <option key={location.id} value={location.id}>
-                    {location.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              <span>반경</span>
-              <select value={radiusKm} onChange={(event) => setRadiusKm(event.target.value)}>
-                {radiusOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}km
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              <span>방식</span>
-              <select
-                value={searchMode}
-                onChange={(event) => setSearchMode(event.target.value as SearchMode)}
-              >
-                {searchModes.map((mode) => (
-                  <option key={mode.value} value={mode.value}>
-                    {mode.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <button type="button" onClick={requestCurrentLocation} disabled={locating}>
-              {locating ? "위치 확인 중" : "현재 위치"}
-            </button>
-          </div>
-
-          <p className={styles.helperRow}>
-            {searchModes.find((mode) => mode.value === searchMode)?.helper}
-          </p>
-
-          <div className={styles.metaBadgeRow}>
-            {sourceBadges.map((badge) => (
-              <span key={badge} className={styles.badgeMuted}>
-                {badge}
-              </span>
-            ))}
-            {searchState !== "idle" && searchState !== "loading" ? (
-              <span className={styles.badgeMuted}>
-                응답시간: {formatGeneratedAt(response?.source?.generatedAt ?? response?.generatedAt)}
-              </span>
-            ) : null}
-          </div>
-
-          <div className={styles.panelToggleRow}>
-            <label className={styles.togglePill}>
-              <input
-                type="checkbox"
-                checked={clusterMode}
-                onChange={(event) => setClusterMode(event.target.checked)}
-              />
-              <span>클러스터 레이어</span>
-            </label>
-            <label className={styles.togglePill}>
-              <input
-                type="checkbox"
-                checked={routeMode}
-                onChange={(event) => setRouteMode(event.target.checked)}
-              />
-              <span>추천 경로 모드</span>
-            </label>
-          </div>
-
-          {routeMode && routeStops.length > 1 ? (
-            <p className={styles.routeInfo}>
-              추천 경로: {routeStops.length}개 정거장 · 총거리 {routeDistanceKm.toFixed(2)}km
-            </p>
-          ) : null}
-
-          {error ? <p className={styles.errorMessage}>{error}</p> : null}
-
-          <div className={styles.resultList}>
-            {searchState === "loading" ? (
-              <div className={styles.emptyState}>
-                <strong>검색 중입니다.</strong>
-                <p>잠시만 기다려 주세요. 결과가 준비되면 패널이 갱신됩니다.</p>
+                })}
               </div>
-            ) : null}
-            {searchState === "idle" ? (
-              <div className={styles.emptyState}>
-                <strong>검색을 시작하세요.</strong>
-                <p>상단 검색창에서 질의 후 {`"`}검색{`"`}을 눌러 결과를 받아주세요.</p>
-              </div>
-            ) : null}
-            {searchState === "error" ? (
-              <div className={styles.emptyState}>
-                <strong>검색 요청 실패</strong>
-                <p>백엔드 응답을 다시 확인해 주세요. 검색어/필터를 바꾸어 재시도할 수 있습니다.</p>
-              </div>
-            ) : null}
-            {searchState === "success" && results.length === 0 ? (
-              <div className={styles.emptyState}>
-                <strong>일치하는 장소가 없습니다.</strong>
-                <p>검색어를 바꾸거나 반경을 넓혀 다시 시도해 보세요.</p>
-              </div>
-            ) : null}
-            {searchState === "success" && results.length ? (
-              results.map((place, index) => (
-                <ResultCard
-                  key={place.id}
-                  index={index}
-                  place={place}
-                  active={place.id === selectedPlaceId}
-                  isHovered={place.id === hoveredPlaceId}
-                  onSelect={() => setSelectedPlaceId(place.id)}
-                  onHover={(placeId) => setHoveredPlaceId(placeId)}
-                />
-              ))
+
+              {visiblePlaces.length < activePlaces.length ? (
+                <button
+                  type="button"
+                  className={styles.loadMoreButton}
+                  onClick={() => setPlaceListLimit((current) => current + INITIAL_PLACE_LIST_LIMIT)}
+                >
+                  장소 더 보기
+                </button>
+              ) : null}
+            </section>
+
+            {selectedPlace ? (
+              <section className={styles.selectionCard}>
+                <div className={styles.sectionHeader}>
+                  <div>
+                    <span className={styles.sectionLabel}>선택 장소</span>
+                    <strong>{selectedPlace.name}</strong>
+                  </div>
+                  <a
+                    className={styles.outboundLink}
+                    href={buildMapUrl(selectedPlace.latitude, selectedPlace.longitude)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    외부지도
+                  </a>
+                </div>
+
+                {selectedImage ? (
+                  <div className={styles.selectionImage} style={{ backgroundImage: `url(${selectedImage})` }} />
+                ) : null}
+
+                <p className={styles.selectionLead}>
+                  {selectedPlaceLead(selectedPlace, "선택한 장소의 메타데이터와 설명을 지도 탐색용으로 정리했습니다.")}
+                </p>
+
+                <div className={styles.selectionMeta}>
+                  {buildSelectionChips(selectedPlace).map((chip) => (
+                    <span key={chip}>{chip}</span>
+                  ))}
+                </div>
+
+                <p className={styles.selectionSummary}>
+                  {sanitizeRichText(selectedPlace.tourApi?.common?.overview ?? selectedPlace.summary)}
+                </p>
+
+                {selectedEvents.length > 0 ? (
+                  <div className={styles.inlineEvents}>
+                    {selectedEvents.map((themeEvent: ThemeEvent) => (
+                      <div key={themeEvent.id} className={styles.eventItem}>
+                        <strong>{themeEvent.title}</strong>
+                        <span>{themeEvent.periodLabel}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </section>
             ) : null}
           </div>
-        </section>
+        </aside>
+      </div>
 
-        {selectedPlace ? (
-          <SelectedEvidencePanel place={selectedPlace} mode={response?.mode ?? searchMode} />
-        ) : null}
-      </main>
-    </div>
+      {themeBootState === "loading" && themes.length === 0 ? <div className={styles.mapSkeleton}>테마를 불러오는 중입니다.</div> : null}
+    </main>
   );
-}
-
-function SelectedEvidencePanel({
-  place,
-  mode,
-}: {
-  place: PlaceResult;
-  mode: SearchMode;
-}) {
-  const scores = [
-    { label: "키워드", value: place.keywordScore },
-    { label: "문맥", value: place.vectorScore },
-    { label: "특징", value: place.featureScore },
-    { label: "위치", value: place.geoScore },
-  ];
-
-  return (
-    <aside className={styles.evidencePanel} aria-label={`${place.name} 검색 근거`}>
-      <div className={styles.evidencePanelHeader}>
-        <span className={styles.badge}>{mode} 선택됨</span>
-        <h2>{place.name}</h2>
-        <p>
-          {place.category} · {place.district} · {place.roadAddress}
-        </p>
-      </div>
-
-      <div className={styles.metaGrid}>
-        <div>
-          <span>좌표</span>
-          <strong>{place.latitude.toFixed(4)}</strong>
-          <strong>{place.longitude.toFixed(4)}</strong>
-        </div>
-        <div>
-          <span>거리</span>
-          <strong>{place.distanceKm == null ? "없음" : `${place.distanceKm.toFixed(2)} km`}</strong>
-        </div>
-        <div>
-          <span>종합 점수</span>
-          <strong>{Math.round(place.finalScore * 100)}</strong>
-        </div>
-      </div>
-
-      <div className={styles.reasonBlock}>
-        <span>선택 장소 근거</span>
-        <p>{place.evidence}</p>
-      </div>
-
-      <div className={styles.scoreGrid} aria-label="검색 점수 구성">
-        {scores.map((score) => (
-          <div className={styles.scoreItem} key={score.label}>
-            <span>{score.label}</span>
-            <strong>{Math.round(score.value * 100)}</strong>
-          </div>
-        ))}
-      </div>
-
-      <div className={styles.tagCloud}>
-        {place.tags.slice(0, 4).map((tag) => (
-          <span key={`${place.id}-evidence-${tag}`}>{tag}</span>
-        ))}
-      </div>
-    </aside>
-  );
-}
-
-function ResultCard({
-  index,
-  place,
-  active,
-  onSelect,
-  onHover,
-  isHovered,
-}: {
-  index: number;
-  place: PlaceResult;
-  active: boolean;
-  isHovered: boolean;
-  onSelect: () => void;
-  onHover: (placeId: string | null) => void;
-}) {
-  const mapUrl = buildMapUrl(place.latitude, place.longitude);
-
-  return (
-    <article
-      className={`${styles.resultCard} ${active ? styles.resultCardActive : ""} ${isHovered ? styles.resultCardHover : ""}`}
-      onMouseEnter={() => onHover(place.id)}
-      onMouseLeave={() => onHover(null)}
-      onClick={onSelect}
-      tabIndex={0}
-      role="button"
-      onFocus={() => onHover(place.id)}
-      onBlur={() => onHover(null)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onSelect();
-        }
-      }}
-    >
-      <div className={styles.resultRow}>
-        <h3>{place.name}</h3>
-        <p className={styles.coordinate}>
-          {place.latitude.toFixed(4)}° N, {place.longitude.toFixed(4)}° E
-        </p>
-      </div>
-
-      <p className={styles.summary}>{place.summary}</p>
-
-      <p className={styles.distance}>
-        {place.distanceKm !== null ? `${place.distanceKm.toFixed(2)} km` : "거리 정보 없음"}
-      </p>
-
-      <p className={styles.evidenceText}>{place.evidence}</p>
-
-      <div className={styles.cardActions}>
-        <a
-          href={mapUrl}
-          target="_blank"
-          rel="noreferrer"
-          onClick={(event) => event.stopPropagation()}
-        >
-          길찾기
-        </a>
-        <span>#{String(index + 1).padStart(2, "0")}</span>
-      </div>
-    </article>
-  );
-}
-
-function buildMapUrl(latitude: number, longitude: number) {
-  return `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
 }

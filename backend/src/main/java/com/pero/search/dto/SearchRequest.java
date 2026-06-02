@@ -12,6 +12,8 @@ public record SearchRequest(
         @NotBlank(message = "query는 비어 있을 수 없습니다.")
         String query,
 
+        String themeId,
+
         SearchMode mode,
 
         @DecimalMin(value = "-90.0", message = "latitude는 -90 이상이어야 합니다.")

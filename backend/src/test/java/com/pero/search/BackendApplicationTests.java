@@ -23,7 +23,7 @@ class BackendApplicationTests {
 
 	@Test
 	void hybridSearchReturnsResult() {
-		var request = new SearchRequest("카페", SearchMode.HYBRID, null, null, null, 5);
+		var request = new SearchRequest("카페", null, SearchMode.HYBRID, null, null, null, 5);
 		var response = searchService.search(request);
 
 		assertThat(response.results()).isNotEmpty();
@@ -37,7 +37,7 @@ class BackendApplicationTests {
 
 	@Test
 	void searchWithoutLocationUsesDefaults() {
-		var request = new SearchRequest("조용한 북카페", null, null, null, null, null);
+		var request = new SearchRequest("조용한 북카페", null, null, null, null, null, null);
 		var response = searchService.search(request);
 
 		assertThat(response.mode()).isEqualTo(SearchMode.HYBRID);
@@ -51,7 +51,7 @@ class BackendApplicationTests {
 
 	@Test
 	void recommendationBuildsDateCourseWithThreeStops() {
-		var request = new RecommendationRequest(37.5535, 126.9221, 5.0);
+		var request = new RecommendationRequest(null, 37.5535, 126.9221, 5.0);
 		var response = searchService.recommend(request);
 
 		assertThat(response.nearbyPick().place()).isNotNull();

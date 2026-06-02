@@ -10,7 +10,34 @@
     "longitude": 126.9242,
     "summary": "조용히 머무르며 탐색하고 동행을 계획하기 좋은 데모 장소입니다.",
     "tags": ["카페", "조용한", "브런치", "탐색"],
-    "searchHints": ["한강공원 부근 카페 맥락으로 추천되는 예시 장소입니다.", "데모 데이터로 사용되는 장소"]
+    "searchHints": ["한강공원 부근 카페 맥락으로 추천되는 예시 장소입니다.", "데모 데이터로 사용되는 장소"],
+    "tourApi": {
+      "contentId": "1001",
+      "contentTypeId": "39",
+      "contentTypeLabel": "음식점",
+      "common": {
+        "tel": "02-123-4567",
+        "homepage": "https://example.com/demo-cafe",
+        "overview": "한강공원 인근에서 쉬어가기 좋은 카페형 데모 장소입니다.",
+        "useTime": "10:00~22:00",
+        "parking": "주차 가능"
+      },
+      "intro": {
+        "opendatefood": "20240101",
+        "firstmenu": "브런치 플레이트"
+      },
+      "images": [
+        {
+          "originImgUrl": "https://example.com/image/demo-cafe.jpg",
+          "smallImageUrl": "https://example.com/image/demo-cafe-small.jpg",
+          "imgName": "데모 카페 전경",
+          "serialNum": "1"
+        }
+      ],
+      "pet": {
+        "petTursmInfo": "야외 좌석 반려동물 동반 가능"
+      }
+    }
   },
   {
     "id": "korea-tour-2",

@@ -45,7 +45,7 @@ class SearchControllerProviderFallbackIntegrationTests {
 
         PlacesResponse placesResponse = objectMapper.readValue(placesBody, PlacesResponse.class);
         assertThat(placesResponse.source().providerId()).isEqualTo("koreaTour");
-        assertThat(placesResponse.source().providerName()).contains("한국관광공사 API 동기화 캐시");
+        assertThat(placesResponse.source().providerName()).contains("한국관광공사");
         assertThat(placesResponse.source().status()).isEqualTo("ok");
         assertThat(placesResponse.places()).hasSize(2);
 

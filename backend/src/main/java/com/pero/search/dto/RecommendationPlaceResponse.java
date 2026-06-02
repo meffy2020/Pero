@@ -10,9 +10,12 @@ public record RecommendationPlaceResponse(
         String roadAddress,
         String summary,
         List<String> tags,
+        List<String> themeTags,
         double latitude,
         double longitude,
+        String sourceAttribution,
         Double distanceKm,
-        String reason
+        String reason,
+        TourApiResponse tourApi
 ) {
 }

@@ -5,6 +5,8 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Positive;
 
 public record RecommendationRequest(
+        String themeId,
+
         @DecimalMin(value = "-90.0", message = "latitude는 -90 이상이어야 합니다.")
         @DecimalMax(value = "90.0", message = "latitude는 90 이하여야 합니다.")
         Double latitude,

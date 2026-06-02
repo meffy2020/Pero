@@ -2,6 +2,7 @@ package com.pero.search.service;
 
 import com.pero.search.dto.DateCourseResponse;
 import com.pero.search.dto.DateCourseStopResponse;
+import com.pero.search.dto.PlaceListItemResponse;
 import com.pero.search.dto.PlaceResultResponse;
 import com.pero.search.dto.RecommendationCardResponse;
 import com.pero.search.dto.RecommendationPlaceResponse;
@@ -11,9 +12,14 @@ import com.pero.search.dto.SearchRequest;
 import com.pero.search.dto.SearchResponse;
 import com.pero.search.dto.PlacesResponse;
 import com.pero.search.dto.SearchSourceMeta;
+import com.pero.search.dto.TourApiResponse;
+import com.pero.search.dto.TourCommonResponse;
+import com.pero.search.dto.TourImageResponse;
+import com.pero.search.dto.TourPetResponse;
 import com.pero.search.data.PlaceDataLoadResult;
 import com.pero.search.model.IndexedPlace;
 import com.pero.search.model.IndexedEvidence;
+import com.pero.search.model.TourApiSeed;
 import com.pero.search.repository.PlaceRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -41,17 +47,20 @@ public class SearchService {
     private final PlaceRepository placeRepository;
     private final TextNormalizer normalizer;
     private final EmbeddingService embeddingService;
+    private final ThemeMapService themeMapService;
     private final Map<String, Long> documentFrequencies;
     private final double averageDocumentLength;
 
     public SearchService(
             PlaceRepository placeRepository,
             TextNormalizer normalizer,
-            EmbeddingService embeddingService
+            EmbeddingService embeddingService,
+            ThemeMapService themeMapService
     ) {
         this.placeRepository = placeRepository;
         this.normalizer = normalizer;
         this.embeddingService = embeddingService;
+        this.themeMapService = themeMapService;
         this.documentFrequencies = buildDocumentFrequencies(placeRepository.findAll());
         this.averageDocumentLength = placeRepository.findAll().stream()
                 .mapToInt(IndexedPlace::documentLength)
@@ -61,7 +70,7 @@ public class SearchService {
 
     public SearchResponse search(SearchRequest request) {
         validateLocation(request);
-        var allPlaces = placeRepository.findAll();
+        List<IndexedPlace> allPlaces = themeMapService.filterPlacesByTheme(placeRepository.findAll(), request.themeId());
         SearchSourceMeta sourceMeta = toSourceMeta(placeRepository.source());
 
         List<IndexedPlace> candidates = allPlaces.stream()
@@ -85,17 +94,19 @@ public class SearchService {
                 .max()
                 .orElse(1.0);
 
-        List<PlaceResultResponse> rankedResults = bundles.stream()
-                .map(bundle -> toResponse(bundle, request, maxKeyword, maxVector, maxRrf, keywordRanks, vectorRanks))
-                .sorted(Comparator.comparingDouble(PlaceResultResponse::finalScore).reversed())
+        List<ScoredBundle> rankedResults = bundles.stream()
+                .map(bundle -> scoreBundle(bundle, request, maxKeyword, maxVector, maxRrf, keywordRanks, vectorRanks))
+                .sorted(Comparator.comparingDouble(ScoredBundle::finalScore).reversed())
                 .toList();
 
         List<PlaceResultResponse> results = (request.hasLocation() ? rankedResults : diversifyByDistrict(rankedResults)).stream()
                 .limit(request.resolvedTopK())
+                .map(bundle -> toResponse(bundle, queryEmbedding))
                 .toList();
 
         return new SearchResponse(
                 request.query(),
+                request.themeId(),
                 request.resolvedMode(),
                 results.size(),
                 request.resolvedTopK(),
@@ -107,7 +118,7 @@ public class SearchService {
 
     public RecommendationResponse recommend(RecommendationRequest request) {
         validateLocation(request.latitude(), request.longitude());
-        List<IndexedPlace> allPlaces = placeRepository.findAll();
+        List<IndexedPlace> allPlaces = themeMapService.filterPlacesByTheme(placeRepository.findAll(), request.themeId());
 
         if (allPlaces.isEmpty()) {
             RecommendationPlaceResponse unavailablePlace = unavailableRecommendationPlace(
@@ -125,9 +136,9 @@ public class SearchService {
                             unavailablePlace
                     ),
                     new RecommendationCardResponse(
-                            "meal-nearby",
-                            "식사 추천 준비중",
-                            "현재 후보 데이터가 없어 식사 추천은 보류했습니다.",
+                            "theme-highlight",
+                            "테마 추천 준비중",
+                            "현재 후보 데이터가 없어 테마 추천은 보류했습니다.",
                             unavailablePlace
                     ),
                     new DateCourseResponse(
@@ -150,7 +161,7 @@ public class SearchService {
 
         RecommendationCardResponse nearbyPick = new RecommendationCardResponse(
                 "nearby-random",
-                "랜덤 장소",
+                "근처 대표 장소",
                 fallbackUsed
                         ? "반경 안 후보가 적어서 가장 가까운 장소권에서 골랐습니다."
                         : "현재 반경 안에서 가까운 후보들 중 한 곳을 랜덤으로 골랐습니다.",
@@ -164,13 +175,13 @@ public class SearchService {
         );
 
         RecommendationCardResponse mealPick = new RecommendationCardResponse(
-                "meal-nearby",
-                "근처 식사 추천",
-                "브런치, 레스토랑, 베이커리 성격의 후보를 추려 랜덤으로 골랐습니다.",
+                "theme-highlight",
+                request.themeId() == null || request.themeId().isBlank() ? "추천 포인트" : "테마 하이라이트",
+                "현재 테마 안에서 체류 가치와 설명 가능성이 높은 장소를 골랐습니다.",
                 toRecommendationPlace(
-                        pickRandomTop(effectiveCandidates, request, 4, this::isMealPlace),
+                        pickRandomTop(effectiveCandidates, request, 4, this::isHighlightPlace),
                         request,
-                        "식사 시작이나 가벼운 브런치에 맞는 장소 유형이라 식사 후보로 선정했습니다."
+                        "현재 테마와의 연결 신호가 높고 상세 설명이 풍부해 하이라이트 후보로 선정했습니다."
                 )
         );
 
@@ -183,23 +194,29 @@ public class SearchService {
         );
     }
 
-    public List<Map<String, Object>> getPlaces() {
+    public List<PlaceListItemResponse> getPlaces() {
         return placeRepository.findAll().stream()
-                .map(place -> Map.<String, Object>of(
-                        "id", place.id(),
-                        "name", place.name(),
-                        "category", place.category(),
-                        "district", place.district(),
-                        "latitude", place.latitude(),
-                        "longitude", place.longitude(),
-                        "tags", place.tags()
+                .map(place -> new PlaceListItemResponse(
+                        place.id(),
+                        place.name(),
+                        place.category(),
+                        place.district(),
+                        place.address(),
+                        place.roadAddress(),
+                        place.summary(),
+                        place.tags(),
+                        place.themeTags(),
+                        place.latitude(),
+                        place.longitude(),
+                        place.sourceAttribution(),
+                        toTourApiResponse(place.tourApi())
                 ))
                 .toList();
     }
 
     public PlacesResponse places() {
         SearchSourceMeta sourceMeta = toSourceMeta(placeRepository.source());
-        List<Map<String, Object>> places = getPlaces();
+        List<PlaceListItemResponse> places = getPlaces();
         return new PlacesResponse(sourceMeta, places.size(), places);
     }
 
@@ -223,11 +240,11 @@ public class SearchService {
 
         Set<String> usedIds = new HashSet<>();
 
-        IndexedPlace meal = pickRandomTop(candidates, request, 4, this::isMealPlace);
-        meal = meal == null
+        IndexedPlace start = pickRandomTop(candidates, request, 4, this::isHighlightPlace);
+        start = start == null
                 ? pickRandomTop(candidates, request, 4, place -> true)
-                : meal;
-        if (meal == null) {
+                : start;
+        if (start == null) {
             RecommendationPlaceResponse fallback = unavailableRecommendationPlace(
                     request,
                     "현재 조건에서 후보를 찾지 못했습니다."
@@ -242,48 +259,48 @@ public class SearchService {
                     )
             );
         }
-        usedIds.add(meal.id());
+        usedIds.add(start.id());
 
-        IndexedPlace cafe = pickRandomTop(
+        IndexedPlace highlight = pickRandomTop(
                 candidates,
                 request,
                 4,
-                place -> isCafePlace(place) && !usedIds.contains(place.id())
+                place -> isDateFinishPlace(place) && !usedIds.contains(place.id())
         );
-        if (cafe == null) {
-            cafe = meal;
+        if (highlight == null) {
+            highlight = start;
         }
-        usedIds.add(cafe.id());
+        usedIds.add(highlight.id());
 
         IndexedPlace finish = pickRandomTop(
                 candidates,
                 request,
                 4,
-                place -> isDateFinishPlace(place) && !usedIds.contains(place.id())
+                place -> !usedIds.contains(place.id())
         );
 
         if (finish == null) {
             finish = pickRandomTop(candidates, request, 4, place -> !usedIds.contains(place.id()));
         }
         if (finish == null) {
-            finish = cafe;
+            finish = highlight;
         }
 
         List<DateCourseStopResponse> stops = List.of(
                 new DateCourseStopResponse(
-                        "식사",
+                        "시작",
                         toRecommendationPlace(
-                                meal,
+                                start,
                                 request,
-                                "식사나 브런치로 시작하기 좋은 유형이라 첫 코스로 배치했습니다."
+                                "테마를 시작하기 좋은 대표 장소라 첫 정거장으로 배치했습니다."
                         )
                 ),
                 new DateCourseStopResponse(
-                        "카페",
+                        "하이라이트",
                         toRecommendationPlace(
-                                cafe,
+                                highlight,
                                 request,
-                                "대화하거나 머무르기 좋은 카페 성격이라 중간 코스로 배치했습니다."
+                                "테마 특성이 가장 잘 드러나는 후보라 중간 하이라이트로 배치했습니다."
                         )
                 ),
                 new DateCourseStopResponse(
@@ -291,14 +308,14 @@ public class SearchService {
                         toRecommendationPlace(
                                 finish,
                                 request,
-                                "분위기, 뷰, 조용한 체류 특성을 기준으로 마무리 코스로 골랐습니다."
+                                "동선을 마무리하며 함께 보기 좋은 후보라 마지막 정거장으로 배치했습니다."
                         )
                 )
         );
 
         return new DateCourseResponse(
-                "랜덤 데이트 코스",
-                "현재 위치에서 이동 부담이 크지 않은 후보를 식사, 카페, 마무리 순서로 조합했습니다.",
+                "테마 탐방 코스",
+                "현재 위치에서 이동 부담이 크지 않은 후보를 시작, 하이라이트, 마무리 순서로 조합했습니다.",
                 stops
         );
     }
@@ -315,10 +332,13 @@ public class SearchService {
                 "데이터 적재 대기",
                 reason,
                 List.of("데이터 없음", "캐시 준비"),
+                List.of(),
                 latitude,
                 longitude,
+                "koreaTour",
                 null,
-                reason
+                reason,
+                null
         );
     }
 
@@ -337,7 +357,7 @@ public class SearchService {
                 source.providerName(),
                 source.sourceStatus(),
                 source.generatedAt(),
-                source.places().size()
+                source.count()
         );
     }
 
@@ -354,9 +374,8 @@ public class SearchService {
                 ? haversineKm(request.latitude(), request.longitude(), place.latitude(), place.longitude())
                 : null;
         double geoRaw = distanceKm == null ? 0.0 : geoScore(distanceKm, request.resolvedRadiusKm());
-        String evidence = bestEvidence(place.evidenceCandidates(), queryEmbedding);
 
-        return new ScoreBundle(place, keywordRaw, vectorRaw, featureRaw, geoRaw, distanceKm, evidence);
+        return new ScoreBundle(place, keywordRaw, vectorRaw, featureRaw, geoRaw, distanceKm);
     }
 
     private List<IndexedPlace> findNearbyCandidates(RecommendationRequest request, List<IndexedPlace> candidates) {
@@ -386,10 +405,13 @@ public class SearchService {
                 place.roadAddress(),
                 place.summary(),
                 place.tags(),
+                place.themeTags(),
                 place.latitude(),
                 place.longitude(),
+                place.sourceAttribution(),
                 distanceKm == null ? null : round(distanceKm),
-                reason
+                reason,
+                toTourApiResponse(place.tourApi())
         );
     }
 
@@ -440,6 +462,18 @@ public class SearchService {
                 .anyMatch(tag -> tag.contains("브런치") || tag.contains("베이커리") || tag.contains("주말"));
     }
 
+    private boolean isHighlightPlace(IndexedPlace place) {
+        if (!place.themeTags().isEmpty()) {
+            return true;
+        }
+
+        TourApiSeed tourApi = place.tourApi();
+        return tourApi != null
+                && tourApi.common() != null
+                && tourApi.common().overview() != null
+                && !tourApi.common().overview().isBlank();
+    }
+
     private boolean isCafePlace(IndexedPlace place) {
         String category = normalizer.normalize(place.category());
         if (category.contains("카페")) {
@@ -465,7 +499,7 @@ public class SearchService {
         );
     }
 
-    private PlaceResultResponse toResponse(
+    private ScoredBundle scoreBundle(
             ScoreBundle bundle,
             SearchRequest request,
             double maxKeyword,
@@ -496,6 +530,20 @@ public class SearchService {
                     : 0.8 * rrfScore + 0.2 * featureScore;
         };
 
+        return new ScoredBundle(
+                bundle.place(),
+                bundle.distanceKm(),
+                round(keywordScore),
+                round(vectorScore),
+                round(featureScore),
+                round(geoScore),
+                round(finalScore)
+        );
+    }
+
+    private PlaceResultResponse toResponse(ScoredBundle bundle, double[] queryEmbedding) {
+        String evidence = bestEvidence(bundle.place().evidenceCandidates(), queryEmbedding);
+
         return new PlaceResultResponse(
                 bundle.place().id(),
                 bundle.place().name(),
@@ -505,15 +553,77 @@ public class SearchService {
                 bundle.place().roadAddress(),
                 bundle.place().summary(),
                 bundle.place().tags(),
+                bundle.place().themeTags(),
                 bundle.place().latitude(),
                 bundle.place().longitude(),
+                bundle.place().sourceAttribution(),
                 bundle.distanceKm() == null ? null : round(bundle.distanceKm()),
-                bundle.evidence(),
-                round(keywordScore),
-                round(vectorScore),
-                round(featureScore),
-                round(geoScore),
-                round(finalScore)
+                evidence,
+                bundle.keywordScore(),
+                bundle.vectorScore(),
+                bundle.featureScore(),
+                bundle.geoScore(),
+                bundle.finalScore(),
+                toTourApiResponse(bundle.place().tourApi())
+        );
+    }
+
+    private TourApiResponse toTourApiResponse(TourApiSeed tourApi) {
+        if (tourApi == null) {
+            return null;
+        }
+
+        TourCommonResponse common = null;
+        if (tourApi.common() != null) {
+            common = new TourCommonResponse(
+                    tourApi.common().tel(),
+                    tourApi.common().homepage(),
+                    tourApi.common().overview(),
+                    tourApi.common().bookTour(),
+                    tourApi.common().infoCenter(),
+                    tourApi.common().restDate(),
+                    tourApi.common().useTime(),
+                    tourApi.common().parking(),
+                    tourApi.common().useFee(),
+                    tourApi.common().refundPolicy(),
+                    tourApi.common().expGuide(),
+                    tourApi.common().accomCount(),
+                    tourApi.common().chkInTime(),
+                    tourApi.common().chkOutTime(),
+                    tourApi.common().subFacility(),
+                    tourApi.common().parkingFee(),
+                    tourApi.common().scale(),
+                    tourApi.common().spendTime(),
+                    tourApi.common().eventStartDate(),
+                    tourApi.common().eventEndDate(),
+                    tourApi.common().playTime(),
+                    tourApi.common().ageLimit()
+            );
+        }
+
+        return new TourApiResponse(
+                tourApi.contentId(),
+                tourApi.contentTypeId(),
+                tourApi.contentTypeLabel(),
+                common,
+                tourApi.intro(),
+                tourApi.images() == null ? List.of() : tourApi.images().stream()
+                        .map(image -> new TourImageResponse(
+                                image.originImgUrl(),
+                                image.smallImageUrl(),
+                                image.imgName(),
+                                image.serialNum()
+                        ))
+                        .toList(),
+                tourApi.pet() == null ? null : new TourPetResponse(
+                        tourApi.pet().petTursmInfo(),
+                        tourApi.pet().acmpyTypeCd(),
+                        tourApi.pet().relaPosesFclty(),
+                        tourApi.pet().relaFrnshPrdlst(),
+                        tourApi.pet().etcAcmpyInfo(),
+                        tourApi.pet().relaPurcPrdlst(),
+                        tourApi.pet().acmpyPsblCpam()
+                )
         );
     }
 
@@ -564,8 +674,17 @@ public class SearchService {
     }
 
     private String bestEvidence(List<IndexedEvidence> evidences, double[] queryEmbedding) {
+        Map<String, double[]> resolvedEmbeddings = embeddingService.embedAll(evidences.stream()
+                .map(IndexedEvidence::text)
+                .toList());
+
         return evidences.stream()
-                .max(Comparator.comparingDouble(evidence -> embeddingService.cosineSimilarity(queryEmbedding, evidence.embedding())))
+                .max(Comparator.comparingDouble(evidence -> embeddingService.cosineSimilarity(
+                        queryEmbedding,
+                        evidence.embedding() == null
+                                ? resolvedEmbeddings.get(evidence.text())
+                                : evidence.embedding()
+                )))
                 .map(IndexedEvidence::text)
                 .orElse("");
     }
@@ -628,17 +747,17 @@ public class SearchService {
         return 1.0 / (RRF_CONSTANT + ranks.getOrDefault(placeId, 999));
     }
 
-    private List<PlaceResultResponse> diversifyByDistrict(List<PlaceResultResponse> rankedResults) {
-        Map<String, List<PlaceResultResponse>> grouped = new LinkedHashMap<>();
-        for (PlaceResultResponse result : rankedResults) {
-            grouped.computeIfAbsent(result.district(), ignored -> new ArrayList<>()).add(result);
+    private List<ScoredBundle> diversifyByDistrict(List<ScoredBundle> rankedResults) {
+        Map<String, List<ScoredBundle>> grouped = new LinkedHashMap<>();
+        for (ScoredBundle result : rankedResults) {
+            grouped.computeIfAbsent(result.place().district(), ignored -> new ArrayList<>()).add(result);
         }
 
-        List<PlaceResultResponse> diversified = new ArrayList<>();
+        List<ScoredBundle> diversified = new ArrayList<>();
         int cursor = 0;
         while (diversified.size() < rankedResults.size()) {
             boolean added = false;
-            for (List<PlaceResultResponse> group : grouped.values()) {
+            for (List<ScoredBundle> group : grouped.values()) {
                 if (cursor < group.size()) {
                     diversified.add(group.get(cursor));
                     added = true;
@@ -689,8 +808,18 @@ public class SearchService {
             double vectorRaw,
             double featureRaw,
             double geoRaw,
+            Double distanceKm
+    ) {
+    }
+
+    private record ScoredBundle(
+            IndexedPlace place,
             Double distanceKm,
-            String evidence
+            double keywordScore,
+            double vectorScore,
+            double featureScore,
+            double geoScore,
+            double finalScore
     ) {
     }
 }

@@ -13,6 +13,9 @@ public record PlaceSeed(
         double longitude,
         String summary,
         List<String> tags,
-        List<String> searchHints
+        List<String> themeTags,
+        List<String> searchHints,
+        String sourceAttribution,
+        TourApiSeed tourApi
 ) {
 }

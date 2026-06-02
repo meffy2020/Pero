@@ -30,10 +30,9 @@
 ### 2) 운영/폴백 요구사항 반영
 
 - 캐시 미존재/파싱 실패 시 서버 시작 실패 없이 `cache-missing`, `parse-error` 상태를 전달하는 기존 provider 체인을 유지.
-- provider 순서를 `koreaTour,smartSeoul` 기본값으로 둠.
-- Smart Seoul 토글은 준비되었을 때 전환 가능한 모듈 상태를 유지:
-  - 현재는 `smartSeoul` 콜렉터 비활성
-  - 승인 뒤 `pero.providers.smartSeoul.enabled=true` + 캐시 존재 시 우선 사용되는 흐름 검증 대상
+- provider 순서를 `smartSeoul,koreaTour` 기본값으로 조정함.
+- Smart Seoul collector를 별도 캐시(`places.smartseoul.json`) 기반으로 구현함.
+- 런타임은 provider 우선순위대로 캐시를 병합해 읽고, 서울 중복 레코드는 Smart Seoul 쪽을 우선 채택함.
 
 ### 3) GitHub Actions 동기화 파이프라인
 
@@ -45,17 +44,21 @@
 
 - provider 레지스트리/포함된 통합 테스트를 통해:
   - smart cache missing 시 koreaTour 폴백
-  - smartSeoul 우선순위 시 smart 데이터 선출
+  - smartSeoul + koreaTour 동시 존재 시 병합 source 메타 노출
+  - 서울 중복 후보는 smartSeoul 데이터 선출
   - source 메타 노출(`providerId`, `providerName`, `status`, `count`) 검증을 강화
 
 ## 실행/검증
 
 ```bash
-# 드라이런(요약)
-python3 scripts/etl/sync_places.py --dry-run --max-places 60 --region-target 8 --pause 0.0
+# TourAPI 드라이런(요약)
+python3 scripts/etl/sync_places.py --provider koreaTour --mode full --dry-run --max-places 60 --pause 0.0
 
-# 실제 캐시 갱신
-python3 scripts/etl/sync_places.py --max-places 120 --region-target 10 --pause 0.0
+# TourAPI 실제 캐시 갱신
+python3 scripts/etl/sync_places.py --provider koreaTour --mode full --max-places 120 --pause 0.0
+
+# Smart Seoul 실제 캐시 갱신
+python3 scripts/etl/sync_places.py --provider smartSeoul --mode full --source-path /path/to/source-dir
 
 # 주간 자동화
 Workflow: Sync KoreaTour Places Cache
@@ -92,8 +95,8 @@ Workflow: Sync KoreaTour Places Cache
 
 ## 후속 작업
 
-- Smart Seoul 승인/심사 후 `scripts/etl/sync_places.py` 또는 별도 스크립트로 smart 캐시 동기화 엔트리 추가
-- 승인 후 `pero.providers.smartSeoul.enabled=true`에서 검색/places source 메타 전환 테스트 자동화 확장
+- Smart Seoul 실제 운영 소스 경로/API를 확정하고 incremental 수정시각 필드 품질을 점검
+- 공급자별 full/incremental 실행 결과를 주기적으로 기록하고 드롭 사유 상위를 점검
 - 쿼리별 데모 시나리오(조용한 카페, 반려동물 동반, 야간 산책 등) 실검증
 
 ## 커밋/PR

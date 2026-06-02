@@ -1,230 +1,108 @@
 .mapShell {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  background: #f3f3f3;
 }
 
 .mapCanvas {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, #f2f2f4 0%, #ececf1 100%);
-}
-
-.mapHeader {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  z-index: 12;
-  display: grid;
-  gap: 4px;
-  max-width: 390px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(29, 29, 31, 0.16);
-  padding: 12px 14px;
-  color: #1d1d1f;
-}
-
-.mapHeader strong {
-  font-size: 0.9rem;
-}
-
-.mapHeader span {
-  color: rgba(29, 29, 31, 0.64);
-  font-size: 0.72rem;
-}
-
-.mapOverlay {
-  position: absolute;
-  z-index: 12;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(29, 29, 31, 0.14);
-  backdrop-filter: blur(16px);
-  border-radius: 14px;
-  padding: 10px 12px;
-  display: grid;
-  gap: 6px;
-  max-width: 380px;
-}
-
-.mapOverlayTop {
-  top: 20px;
-  right: 20px;
-}
-
-.mapOverlayTop p,
-.mapOverlayBottom p,
-.mapOverlayBottom span {
-  margin: 0;
-  color: rgba(29, 29, 31, 0.66);
-  font-size: 0.78rem;
-}
-
-.mapOverlayTop strong {
-  font-size: 0.94rem;
-}
-
-.mapOverlayBottom {
-  left: 20px;
-  bottom: 20px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.badge,
-.badgeMuted {
-  width: fit-content;
-  border-radius: 999px;
-  font-size: 0.68rem;
-  padding: 4px 8px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.badge {
-  background: #1d1d1f;
-  color: #ffffff;
-}
-
-.badgeMuted {
-  background: rgba(29, 29, 31, 0.09);
-  color: rgba(29, 29, 31, 0.76);
-}
-
-.leafletPin {
-  display: grid;
-  width: 30px;
-  height: 30px;
-  place-items: center;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.84);
-  background: rgba(29, 29, 31, 0.72);
-  color: rgba(255, 255, 255, 0.8);
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.15),
-    0 0 0 2px rgba(255, 255, 255, 0.2) inset;
-  font-size: 0.67rem;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.leafletPin span {
-  transform: translateY(0.5px);
-}
-
-.leafletPinActive {
-  transform: scale(1.2);
-  background: #0071e3;
-  color: #ffffff;
-  border-color: #d9ecff;
-  box-shadow:
-    0 0 0 5px rgba(0, 113, 227, 0.18),
-    0 0 14px rgba(0, 113, 227, 0.3);
-}
-
-.leafletPinHovered {
-  transform: scale(1.12);
-  background: #1d4ed8;
-  color: #ffffff;
-  border-color: #bfdbfe;
-  box-shadow:
-    0 0 0 4px rgba(29, 78, 216, 0.18),
-    0 0 12px rgba(29, 78, 216, 0.3);
-}
-
-.leafletClusterPin {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.96);
-  background: linear-gradient(180deg, #111827 0%, #374151 100%);
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 0.72rem;
-  box-shadow:
-    0 0 0 1px rgba(17, 24, 39, 0.22),
-    0 0 0 3px rgba(255, 255, 255, 0.2);
-}
-
-.leafletClusterPin span {
-  transform: translateY(0.5px);
-}
-
-.leafletRoutePin {
-  display: grid;
-  grid-template-areas:
-    "badge"
-    "index";
-  gap: 1px;
-  width: 32px;
-  height: 32px;
-  place-items: center;
-  border-radius: 50%;
-  background: #ff5a1f;
-  color: #ffffff;
-  border: 2px solid rgba(255, 255, 255, 0.96);
-  box-shadow:
-    0 0 0 1px rgba(255, 90, 31, 0.35),
-    0 0 0 3px rgba(255, 255, 255, 0.23);
-  font-size: 0.62rem;
-  line-height: 1;
-}
-
-.leafletRoutePin span {
-  font-size: 0.58rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.leafletRoutePin strong {
-  font-size: 0.76rem;
-  line-height: 1;
-  font-weight: 700;
-}
-
-.mapCanvas :global(.leaflet-container) {
   width: 100%;
-  height: 100%;
+  height: 100vh;
 }
 
-.mapCanvas :global(.leaflet-control-attribution) {
-  font-size: 9px;
-  background: rgba(255, 255, 255, 0.68);
-  color: rgba(29, 29, 31, 0.58);
-}
-
-.mapCanvas :global(.leaflet-control-zoom a) {
+.markerWrapper {
+  background: transparent;
   border: 0;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #1d1d1f;
 }
 
-.mapCanvas :global(.leaflet-control-zoom a:hover),
-.mapCanvas :global(.leaflet-control-scale-line) {
-  color: #0071e3;
+.markerPin {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 60px;
+  position: relative;
+  transition: transform 140ms ease, opacity 140ms ease;
 }
 
-@media (max-width: 680px) {
-  .mapHeader,
-  .mapOverlay {
-    max-width: calc(100% - 28px);
-  }
+.markerImage {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 56px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 10px rgba(23, 23, 23, 0.14));
+}
 
-  .mapHeader {
-    left: 10px;
-  }
+.markerPinHovered,
+.markerPinActive {
+  transform: translateY(-1px) scale(1.04);
+}
 
-  .mapOverlayTop {
-    right: 10px;
-    top: 84px;
-  }
+.markerPinHovered .markerImage,
+.markerPinActive .markerImage {
+  filter: drop-shadow(0 8px 14px rgba(23, 23, 23, 0.16));
+}
 
-  .mapOverlayBottom {
-    left: 10px;
-    bottom: 10px;
+.markerPulse {
+  position: absolute;
+  inset: 9px 8px auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  background: rgba(80, 144, 139, 0.14);
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+.markerPinHovered .markerPulse,
+.markerPinActive .markerPulse {
+  opacity: 1;
+  animation: markerPulse 1.4s ease-out infinite;
+}
+
+@keyframes markerPulse {
+  0% {
+    transform: scale(0.82);
+    opacity: 0.6;
   }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+:global(.leaflet-control-zoom) {
+  border: 1px solid rgba(23, 23, 23, 0.1) !important;
+  border-radius: 16px !important;
+  overflow: hidden;
+  box-shadow: none !important;
+}
+
+:global(.leaflet-control-zoom a) {
+  background: rgba(255, 255, 255, 0.96) !important;
+  color: #171717 !important;
+  border-bottom: 1px solid rgba(23, 23, 23, 0.08) !important;
+  width: 36px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+}
+
+:global(.leaflet-control-zoom a:last-child) {
+  border-bottom: 0 !important;
+}
+
+:global(.leaflet-control-attribution) {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-radius: 12px 0 0 0;
+}
+
+:global(.leaflet-tooltip) {
+  border: 1px solid rgba(23, 23, 23, 0.1);
+  background: rgba(255, 255, 255, 0.98);
+  color: #171717;
+  box-shadow: none;
+}
+
+:global(.leaflet-tooltip-top:before) {
+  border-top-color: rgba(255, 255, 255, 0.98);
 }

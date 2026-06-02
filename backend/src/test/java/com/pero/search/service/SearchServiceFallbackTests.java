@@ -33,13 +33,14 @@ class SearchServiceFallbackTests {
                 PlaceDataLoadResult.missing("koreaTour", "한국관광공사", "cache-missing")
         );
         when(placeRepository.findAll()).thenReturn(List.of());
-        this.searchService = new SearchService(placeRepository, normalizer, embeddingService);
+        this.searchService = new SearchService(placeRepository, normalizer, embeddingService, new ThemeMapService(placeRepository, normalizer));
     }
 
     @Test
     void searchReturnsEmptyResultWhenNoCache() {
         var request = new SearchRequest(
                 "조용한 카페",
+                null,
                 SearchMode.HYBRID,
                 37.5619,
                 126.9782,
@@ -57,7 +58,7 @@ class SearchServiceFallbackTests {
 
     @Test
     void recommendationsReturnFallbackWithoutNpe() {
-        var request = new RecommendationRequest(37.5619, 126.9782, 3.0);
+        var request = new RecommendationRequest(null, 37.5619, 126.9782, 3.0);
 
         var response = searchService.recommend(request);
 

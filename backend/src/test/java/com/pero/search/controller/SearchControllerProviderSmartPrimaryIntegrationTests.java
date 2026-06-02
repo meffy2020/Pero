@@ -34,7 +34,7 @@ class SearchControllerProviderSmartPrimaryIntegrationTests {
     private ObjectMapper objectMapper;
 
     @Test
-    void searchUsesSmartSeoulWhenEnabledAndPrioritized() throws Exception {
+    void searchMergesProvidersButKeepsSmartSeoulPriorityForOverlappingSeoulQueries() throws Exception {
         String body = mockMvc.perform(
                         post("/api/search")
                                 .contentType(MediaType.APPLICATION_JSON)
@@ -54,8 +54,12 @@ class SearchControllerProviderSmartPrimaryIntegrationTests {
                 .getContentAsString();
 
         SearchResponse searchResponse = objectMapper.readValue(body, SearchResponse.class);
-        assertThat(searchResponse.source().providerId()).isEqualTo("smartSeoul");
+        assertThat(searchResponse.source().providerId()).isEqualTo("smartSeoul,koreaTour");
         assertThat(searchResponse.source().providerName()).contains("스마트서울맵");
-        assertThat(searchResponse.source().count()).isEqualTo(2);
+        assertThat(searchResponse.source().providerName()).contains("한국관광공사");
+        assertThat(searchResponse.source().count()).isEqualTo(4);
+        assertThat(searchResponse.results())
+                .extracting(result -> result.sourceAttribution())
+                .contains("smartSeoul");
     }
 }
