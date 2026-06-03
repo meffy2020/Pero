@@ -591,6 +591,12 @@ private struct RandomRecommendationSlotCard: View {
                     .buttonStyle(.borderedProminent)
                 }
                 .font(.caption.weight(.semibold))
+            } else {
+                StateMessageView(
+                    icon: "clock",
+                    title: "추천 준비 중",
+                    message: HomeMapKoreanCopy.slotPendingMessage
+                )
             }
         }
         .padding(16)
