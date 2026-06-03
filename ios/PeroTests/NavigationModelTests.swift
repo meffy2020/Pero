@@ -37,6 +37,17 @@ struct NavigationModelTests {
         #expect(cards.first?.reason.contains("현재 위치") == true)
     }
 
+    @Test func pickerModesKeepMapLayerIdentity() {
+        let response = RecommendationResponse.previewForTests
+        let cards = RecommendationViewModel.normalize(response: response)
+
+        #expect(cards.filter(RecommendationPickerMode.place.matches).map(\.id) == ["preview-seoul-park"])
+        #expect(cards.filter(RecommendationPickerMode.restaurant.matches).map(\.id) == ["preview-market"])
+        #expect(cards.filter(RecommendationPickerMode.course.matches).map(\.id) == ["preview-gallery"])
+        #expect(RecommendationPickerMode.allCases.map(\.title) == ["장소", "식당", "코스"])
+        #expect(RecommendationPickerMode.course.poolCopy == "코스 시작점")
+    }
+
     @Test @MainActor func viewModelKeepsSlotIdentityWhenEarlierRecommendationIsMissing() async {
         let provider = CapturingRecommendationProvider(response: .missingNearbyForTests)
         let locationProvider = StaticLocationProvider(latitude: 35.1796, longitude: 129.0756)

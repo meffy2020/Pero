@@ -60,6 +60,72 @@ enum RecommendationSlotKind: Hashable {
     case course
 }
 
+enum RecommendationPickerMode: String, CaseIterable, Hashable, Identifiable {
+    case place
+    case restaurant
+    case course
+
+    var id: String { rawValue }
+
+    init(card: RecommendationCardModel) {
+        switch card.randomSlotKind {
+        case .place:
+            self = .place
+        case .restaurant:
+            self = .restaurant
+        case .course:
+            self = .course
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .place: "장소"
+        case .restaurant: "식당"
+        case .course: "코스"
+        }
+    }
+
+    var shortTitle: String {
+        switch self {
+        case .place: "장소"
+        case .restaurant: "식당"
+        case .course: "코스"
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .place: "sparkles.square.filled.on.square"
+        case .restaurant: "fork.knife.circle.fill"
+        case .course: "point.topleft.down.curvedto.point.bottomright.up.fill"
+        }
+    }
+
+    var poolCopy: String {
+        switch self {
+        case .place: "주변 장소 핀"
+        case .restaurant: "식사 후보 핀"
+        case .course: "코스 시작점"
+        }
+    }
+
+    func matches(_ card: RecommendationCardModel) -> Bool {
+        RecommendationPickerMode(card: card) == self
+    }
+
+    func resultCopy(for card: RecommendationCardModel) -> String {
+        switch self {
+        case .place:
+            "지도 안 장소 후보 중 \(card.distanceLabel) 거리의 \(card.district) 장소를 뽑았어요. \(card.reason)"
+        case .restaurant:
+            "지금 먹기 좋은 식당 후보 중 하나를 뽑았어요. \(card.reason)"
+        case .course:
+            "현재 영역 안 코스 시작점으로 뽑았어요. \(card.reason)"
+        }
+    }
+}
+
 enum AppRoute: Hashable {
     case recommendationDetail(cardID: RecommendationCardModel.ID)
     case mapFocus(cardID: RecommendationCardModel.ID)
