@@ -19,8 +19,8 @@ struct MapScreen: View {
     )
   }
 
-  private var slot: RandomRecommendationSlot {
-    RandomRecommendationSlot(card: card)
+  private var mode: RecommendationPickerMode {
+    RecommendationPickerMode(card: card)
   }
 
   var body: some View {
@@ -28,9 +28,9 @@ struct MapScreen: View {
       Map(initialPosition: position) {
         Annotation(card.title, coordinate: coordinate) {
           VStack(spacing: 6) {
-            Image(systemName: slot.symbolName)
+            Image(systemName: mode.symbolName)
               .font(.system(size: 34, weight: .bold))
-              .foregroundStyle(.white, slot.accent.gradient)
+              .foregroundStyle(.white, mode.mapAccent.gradient)
               .shadow(color: .black.opacity(0.22), radius: 10, y: 4)
             Text(card.title)
               .font(.caption.weight(.bold))
@@ -86,7 +86,7 @@ struct MapScreen: View {
       .buttonStyle(.plain)
       .accessibilityLabel("뒤로")
 
-      Label(slot.mapEyebrow, systemImage: slot.symbolName)
+      Label(mode.mapEyebrow, systemImage: mode.symbolName)
       Label(card.distanceLabel, systemImage: "figure.walk")
       Label(card.district, systemImage: "mappin.and.ellipse")
       Spacer(minLength: 0)
@@ -95,34 +95,34 @@ struct MapScreen: View {
     .foregroundStyle(.primary)
     .padding(.horizontal, 12)
     .padding(.vertical, 10)
-    .mapScreenGlass(cornerRadius: 18, tint: slot.accent.opacity(0.20))
+    .mapScreenGlass(cornerRadius: 18, tint: mode.mapAccent.opacity(0.20))
   }
 
   private var bottomSummaryPanel: some View {
     VStack(alignment: .leading, spacing: 16) {
       HStack(alignment: .top, spacing: 12) {
         VStack(alignment: .leading, spacing: 7) {
-          Text(slot.detailEyebrow)
+          Text(mode.detailEyebrow)
             .font(.caption.weight(.bold))
-            .foregroundStyle(slot.accent)
+            .foregroundStyle(mode.mapAccent)
           Text(card.title)
             .font(.title2.weight(.bold))
-          Text(slot.mapSummary(for: card))
+          Text(mode.mapSummary(for: card))
             .font(.subheadline)
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
         }
         Spacer()
-        Image(systemName: slot.symbolName)
+        Image(systemName: mode.symbolName)
           .font(.title2.weight(.bold))
-          .foregroundStyle(slot.accent)
+          .foregroundStyle(mode.mapAccent)
           .frame(width: 48, height: 48)
-          .mapScreenGlass(cornerRadius: 18, tint: slot.accent.opacity(0.14))
+          .mapScreenGlass(cornerRadius: 18, tint: mode.mapAccent.opacity(0.14))
       }
 
       VStack(alignment: .leading, spacing: 8) {
         Label(card.roadAddress, systemImage: "road.lanes")
-        Label(slot.explainabilityCopy, systemImage: "sparkles")
+        Label(mode.explainabilityCopy, systemImage: "sparkles")
         Label("출처: \(card.sourceAttribution)", systemImage: "doc.text.magnifyingglass")
       }
       .font(.caption)
@@ -131,7 +131,7 @@ struct MapScreen: View {
       HStack(spacing: 10) {
         if let appleMapsURL = card.appleMapsURL {
           Link(destination: appleMapsURL) {
-            Label("애플 지도 열기", systemImage: "arrow.up.right.square")
+            Label(mode.directionsTitle, systemImage: "arrow.up.right.square")
               .frame(maxWidth: .infinity)
           }
           .buttonStyle(.borderedProminent)
@@ -144,7 +144,7 @@ struct MapScreen: View {
         }
 
         NavigationLink(value: AppRoute.recommendationDetail(cardID: card.id)) {
-          Label("추천 이유", systemImage: "sparkles")
+          Label("상세", systemImage: "sparkles")
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.bordered)
@@ -159,22 +159,7 @@ struct MapScreen: View {
 
 }
 
-private enum RandomRecommendationSlot {
-  case place
-  case restaurant
-  case course
-
-  init(card: RecommendationCardModel) {
-    switch card.randomSlotKind {
-    case .place:
-      self = .place
-    case .restaurant:
-      self = .restaurant
-    case .course:
-      self = .course
-    }
-  }
-
+private extension RecommendationPickerMode {
   var mapEyebrow: String {
     switch self {
     case .place: "랜덤 장소"
@@ -185,9 +170,9 @@ private enum RandomRecommendationSlot {
 
   var detailEyebrow: String {
     switch self {
-    case .place: "오늘 뽑힌 랜덤 장소"
-    case .restaurant: "지금 먹기 좋은 식당 추천"
-    case .course: "바로 이어지는 랜덤 코스"
+    case .place: "현재 추천 영역에서 뽑힌 장소"
+    case .restaurant: "현재 추천 영역에서 뽑힌 식당"
+    case .course: "현재 추천 영역에서 뽑힌 코스 시작점"
     }
   }
 
@@ -199,15 +184,7 @@ private enum RandomRecommendationSlot {
     }
   }
 
-  var symbolName: String {
-    switch self {
-    case .place: "sparkles.square.filled.on.square"
-    case .restaurant: "fork.knife.circle.fill"
-    case .course: "point.topleft.down.curvedto.point.bottomright.up.fill"
-    }
-  }
-
-  var accent: Color {
+  var mapAccent: Color {
     switch self {
     case .place: .blue
     case .restaurant: .orange
@@ -215,8 +192,16 @@ private enum RandomRecommendationSlot {
     }
   }
 
+  var directionsTitle: String {
+    switch self {
+    case .place: "장소 길찾기"
+    case .restaurant: "식당 길찾기"
+    case .course: "코스 시작"
+    }
+  }
+
   func mapSummary(for card: RecommendationCardModel) -> String {
-    "\(explainabilityCopy) \(card.reason)"
+    "현재 추천 영역의 \(poolCopy) 중 선택된 결과입니다. \(resultCopy(for: card))"
   }
 }
 
