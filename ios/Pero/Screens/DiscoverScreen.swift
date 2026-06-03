@@ -74,7 +74,7 @@ struct HomeRecommendationScreen: View {
                 Text("지금 뭐 하지?")
                     .font(.largeTitle.weight(.bold))
                     .minimumScaleFactor(0.82)
-                Text("근처 후보에서 장소·식당·코스를 바로 뽑고, 왜 추천됐는지는 카드에서 확인해요.")
+                Text(HomeMapKoreanCopy.heroSubtitle)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -83,21 +83,21 @@ struct HomeRecommendationScreen: View {
                 Button {
                     rerollRecommendations()
                 } label: {
-                    Label(viewModel.state == .loading ? "다시 뽑는 중" : "다시 뽑기", systemImage: "arrow.triangle.2.circlepath")
+                    Label(viewModel.state == .loading ? HomeMapKoreanCopy.randomPickLoadingCTA : HomeMapKoreanCopy.randomPickCTA, systemImage: "arrow.triangle.2.circlepath")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
                 .disabled(viewModel.state == .loading)
 
-                Text("검색 조건을 바꾸지 않고 현재 위치 기준 추천만 새로 불러옵니다.")
+                Text(HomeMapKoreanCopy.randomPickHint)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             if viewModel.fallbackUsed {
-                Label("추천 반경을 넓혀 보완한 결과입니다", systemImage: "info.circle")
+                Label(HomeMapKoreanCopy.fallbackNotice, systemImage: "info.circle")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 10)
@@ -111,7 +111,7 @@ struct HomeRecommendationScreen: View {
 
     private var randomSlotSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionTitle("오늘의 랜덤 추천 3가지")
+            SectionTitle(HomeMapKoreanCopy.slotSectionTitle)
             ForEach(RandomRecommendationSlot.all) { slot in
                 RandomRecommendationSlotCard(slot: slot, card: viewModel.card(forSlotTitle: slot.title))
             }
@@ -129,13 +129,13 @@ struct HomeRecommendationScreen: View {
     private var stateSection: some View {
         switch viewModel.state {
         case .ready:
-            StateMessageView(icon: "location", title: "위치 확인 대기", message: "시연용 기본 위치로 추천을 준비합니다.")
+            StateMessageView(icon: "location", title: "위치 확인 대기", message: HomeMapKoreanCopy.readyMessage)
         case .loading:
             VStack(alignment: .leading, spacing: 10) {
                 SectionTitle("지금 갈 곳 찾는 중")
                 HStack(spacing: 12) {
                     ProgressView()
-                    Text("장소 메타데이터와 추천 이유를 정리하고 있습니다.")
+                    Text(HomeMapKoreanCopy.loadingMessage)
                         .foregroundStyle(.secondary)
                 }
                 .padding(16)
@@ -144,12 +144,31 @@ struct HomeRecommendationScreen: View {
         case .results:
             EmptyView()
         case .empty:
-            StateMessageView(icon: "tray", title: "추천 후보 없음", message: "반경을 넓히거나 백엔드 추천 데이터를 확인해 주세요.")
+            StateMessageView(icon: "tray", title: "추천 후보 없음", message: HomeMapKoreanCopy.emptyMessage)
         case .error(let message):
             StateMessageView(icon: "exclamationmark.triangle", title: "연결 확인 필요", message: message)
         }
     }
 
+}
+
+
+
+enum HomeMapKoreanCopy {
+    static let heroSubtitle = "현재 보고 있는 지도 안 후보에서 장소·식당·코스를 바로 뽑고, 왜 추천됐는지는 카드에서 확인해요."
+    static let randomPickCTA = "이 화면에서 랜덤 픽"
+    static let randomPickLoadingCTA = "지도 후보 뽑는 중"
+    static let randomPickHint = "검색 조건을 바꾸지 않고 현재 화면의 추천 후보만 새로 뽑습니다."
+    static let fallbackNotice = "현재 화면 후보가 부족해 주변 반경을 넓힌 결과입니다"
+    static let slotSectionTitle = "현재 화면 안 추천 후보"
+    static let readyMessage = "시연용 기본 위치의 지도 후보를 준비합니다."
+    static let loadingMessage = "지도 안 후보와 추천 이유를 정리하고 있습니다."
+    static let emptyMessage = "지도를 움직이거나 반경을 넓혀 추천 후보를 다시 확인해 주세요."
+    static let mapPreviewEyebrow = "현재 화면 후보"
+    static let mapPreviewPlaceholder = "지도 후보를 준비 중입니다"
+    static let mapCTA = "지도에서 보기"
+    static let reasonCTA = "왜 뽑혔는지 보기"
+    static let slotPendingMessage = "랜덤 픽을 누르거나 추천 응답이 도착하면 이 슬롯이 채워집니다."
 }
 
 private struct RandomRecommendationSlot: Identifiable {
@@ -163,21 +182,21 @@ private struct RandomRecommendationSlot: Identifiable {
         RandomRecommendationSlot(
             id: "nearby",
             title: "랜덤 장소 추천",
-            userPrompt: "근처 아무 데나 하나 골라줘",
+            userPrompt: "현재 화면 안에서 하나만 골라줘",
             systemImage: "shuffle.circle.fill",
             tint: .blue
         ),
         RandomRecommendationSlot(
             id: "meal",
             title: "식당 추천",
-            userPrompt: "지금 밥 먹을 만한 곳 추천해줘",
+            userPrompt: "이 지도 안에서 밥 먹을 곳 골라줘",
             systemImage: "fork.knife.circle.fill",
             tint: .orange
         ),
         RandomRecommendationSlot(
             id: "course",
             title: "랜덤 코스 추천",
-            userPrompt: "한 번에 갈 코스 짜줘",
+            userPrompt: "보이는 후보로 코스 짜줘",
             systemImage: "point.topleft.down.curvedto.point.bottomright.up.fill",
             tint: .purple
         )
@@ -222,10 +241,10 @@ private struct MapPreviewCard: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Label("지도 우선 탐색", systemImage: "map")
+                Label(HomeMapKoreanCopy.mapPreviewEyebrow, systemImage: "map")
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.white.opacity(0.88))
-                Text(card?.title ?? "추천 지도를 준비 중입니다")
+                Text(card?.title ?? HomeMapKoreanCopy.mapPreviewPlaceholder)
                     .font(.title3.weight(.bold))
                     .foregroundStyle(.white)
                 if let card {
@@ -283,13 +302,13 @@ private struct RandomRecommendationSlotCard: View {
 
                 HStack(spacing: 10) {
                     NavigationLink(value: AppRoute.mapFocus(cardID: card.id)) {
-                        Label("지도에서 확인", systemImage: "map")
+                        Label(HomeMapKoreanCopy.mapCTA, systemImage: "map")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
 
                     NavigationLink(value: AppRoute.recommendationDetail(cardID: card.id)) {
-                        Label("왜 뽑혔는지", systemImage: "sparkles")
+                        Label(HomeMapKoreanCopy.reasonCTA, systemImage: "sparkles")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
@@ -299,7 +318,7 @@ private struct RandomRecommendationSlotCard: View {
                 StateMessageView(
                     icon: "clock",
                     title: "추천 준비 중",
-                    message: "다시 뽑기를 누르거나 추천 응답이 도착하면 이 슬롯이 채워집니다."
+                    message: HomeMapKoreanCopy.slotPendingMessage
                 )
             }
         }
