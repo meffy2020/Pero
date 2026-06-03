@@ -28,6 +28,11 @@ struct NavigationModelTests {
     }
 
     @Test func recommendationSlotKindDrivesMapPrimaryCTACopy() {
+        let place = RecommendationCardModel.sample.with(
+            title: "조용한 산책 공원",
+            subtitle: "랜덤 장소 추천",
+            category: "공원"
+        )
         let restaurant = RecommendationCardModel.sample.with(
             title: "도심 간편 식당가",
             subtitle: "식당 추천",
@@ -39,10 +44,18 @@ struct NavigationModelTests {
             category: "전시"
         )
 
+        #expect(place.randomSlotKind == .place)
+        #expect(place.mapPrimaryCTATitle == "지도에서 랜덤 장소 보기")
         #expect(restaurant.randomSlotKind == .restaurant)
         #expect(restaurant.mapPrimaryCTATitle == "지도에서 식당 위치 보기")
         #expect(course.randomSlotKind == .course)
         #expect(course.mapPrimaryCTATitle == "지도에서 코스 시작점 보기")
+    }
+
+    @Test func recommendationCardCategoryIconsStayPresentationOnly() {
+        #expect(RecommendationCardModel.sample.with(category: "음식점").categoryIconName == "fork.knife.circle.fill")
+        #expect(RecommendationCardModel.sample.with(category: "전시").categoryIconName == "building.columns.circle.fill")
+        #expect(RecommendationCardModel.sample.with(category: "공원").categoryIconName == "leaf.circle.fill")
     }
 
     @Test func recommendationStatesExposeKoreanCopy() {
