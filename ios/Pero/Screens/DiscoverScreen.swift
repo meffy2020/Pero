@@ -108,7 +108,7 @@ struct HomeRecommendationScreen: View {
                     Text("지금 뭐 하지?")
                         .font(.largeTitle.weight(.black))
                         .foregroundStyle(.primary)
-                    Text("보고 있는 지도 안 후보만 랜덤으로 뽑아요")
+                    Text("현재 추천 영역 안 후보만 랜덤으로 뽑아요")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
@@ -146,7 +146,7 @@ struct HomeRecommendationScreen: View {
 
     private var currentAreaPill: some View {
         HStack(spacing: 8) {
-            Label("현재 화면 안 후보 \(visiblePoolCount)개", systemImage: "scope")
+            Label("현재 추천 영역 후보 \(visiblePoolCount)개", systemImage: "scope")
             Text("·")
                 .foregroundStyle(.tertiary)
             Text(pickerMode.poolCopy)
@@ -192,7 +192,7 @@ struct HomeRecommendationScreen: View {
         case .loading:
             "후보 스캔 중"
         default:
-            "이 화면에서 \(pickerMode.shortTitle) 랜덤 PICK"
+            "이 영역에서 \(pickerMode.shortTitle) 랜덤 PICK"
         }
     }
 
@@ -364,7 +364,7 @@ private struct RandomRecommendationSlotCard: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 7) {
-                    Label("현재 화면에서 뽑힘 · 후보 \(visiblePoolCount)개", systemImage: "scope")
+                    Label("현재 추천 영역에서 뽑힘 · 후보 \(visiblePoolCount)개", systemImage: "scope")
                         .font(.caption.weight(.bold))
                         .foregroundStyle(mode.accent)
                     Text(card.title)
