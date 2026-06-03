@@ -598,6 +598,7 @@ private struct RandomRecommendationSlotCard: View {
                     message: HomeMapKoreanCopy.slotPendingMessage
                 )
             }
+            .font(.caption.weight(.bold))
         }
         .padding(16)
         .homeRecommendationGlass(cornerRadius: 24, tint: .white.opacity(0.24))
@@ -703,6 +704,22 @@ private extension View {
                 .overlay {
                     shape.stroke(.quaternary, lineWidth: 1)
                 }
+        }
+    }
+}
+
+private extension RecommendationCardModel {
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+}
+
+private extension RecommendationPickerMode {
+    var accent: Color {
+        switch self {
+        case .place: .blue
+        case .restaurant: .orange
+        case .course: .purple
         }
     }
 }
