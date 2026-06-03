@@ -12,11 +12,13 @@ struct PlaceExplanationDetailScreen: View {
       detailBackdrop
 
       ScrollView {
-        VStack(alignment: .leading, spacing: 18) {
-          reasonHero
-          actionRow
-          visitSummary
-          sourceAndTags
+        detailScreenGlassContainer {
+          VStack(alignment: .leading, spacing: 18) {
+            reasonHero
+            actionRow
+            visitSummary
+            sourceAndTags
+          }
         }
         .padding(.horizontal, 20)
         .padding(.top, 24)
@@ -26,6 +28,17 @@ struct PlaceExplanationDetailScreen: View {
     }
     .navigationTitle("추천 이유")
     .navigationBarTitleDisplayMode(.inline)
+  }
+
+  @ViewBuilder
+  private func detailScreenGlassContainer<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+    if #available(iOS 26, *) {
+      GlassEffectContainer(spacing: 18) {
+        content()
+      }
+    } else {
+      content()
+    }
   }
 
   private var detailBackdrop: some View {
@@ -363,14 +376,18 @@ extension View {
 
       self.glassEffect(glass, in: .rect(cornerRadius: cornerRadius))
     } else {
+      let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+
       self
-        .background(
-          .background.opacity(0.82),
-          in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        )
+        .background {
+          shape.fill(.ultraThinMaterial)
+          shape.fill(Color(.systemBackground).opacity(0.48))
+          if let tint {
+            shape.fill(tint)
+          }
+        }
         .overlay {
-          RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            .stroke(.white.opacity(0.24), lineWidth: 1)
+          shape.stroke(.white.opacity(0.24), lineWidth: 1)
         }
     }
   }

@@ -313,7 +313,58 @@ private struct RandomMapResultSheet: View {
     let reroll: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 15) {
+        ZStack(alignment: .bottomLeading) {
+            Map(initialPosition: position) {
+                if let card {
+                    Marker(card.title, coordinate: CLLocationCoordinate2D(latitude: card.latitude, longitude: card.longitude))
+                }
+            }
+            .mapStyle(.standard(elevation: .realistic))
+            .allowsHitTesting(false)
+            .overlay {
+                LinearGradient(
+                    colors: [.black.opacity(0.05), .black.opacity(0.45)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Label("지도 우선 탐색", systemImage: "map")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white.opacity(0.88))
+                Text(card?.title ?? "추천 지도를 준비 중입니다")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(.white)
+                if let card {
+                    HStack(spacing: 6) {
+                        MetadataChip(text: card.distanceLabel, systemImage: "figure.walk", style: .light)
+                        MetadataChip(text: card.district, systemImage: "mappin.and.ellipse", style: .light)
+                    }
+                }
+            }
+            .padding(16)
+        }
+        .overlay(alignment: .topTrailing) {
+            VStack(spacing: 8) {
+                Image(systemName: "location.north.line.fill")
+                Image(systemName: "plus.magnifyingglass")
+            }
+            .font(.caption.weight(.bold))
+            .foregroundStyle(.primary)
+            .padding(10)
+            .homeRecommendationGlass(cornerRadius: 18, tint: .white.opacity(0.22))
+            .padding(12)
+        }
+    }
+}
+
+private struct RandomRecommendationSlotCard: View {
+    let slot: RandomRecommendationSlot
+    let card: RecommendationCardModel?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 7) {
                     Label("현재 화면에서 뽑힘 · 후보 \(visiblePoolCount)개", systemImage: "scope")
@@ -437,11 +488,17 @@ private extension View {
             self
                 .glassEffect(glass, in: .rect(cornerRadius: cornerRadius))
         } else {
+            let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+
             self
-                .background(.background.opacity(0.92), in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .background {
+                    shape.fill(.ultraThinMaterial)
+                    if let tint {
+                        shape.fill(tint)
+                    }
+                }
                 .overlay {
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .stroke(.white.opacity(0.28), lineWidth: 1)
+                    shape.stroke(.quaternary, lineWidth: 1)
                 }
         }
     }

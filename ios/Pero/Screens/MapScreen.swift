@@ -47,10 +47,12 @@ struct MapScreen: View {
       )
       .ignoresSafeArea()
 
-      VStack(spacing: 0) {
-        topContextBar
-        Spacer()
-        bottomSummaryPanel
+      mapScreenGlassContainer {
+        VStack(spacing: 0) {
+          topContextBar
+          Spacer()
+          bottomSummaryPanel
+        }
       }
       .padding(.horizontal, 18)
       .safeAreaPadding(.top, 12)
@@ -58,6 +60,17 @@ struct MapScreen: View {
     }
     .background(Color(.systemGroupedBackground))
     .toolbar(.hidden, for: .navigationBar)
+  }
+
+  @ViewBuilder
+  private func mapScreenGlassContainer<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+    if #available(iOS 26, *) {
+      GlassEffectContainer(spacing: 18) {
+        content()
+      }
+    } else {
+      content()
+    }
   }
 
   private var topContextBar: some View {
@@ -217,14 +230,18 @@ extension View {
 
       self.glassEffect(glass, in: .rect(cornerRadius: cornerRadius))
     } else {
+      let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+
       self
-        .background(
-          .background.opacity(0.92),
-          in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        )
+        .background {
+          shape.fill(.ultraThinMaterial)
+          shape.fill(Color(.systemBackground).opacity(0.58))
+          if let tint {
+            shape.fill(tint)
+          }
+        }
         .overlay {
-          RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            .stroke(.white.opacity(0.28), lineWidth: 1)
+          shape.stroke(.white.opacity(0.28), lineWidth: 1)
         }
     }
   }
