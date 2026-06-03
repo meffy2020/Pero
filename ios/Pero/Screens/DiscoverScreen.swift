@@ -700,6 +700,9 @@ private extension View {
                 .overlay {
                     shape.stroke(.quaternary, lineWidth: 1)
                 }
+                .overlay {
+                    shape.stroke(.quaternary, lineWidth: 1)
+                }
         }
     }
 }
