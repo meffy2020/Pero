@@ -216,82 +216,59 @@ struct HomeRecommendationScreen: View {
         }
     }
 
-    private var stateIcon: String {
-        switch viewModel.state {
-        case .ready: "location"
-        case .loading: "hourglass"
-        case .results: "map"
-        case .empty: "tray"
-        case .error: "exclamationmark.triangle"
+    private var heroSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Label(viewModel.locationLabel, systemImage: "location.fill")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.blue)
+                .lineLimit(1)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .homeRecommendationGlass(cornerRadius: 16, tint: .cyan.opacity(0.24))
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("지금 뭐 하지?")
+                    .font(.largeTitle.weight(.bold))
+                    .minimumScaleFactor(0.82)
+                Text(HomeMapKoreanCopy.heroSubtitle)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            HStack(spacing: 10) {
+                Button {
+                    rerollRecommendations()
+                } label: {
+                    Label(viewModel.state == .loading ? HomeMapKoreanCopy.randomPickLoadingCTA : HomeMapKoreanCopy.randomPickCTA, systemImage: "arrow.triangle.2.circlepath")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .disabled(viewModel.state == .loading)
+
+                Text(HomeMapKoreanCopy.randomPickHint)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if viewModel.fallbackUsed {
+                Label(HomeMapKoreanCopy.fallbackNotice, systemImage: "info.circle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .homeRecommendationGlass(cornerRadius: 14, tint: .white.opacity(0.18))
+            }
         }
     }
 
-    private var stateMessage: String {
-        switch viewModel.state {
-        case .ready:
-            "시연용 기본 위치로 지도 후보를 준비합니다."
-        case .loading:
-            "장소 핀과 추천 이유를 지도 위에 올리는 중입니다."
-        case .results:
-            "지도 후보를 선택하거나 랜덤 PICK을 눌러 주세요."
-        case .empty:
-            "현재 영역에 뽑을 후보가 없습니다. 추천 반경이나 백엔드 데이터를 확인해 주세요."
-        case .error(let message):
-            message
-        }
-    }
-
-    private func markerSymbol(for card: RecommendationCardModel) -> String {
-        RecommendationPickerMode(card: card).symbolName
-    }
-
-    private func markerTint(for card: RecommendationCardModel) -> Color {
-        RecommendationPickerMode(card: card).accent
-    }
-
-    private func reconcileSelection(with cards: [RecommendationCardModel]) {
-        if let selectedCardID,
-           let card = cards.first(where: { $0.id == selectedCardID }),
-           pickerMode.matches(card) {
-            focus(on: card)
-            return
-        }
-        if let replacement = cards.first(where: pickerMode.matches) ?? cards.first {
-            select(replacement)
-        } else {
-            selectedCardID = nil
-        }
-    }
-
-    private func pickRandomCandidate() {
-        if candidateCards.isEmpty {
-            rerollRecommendations()
-            return
-        }
-        if candidateCards.count == 1, let only = candidateCards.first {
-            select(only)
-            return
-        }
-        let currentID = selectedCardID
-        let next = candidateCards.filter { $0.id != currentID }.randomElement() ?? candidateCards.randomElement()
-        if let next {
-            select(next)
-        }
-    }
-
-    private func select(_ card: RecommendationCardModel) {
-        selectedCardID = card.id
-        focus(on: card)
-    }
-
-    private func focus(on card: RecommendationCardModel) {
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) {
-            cameraPosition = .region(
-                MKCoordinateRegion(
-                    center: card.coordinate,
-                    span: MKCoordinateSpan(latitudeDelta: 0.018, longitudeDelta: 0.018)
-                )
-            )
+    private var randomSlotSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(HomeMapKoreanCopy.slotSectionTitle)
+            ForEach(RandomRecommendationSlot.all) { slot in
+                RandomRecommendationSlotCard(slot: slot, card: viewModel.card(forSlotTitle: slot.title))
+            }
         }
     }
 
@@ -301,13 +278,104 @@ struct HomeRecommendationScreen: View {
             await viewModel.loadGoNowRecommendations()
         }
     }
+
+    @ViewBuilder
+    private var stateSection: some View {
+        switch viewModel.state {
+        case .ready:
+            StateMessageView(icon: "location", title: "위치 확인 대기", message: HomeMapKoreanCopy.readyMessage)
+        case .loading:
+            VStack(alignment: .leading, spacing: 10) {
+                SectionTitle("지금 갈 곳 찾는 중")
+                HStack(spacing: 12) {
+                    ProgressView()
+                    Text(HomeMapKoreanCopy.loadingMessage)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(16)
+                .homeRecommendationGlass(cornerRadius: 20, tint: .white.opacity(0.18))
+            }
+        case .results:
+            EmptyView()
+        case .empty:
+            StateMessageView(icon: "tray", title: "추천 후보 없음", message: HomeMapKoreanCopy.emptyMessage)
+        case .error(let message):
+            StateMessageView(icon: "exclamationmark.triangle", title: "연결 확인 필요", message: message)
+        }
+    }
+
 }
 
-private struct RandomMapResultSheet: View {
-    let card: RecommendationCardModel
-    let mode: RecommendationPickerMode
-    let visiblePoolCount: Int
-    let reroll: () -> Void
+
+
+enum HomeMapKoreanCopy {
+    static let heroSubtitle = "현재 보고 있는 지도 안 후보에서 장소·식당·코스를 바로 뽑고, 왜 추천됐는지는 카드에서 확인해요."
+    static let randomPickCTA = "이 화면에서 랜덤 픽"
+    static let randomPickLoadingCTA = "지도 후보 뽑는 중"
+    static let randomPickHint = "검색 조건을 바꾸지 않고 현재 화면의 추천 후보만 새로 뽑습니다."
+    static let fallbackNotice = "현재 화면 후보가 부족해 주변 반경을 넓힌 결과입니다"
+    static let slotSectionTitle = "현재 화면 안 추천 후보"
+    static let readyMessage = "시연용 기본 위치의 지도 후보를 준비합니다."
+    static let loadingMessage = "지도 안 후보와 추천 이유를 정리하고 있습니다."
+    static let emptyMessage = "지도를 움직이거나 반경을 넓혀 추천 후보를 다시 확인해 주세요."
+    static let mapPreviewEyebrow = "현재 화면 후보"
+    static let mapPreviewPlaceholder = "지도 후보를 준비 중입니다"
+    static let mapCTA = "지도에서 보기"
+    static let reasonCTA = "왜 뽑혔는지 보기"
+    static let slotPendingMessage = "랜덤 픽을 누르거나 추천 응답이 도착하면 이 슬롯이 채워집니다."
+}
+
+private struct RandomRecommendationSlot: Identifiable {
+    let id: String
+    let title: String
+    let userPrompt: String
+    let systemImage: String
+    let tint: Color
+
+    static let all = [
+        RandomRecommendationSlot(
+            id: "nearby",
+            title: "랜덤 장소 추천",
+            userPrompt: "현재 화면 안에서 하나만 골라줘",
+            systemImage: "shuffle.circle.fill",
+            tint: .blue
+        ),
+        RandomRecommendationSlot(
+            id: "meal",
+            title: "식당 추천",
+            userPrompt: "이 지도 안에서 밥 먹을 곳 골라줘",
+            systemImage: "fork.knife.circle.fill",
+            tint: .orange
+        ),
+        RandomRecommendationSlot(
+            id: "course",
+            title: "랜덤 코스 추천",
+            userPrompt: "보이는 후보로 코스 짜줘",
+            systemImage: "point.topleft.down.curvedto.point.bottomright.up.fill",
+            tint: .purple
+        )
+    ]
+}
+
+private struct MapPreviewCard: View {
+    let card: RecommendationCardModel?
+
+    private var position: MapCameraPosition {
+        guard let card else {
+            return .region(
+                MKCoordinateRegion(
+                    center: CLLocationCoordinate2D(latitude: 37.5665, longitude: 126.9780),
+                    span: MKCoordinateSpan(latitudeDelta: 0.08, longitudeDelta: 0.08)
+                )
+            )
+        }
+        return .region(
+            MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: card.latitude, longitude: card.longitude),
+                span: MKCoordinateSpan(latitudeDelta: 0.018, longitudeDelta: 0.018)
+            )
+        )
+    }
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
@@ -327,10 +395,10 @@ private struct RandomMapResultSheet: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Label("지도 우선 탐색", systemImage: "map")
+                Label(HomeMapKoreanCopy.mapPreviewEyebrow, systemImage: "map")
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.white.opacity(0.88))
-                Text(card?.title ?? "추천 지도를 준비 중입니다")
+                Text(card?.title ?? HomeMapKoreanCopy.mapPreviewPlaceholder)
                     .font(.title3.weight(.bold))
                     .foregroundStyle(.white)
                 if let card {
@@ -393,19 +461,26 @@ private struct RandomRecommendationSlotCard: View {
                 .buttonStyle(.borderedProminent)
                 .tint(mode.accent)
 
-                if let appleMapsURL = card.appleMapsURL {
-                    Link(destination: appleMapsURL) {
-                        Label("길찾기", systemImage: "arrow.triangle.turn.up.right.circle.fill")
+                HStack(spacing: 10) {
+                    NavigationLink(value: AppRoute.mapFocus(cardID: card.id)) {
+                        Label(HomeMapKoreanCopy.mapCTA, systemImage: "map")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
-                }
 
-                NavigationLink(value: AppRoute.recommendationDetail(cardID: card.id)) {
-                    Label("상세", systemImage: "sparkles")
-                        .frame(maxWidth: .infinity)
+                    NavigationLink(value: AppRoute.recommendationDetail(cardID: card.id)) {
+                        Label(HomeMapKoreanCopy.reasonCTA, systemImage: "sparkles")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
-                .buttonStyle(.bordered)
+                .font(.caption.weight(.semibold))
+            } else {
+                StateMessageView(
+                    icon: "clock",
+                    title: "추천 준비 중",
+                    message: HomeMapKoreanCopy.slotPendingMessage
+                )
             }
             .font(.caption.weight(.bold))
         }
