@@ -67,7 +67,7 @@ import Testing
     let places = try await provider.places()
     let search = try await provider.search(SearchRequest(query: "서울"))
 
-    #expect(places.total == 1)
+    #expect(places.total == 3)
     #expect(search.mode == .hybrid)
     #expect(search.results.first?.name == "서울 반려 산책 공원")
 

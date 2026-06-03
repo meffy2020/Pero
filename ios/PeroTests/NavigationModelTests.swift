@@ -83,6 +83,18 @@ struct NavigationModelTests {
         #expect(cards.first?.reason.contains("현재 위치") == true)
     }
 
+
+    @Test func placePoolNormalizerTurnsPlacesIntoMapPins() {
+        let cards = RecommendationViewModel.normalize(places: PlaceListItem.previewPoolForTests, center: StaticLocationProvider.previewCoordinate)
+
+        #expect(cards.count == 4)
+        #expect(cards.map(\.id).contains("preview-cafe"))
+        #expect(cards.filter(RecommendationPickerMode.place.matches).count == 1)
+        #expect(cards.filter(RecommendationPickerMode.restaurant.matches).count == 2)
+        #expect(cards.filter(RecommendationPickerMode.course.matches).count == 1)
+        #expect(cards.first?.distanceLabel.hasSuffix("km") == true)
+    }
+
     @Test func pickerModesKeepMapLayerIdentity() {
         let response = RecommendationResponse.previewForTests
         let cards = RecommendationViewModel.normalize(response: response)
@@ -122,6 +134,21 @@ struct NavigationModelTests {
         #expect(provider.lastRequest?.radiusKm == 3)
         #expect(viewModel.cards.count == 3)
         #expect(viewModel.locationLabel.contains("35.1796") == true)
+    }
+
+    @Test @MainActor func viewModelUsesPlacesEndpointAsMapPinPoolWhenAvailable() async {
+        let provider = CapturingRecommendationProvider(placePool: PlaceListItem.previewPoolForTests)
+        let locationProvider = StaticLocationProvider.preview
+        let viewModel = RecommendationViewModel(provider: provider, locationProvider: locationProvider)
+
+        await viewModel.loadGoNowRecommendations()
+
+        #expect(provider.recommendationCallCount == 1)
+        #expect(provider.placesCallCount == 1)
+        #expect(viewModel.cards.count == 4)
+        #expect(viewModel.cards.map(\.id).contains("preview-cafe"))
+        #expect(viewModel.card(forSlotTitle: "식당 추천")?.randomSlotKind == .restaurant)
+        #expect(viewModel.state == .results)
     }
 
     @Test @MainActor func viewModelFallsBackToPreviewCardsAfterTransientReloadFailure() async {
@@ -211,6 +238,71 @@ private extension RecommendationCardModel {
             tags: tags
         )
     }
+}
+
+private extension PlaceListItem {
+    static let previewPoolForTests = [
+        PlaceListItem(
+            id: "preview-seoul-park",
+            name: "서울 반려 산책 공원",
+            category: "공원",
+            district: "중구",
+            address: "서울특별시 중구",
+            roadAddress: "서울특별시 중구 세종대로",
+            summary: "현재 위치 기준 산책 동선이 짧은 미리보기 장소입니다.",
+            tags: ["산책", "반려동물"],
+            themeTags: ["go-now"],
+            latitude: 37.5665,
+            longitude: 126.9780,
+            sourceAttribution: "Preview",
+            tourApi: nil
+        ),
+        PlaceListItem(
+            id: "preview-market",
+            name: "도심 간편 식당가",
+            category: "음식점",
+            district: "중구",
+            address: "서울특별시 중구",
+            roadAddress: "서울특별시 중구 무교로",
+            summary: "식사 후 이동하기 쉬운 미리보기 장소입니다.",
+            tags: ["식사", "도보"],
+            themeTags: ["go-now"],
+            latitude: 37.5677,
+            longitude: 126.9794,
+            sourceAttribution: "Preview",
+            tourApi: nil
+        ),
+        PlaceListItem(
+            id: "preview-gallery",
+            name: "시청 인근 전시 공간",
+            category: "전시",
+            district: "중구",
+            address: "서울특별시 중구",
+            roadAddress: "서울특별시 중구 세종대로",
+            summary: "날씨 영향을 덜 받는 실내 미리보기 장소입니다.",
+            tags: ["실내", "전시"],
+            themeTags: ["go-now"],
+            latitude: 37.5651,
+            longitude: 126.9759,
+            sourceAttribution: "Preview",
+            tourApi: nil
+        ),
+        PlaceListItem(
+            id: "preview-cafe",
+            name: "지도 옆 작은 카페",
+            category: "카페",
+            district: "중구",
+            address: "서울특별시 중구",
+            roadAddress: "서울특별시 중구 을지로",
+            summary: "지도 후보 풀에 함께 뜨는 카페입니다.",
+            tags: ["카페", "휴식"],
+            themeTags: ["go-now"],
+            latitude: 37.5681,
+            longitude: 126.9771,
+            sourceAttribution: "Preview",
+            tourApi: nil
+        )
+    ]
 }
 
 private extension RecommendationResponse {
@@ -314,12 +406,16 @@ private extension RecommendationResponse {
 private final class CapturingRecommendationProvider: PeroAPIProviding, @unchecked Sendable {
     private(set) var lastRequest: RecommendationRequest?
     private(set) var recommendationCallCount = 0
+    private(set) var placesCallCount = 0
     private(set) var searchCallCount = 0
     var shouldFailRecommendations = false
+    var shouldFailPlaces = false
     private let response: RecommendationResponse
+    private let placePool: [PlaceListItem]
 
-    init(response: RecommendationResponse = .previewForTests) {
+    init(response: RecommendationResponse = .previewForTests, placePool: [PlaceListItem] = []) {
         self.response = response
+        self.placePool = placePool
     }
 
     func health() async throws -> HealthResponse {
@@ -327,7 +423,11 @@ private final class CapturingRecommendationProvider: PeroAPIProviding, @unchecke
     }
 
     func places() async throws -> PlacesResponse {
-        PlacesResponse(source: SearchSourceMeta(providerId: "test", providerName: "test", status: "loaded", generatedAt: Date(timeIntervalSince1970: 0), count: 0), total: 0, places: [])
+        placesCallCount += 1
+        if shouldFailPlaces {
+            throw URLError(.cannotLoadFromNetwork)
+        }
+        return PlacesResponse(source: SearchSourceMeta(providerId: "test", providerName: "test", status: "loaded", generatedAt: Date(timeIntervalSince1970: 0), count: placePool.count), total: placePool.count, places: placePool)
     }
 
     func themes() async throws -> [ThemeSummary] { [] }

@@ -86,7 +86,8 @@ final class CoreLocationProvider: LocationProviding, @unchecked Sendable {
 }
 
 final class StaticLocationProvider: LocationProviding, @unchecked Sendable {
-    static let preview = StaticLocationProvider(latitude: 37.5665, longitude: 126.9780)
+    static let previewCoordinate = UserCoordinate(latitude: 37.5665, longitude: 126.9780)
+    static let preview = StaticLocationProvider(latitude: previewCoordinate.latitude, longitude: previewCoordinate.longitude)
 
     private let coordinate: UserCoordinate
 
@@ -122,22 +123,39 @@ final class RecommendationViewModel: ObservableObject {
         do {
             let coordinate = try await locationProvider.currentCoordinate()
             locationLabel = coordinate.displayLabel
-            let response = try await provider.recommendations(
-                RecommendationRequest(
-                    themeId: "go-now",
-                    latitude: coordinate.latitude,
-                    longitude: coordinate.longitude,
-                    radiusKm: 3
-                )
+            let request = RecommendationRequest(
+                themeId: "go-now",
+                latitude: coordinate.latitude,
+                longitude: coordinate.longitude,
+                radiusKm: 3
             )
-            apply(response: response)
+            let recommendationResponse = try? await provider.recommendations(request)
+            let placesResponse = try? await provider.places()
+            let placePool = Self.normalize(places: placesResponse?.places ?? [], center: coordinate)
+
+            if !placePool.isEmpty {
+                apply(cards: placePool, fallback: recommendationResponse?.fallbackUsed ?? false)
+            } else if let recommendationResponse {
+                apply(response: recommendationResponse)
+            } else {
+                throw LocationProviderError.unavailable
+            }
         } catch {
             do {
-                let response = try await PeroAPIProviderFactory.preview().recommendations(
-                    RecommendationRequest(themeId: "go-now", radiusKm: 3)
-                )
-                locationLabel = "미리보기 추천 영역"
-                apply(response: response, forceFallback: true)
+                let previewProvider = PeroAPIProviderFactory.preview()
+                let previewCoordinate = StaticLocationProvider.previewCoordinate
+                let places = (try await previewProvider.places()).places
+                let previewPool = Self.normalize(places: places, center: previewCoordinate)
+                if !previewPool.isEmpty {
+                    locationLabel = "미리보기 추천 영역"
+                    apply(cards: previewPool, fallback: true)
+                } else {
+                    let response = try await previewProvider.recommendations(
+                        RecommendationRequest(themeId: "go-now", radiusKm: 3)
+                    )
+                    locationLabel = "미리보기 추천 영역"
+                    apply(response: response, forceFallback: true)
+                }
             } catch {
                 fallbackUsed = false
                 locationLabel = "위치 또는 추천 서버 확인 필요"
@@ -155,8 +173,11 @@ final class RecommendationViewModel: ObservableObject {
     }
 
     private func apply(response: RecommendationResponse, forceFallback: Bool = false) {
-        fallbackUsed = forceFallback || response.fallbackUsed
-        let normalizedCards = Self.normalize(response: response)
+        apply(cards: Self.normalize(response: response), fallback: forceFallback || response.fallbackUsed)
+    }
+
+    private func apply(cards normalizedCards: [RecommendationCardModel], fallback: Bool = false) {
+        fallbackUsed = fallback
         cards = normalizedCards
         cache(cards: normalizedCards)
         state = normalizedCards.isEmpty ? .empty : .results
@@ -180,6 +201,41 @@ final class RecommendationViewModel: ObservableObject {
         }
 
         return Array(normalized.prefix(3))
+    }
+    nonisolated static func normalize(places: [PlaceListItem], center: UserCoordinate) -> [RecommendationCardModel] {
+        places.compactMap { place in
+            guard place.latitude.isFinite, place.longitude.isFinite else { return nil }
+            let distanceKm = center.distanceKm(toLatitude: place.latitude, longitude: place.longitude)
+            return RecommendationCardModel(
+                id: place.id,
+                title: place.name,
+                subtitle: Self.slotTitle(for: place),
+                reason: place.summary.isEmpty ? "현재 지도 후보 풀에 포함된 장소입니다." : place.summary,
+                category: place.category,
+                district: place.district,
+                roadAddress: place.roadAddress,
+                latitude: place.latitude,
+                longitude: place.longitude,
+                distanceLabel: String(format: "%.1fkm", distanceKm),
+                sourceAttribution: place.sourceAttribution,
+                tags: Array((place.tags + place.themeTags).uniqued().prefix(4))
+            )
+        }
+        .sorted { lhs, rhs in
+            lhs.distanceValueForSorting < rhs.distanceValueForSorting
+        }
+    }
+
+
+    nonisolated private static func slotTitle(for place: PlaceListItem) -> String {
+        let source = "\(place.category) \(place.name) \(place.tags.joined(separator: " ")) \(place.themeTags.joined(separator: " "))"
+        if source.contains("식사") || source.contains("식당") || source.contains("음식") || source.contains("카페") {
+            return "식당 추천"
+        }
+        if source.contains("코스") || source.contains("전시") || source.contains("문화") || source.contains("관광") || source.contains("체험") {
+            return "랜덤 코스 추천"
+        }
+        return "랜덤 장소 추천"
     }
 
     nonisolated private static func append(card: RecommendationCard?, slotTitle: String, into normalized: inout [RecommendationCardModel], seenIDs: inout Set<String>) {
@@ -210,6 +266,32 @@ final class RecommendationViewModel: ObservableObject {
                 tags: Array(place.tags.prefix(4))
             )
         )
+    }
+}
+
+private extension UserCoordinate {
+    func distanceKm(toLatitude latitude: Double, longitude: Double) -> Double {
+        let earthRadiusKm = 6371.0
+        let lat1 = self.latitude * .pi / 180
+        let lat2 = latitude * .pi / 180
+        let deltaLat = (latitude - self.latitude) * .pi / 180
+        let deltaLon = (longitude - self.longitude) * .pi / 180
+        let a = sin(deltaLat / 2) * sin(deltaLat / 2)
+            + cos(lat1) * cos(lat2) * sin(deltaLon / 2) * sin(deltaLon / 2)
+        return earthRadiusKm * 2 * atan2(sqrt(a), sqrt(1 - a))
+    }
+}
+
+private extension RecommendationCardModel {
+    var distanceValueForSorting: Double {
+        Double(distanceLabel.replacingOccurrences(of: "km", with: "")) ?? .greatestFiniteMagnitude
+    }
+}
+
+private extension Array where Element: Hashable {
+    func uniqued() -> [Element] {
+        var seen: Set<Element> = []
+        return filter { seen.insert($0).inserted }
     }
 }
 
