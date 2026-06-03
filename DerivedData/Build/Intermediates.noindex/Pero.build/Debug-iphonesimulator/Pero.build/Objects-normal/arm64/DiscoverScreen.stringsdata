@@ -1,0 +1,24 @@
+{
+  "source": "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/implement-pero-ios-ma-1d791323/worktrees/worker-3/ios/Pero/Screens/DiscoverScreen.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "지금 뭐 하지?",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 74
+        }
+      },
+      {
+        "comment": "",
+        "key": "“%@”",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 289
+        }
+      }
+    ]
+  },
+  "version": 1
+}
