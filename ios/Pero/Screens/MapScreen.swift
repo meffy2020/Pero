@@ -2,6 +2,8 @@ import MapKit
 import SwiftUI
 
 struct MapScreen: View {
+  @Environment(\.dismiss) private var dismiss
+
   let card: RecommendationCardModel
 
   private var coordinate: CLLocationCoordinate2D {
@@ -43,7 +45,7 @@ struct MapScreen: View {
         .standard(
           elevation: .realistic, pointsOfInterest: .including([.park, .restaurant, .museum]))
       )
-      .ignoresSafeArea(edges: .bottom)
+      .ignoresSafeArea()
 
       VStack(spacing: 0) {
         topContextBar
@@ -51,16 +53,26 @@ struct MapScreen: View {
         bottomSummaryPanel
       }
       .padding(.horizontal, 18)
-      .padding(.top, 12)
-      .padding(.bottom, 18)
+      .safeAreaPadding(.top, 12)
+      .safeAreaPadding(.bottom, 18)
     }
     .background(Color(.systemGroupedBackground))
-    .navigationTitle("지도 확인")
-    .navigationBarTitleDisplayMode(.inline)
+    .toolbar(.hidden, for: .navigationBar)
   }
 
   private var topContextBar: some View {
     HStack(spacing: 8) {
+      Button {
+        dismiss()
+      } label: {
+        Image(systemName: "chevron.left")
+          .font(.caption.weight(.black))
+          .frame(width: 28, height: 28)
+          .background(.white.opacity(0.34), in: Circle())
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel("뒤로")
+
       Label(slot.mapEyebrow, systemImage: slot.symbolName)
       Label(card.distanceLabel, systemImage: "figure.walk")
       Label(card.district, systemImage: "mappin.and.ellipse")
