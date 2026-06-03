@@ -20,6 +20,14 @@ struct NavigationModelTests {
         #expect(RecommendationState.error("x").title == "연결 확인 필요")
     }
 
+    @Test func homeMapKoreanCopyExplainsViewportRandomPick() {
+        #expect(HomeMapKoreanCopy.heroSubtitle.contains("현재 보고 있는 지도 안 후보"))
+        #expect(HomeMapKoreanCopy.randomPickCTA == "이 화면에서 랜덤 픽")
+        #expect(HomeMapKoreanCopy.randomPickHint.contains("현재 화면의 추천 후보"))
+        #expect(HomeMapKoreanCopy.mapPreviewEyebrow == "현재 화면 후보")
+        #expect(HomeMapKoreanCopy.reasonCTA == "왜 뽑혔는지 보기")
+    }
+
     @Test func recommendationNormalizerPrefersCardsBeforeCourseStopsAndLimitsToThree() {
         let response = RecommendationResponse.previewForTests
         let cards = RecommendationViewModel.normalize(response: response)
