@@ -21,6 +21,10 @@
 - Navigation boundary
   - `AppRoute`는 전체 `RecommendationCardModel` payload가 아니라 stable `cardID`만 가진다.
   - destination은 `RecommendationViewModel.card(for:)`로 현재 추천 목록에서 resolve한다.
+- Lane C model/test guard
+  - `RecommendationCardModel`에 map-first presentation helper(`mapFirstSummaryChips`, `mapFirstAccessibilitySummary`, `mapPrimaryCTATitle`)를 추가해 지도 우선 CTA/메타데이터 문구를 모델 테스트로 고정했다.
+  - 새 회귀 테스트는 랜덤 장소/식당/코스 슬롯 판별, Apple Maps URL 좌표/장소명 쿼리, map-first 한국어 CTA copy를 확인한다.
+  - 이 lane은 백엔드 API, 검색/랭킹, ETL, 의존성 manifest를 변경하지 않는다.
 - Preview runtime
   - `PERO_USE_PREVIEW=1`이면 API provider와 location provider를 모두 오프라인 preview/static으로 고정해 시뮬레이터 검증이 위치 권한/백엔드 상태에 흔들리지 않게 했다.
 

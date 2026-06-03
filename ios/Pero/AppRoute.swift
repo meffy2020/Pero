@@ -16,6 +16,25 @@ struct RecommendationCardModel: Identifiable, Hashable {
 }
 
 extension RecommendationCardModel {
+    var mapFirstSummaryChips: [String] {
+        [distanceLabel, district, category]
+    }
+
+    var mapFirstAccessibilitySummary: String {
+        "\(subtitle), \(title), \(distanceLabel), \(district), \(category)"
+    }
+
+    var mapPrimaryCTATitle: String {
+        switch randomSlotKind {
+        case .place:
+            "지도에서 랜덤 장소 보기"
+        case .restaurant:
+            "지도에서 식당 위치 보기"
+        case .course:
+            "지도에서 코스 시작점 보기"
+        }
+    }
+
     var randomSlotKind: RecommendationSlotKind {
         let source = "\(subtitle) \(category) \(title)"
         if source.contains("코스") || source.contains("차") || source.localizedCaseInsensitiveContains("course") {
@@ -47,10 +66,14 @@ extension RecommendationCardModel {
         components.scheme = "http"
         components.host = "maps.apple.com"
         components.queryItems = [
-            URLQueryItem(name: "ll", value: "\(latitude),\(longitude)"),
+            URLQueryItem(name: "ll", value: mapCoordinateQueryValue),
             URLQueryItem(name: "q", value: title)
         ]
         return components.url
+    }
+
+    private var mapCoordinateQueryValue: String {
+        "\(latitude),\(longitude)"
     }
 }
 
