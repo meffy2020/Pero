@@ -124,7 +124,7 @@ struct NavigationModelTests {
         #expect(viewModel.locationLabel.contains("35.1796") == true)
     }
 
-    @Test @MainActor func viewModelKeepsLastCardsAddressableAfterTransientReloadFailure() async {
+    @Test @MainActor func viewModelFallsBackToPreviewCardsAfterTransientReloadFailure() async {
         let provider = CapturingRecommendationProvider()
         let locationProvider = StaticLocationProvider(latitude: 35.1796, longitude: 129.0756)
         let viewModel = RecommendationViewModel(provider: provider, locationProvider: locationProvider)
@@ -136,12 +136,10 @@ struct NavigationModelTests {
         await viewModel.loadGoNowRecommendations()
 
         #expect(viewModel.card(for: firstCardID)?.id == firstCardID)
-        #expect(viewModel.cards.isEmpty == false)
-        if case .error = viewModel.state {
-            #expect(true)
-        } else {
-            #expect(Bool(false), "transient failure should be visible without orphaning the last recommendation")
-        }
+        #expect(viewModel.cards.map(\.id) == ["preview-seoul-park", "preview-market", "preview-gallery"])
+        #expect(viewModel.fallbackUsed)
+        #expect(viewModel.locationLabel == "미리보기 추천 영역")
+        #expect(viewModel.state == .results)
     }
 
     @Test @MainActor func viewModelStartsAsSpontaneousRecommendationSurface() {

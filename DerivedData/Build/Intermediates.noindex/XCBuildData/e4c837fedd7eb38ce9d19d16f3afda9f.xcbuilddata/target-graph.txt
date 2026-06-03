@@ -1,8 +1,0 @@
-Target dependency graph (4 targets)
-Target 'PeroTests' in project 'Pero'
-➜ Explicit dependency on target 'Pero' in project 'Pero'
-Target 'Pero' in project 'Pero'
-➜ Explicit dependency on target 'PeroCore' in project 'PeroCore'
-Target 'PeroCore' in project 'PeroCore'
-➜ Explicit dependency on target 'PeroCore' in project 'PeroCore'
-Target 'PeroCore' in project 'PeroCore' (no dependencies)

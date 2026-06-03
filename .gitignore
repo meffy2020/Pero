@@ -50,3 +50,7 @@ docs/proposals/
 .derivedData/
 .omx/ultragoal/
 .omx/team/
+
+# Xcode build artifacts
+DerivedData/
+*.xcresult

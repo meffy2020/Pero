@@ -279,6 +279,69 @@ struct HomeRecommendationScreen: View {
         }
     }
 
+    private func pickRandomCandidate() {
+        if let random = candidateCards.randomElement() {
+            select(random)
+            return
+        }
+        rerollRecommendations()
+    }
+
+    private func select(_ card: RecommendationCardModel) {
+        selectedCardID = card.id
+        cameraPosition = .region(
+            MKCoordinateRegion(
+                center: card.coordinate,
+                span: MKCoordinateSpan(latitudeDelta: 0.018, longitudeDelta: 0.018)
+            )
+        )
+    }
+
+    private func reconcileSelection(with cards: [RecommendationCardModel]) {
+        if let selectedCardID,
+           cards.contains(where: { $0.id == selectedCardID && pickerMode.matches($0) }) {
+            return
+        }
+        if let first = cards.first(where: pickerMode.matches) ?? cards.first {
+            select(first)
+        } else {
+            selectedCardID = nil
+        }
+    }
+
+    private func markerSymbol(for card: RecommendationCardModel) -> String {
+        RecommendationPickerMode(card: card).symbolName
+    }
+
+    private func markerTint(for card: RecommendationCardModel) -> Color {
+        RecommendationPickerMode(card: card).accent
+    }
+
+    private var stateIcon: String {
+        switch viewModel.state {
+        case .ready: "location"
+        case .loading: "scope"
+        case .results: "sparkles"
+        case .empty: "tray"
+        case .error: "exclamationmark.triangle"
+        }
+    }
+
+    private var stateMessage: String {
+        switch viewModel.state {
+        case .ready:
+            HomeMapKoreanCopy.readyMessage
+        case .loading:
+            HomeMapKoreanCopy.loadingMessage
+        case .results:
+            "지도 안 후보를 선택해 결과를 확인하세요."
+        case .empty:
+            HomeMapKoreanCopy.emptyMessage
+        case .error(let message):
+            message
+        }
+    }
+
     @ViewBuilder
     private var stateSection: some View {
         switch viewModel.state {
@@ -424,9 +487,11 @@ private struct MapPreviewCard: View {
     }
 }
 
-private struct RandomRecommendationSlotCard: View {
-    let slot: RandomRecommendationSlot
-    let card: RecommendationCardModel?
+private struct RandomMapResultSheet: View {
+    let card: RecommendationCardModel
+    let mode: RecommendationPickerMode
+    let visiblePoolCount: Int
+    let reroll: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -461,6 +526,57 @@ private struct RandomRecommendationSlotCard: View {
                 .buttonStyle(.borderedProminent)
                 .tint(mode.accent)
 
+                NavigationLink(value: AppRoute.recommendationDetail(cardID: card.id)) {
+                    Label(HomeMapKoreanCopy.reasonCTA, systemImage: "sparkles")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+            }
+            .font(.caption.weight(.semibold))
+        }
+        .padding(18)
+        .homeRecommendationGlass(cornerRadius: 30, tint: .white.opacity(0.36), interactive: true)
+        .shadow(color: .black.opacity(0.16), radius: 24, y: 14)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(card.mapFirstAccessibilitySummary)
+    }
+}
+
+private struct RandomRecommendationSlotCard: View {
+    let slot: RandomRecommendationSlot
+    let card: RecommendationCardModel?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 7) {
+                    Label(slot.title, systemImage: slot.systemImage)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(slot.tint)
+                    Text(slot.userPrompt)
+                        .font(.headline.weight(.bold))
+                    if let card {
+                        Text(card.reason)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Text(HomeMapKoreanCopy.slotPendingMessage)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer(minLength: 8)
+                Image(systemName: slot.systemImage)
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(slot.tint)
+                    .frame(width: 46, height: 46)
+                    .homeRecommendationGlass(cornerRadius: 16, tint: slot.tint.opacity(0.14))
+            }
+
+            if let card {
+                FlowMetadataRow(card: card)
+
                 HStack(spacing: 10) {
                     NavigationLink(value: AppRoute.mapFocus(cardID: card.id)) {
                         Label(HomeMapKoreanCopy.mapCTA, systemImage: "map")
@@ -475,18 +591,24 @@ private struct RandomRecommendationSlotCard: View {
                     .buttonStyle(.borderedProminent)
                 }
                 .font(.caption.weight(.semibold))
-            } else {
-                StateMessageView(
-                    icon: "clock",
-                    title: "추천 준비 중",
-                    message: HomeMapKoreanCopy.slotPendingMessage
-                )
             }
-            .font(.caption.weight(.bold))
         }
-        .padding(18)
-        .homeRecommendationGlass(cornerRadius: 30, tint: .white.opacity(0.36), interactive: true)
-        .shadow(color: .black.opacity(0.16), radius: 24, y: 14)
+        .padding(16)
+        .homeRecommendationGlass(cornerRadius: 24, tint: .white.opacity(0.24))
+    }
+}
+
+private struct SectionTitle: View {
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        Text(text)
+            .font(.headline.weight(.bold))
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

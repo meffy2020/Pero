@@ -130,15 +130,19 @@ final class RecommendationViewModel: ObservableObject {
                     radiusKm: 3
                 )
             )
-            fallbackUsed = response.fallbackUsed
-            let normalizedCards = Self.normalize(response: response)
-            cards = normalizedCards
-            cache(cards: normalizedCards)
-            state = normalizedCards.isEmpty ? .empty : .results
+            apply(response: response)
         } catch {
-            fallbackUsed = false
-            locationLabel = "위치 또는 추천 서버 확인 필요"
-            state = .error("현재 위치 기반 추천을 불러오지 못했습니다. \(error.localizedDescription)")
+            do {
+                let response = try await PeroAPIProviderFactory.preview().recommendations(
+                    RecommendationRequest(themeId: "go-now", radiusKm: 3)
+                )
+                locationLabel = "미리보기 추천 영역"
+                apply(response: response, forceFallback: true)
+            } catch {
+                fallbackUsed = false
+                locationLabel = "위치 또는 추천 서버 확인 필요"
+                state = .error("현재 위치 기반 추천을 불러오지 못했습니다. \(error.localizedDescription)")
+            }
         }
     }
 
@@ -148,6 +152,14 @@ final class RecommendationViewModel: ObservableObject {
 
     func card(forSlotTitle slotTitle: String) -> RecommendationCardModel? {
         cards.first { $0.subtitle == slotTitle }
+    }
+
+    private func apply(response: RecommendationResponse, forceFallback: Bool = false) {
+        fallbackUsed = forceFallback || response.fallbackUsed
+        let normalizedCards = Self.normalize(response: response)
+        cards = normalizedCards
+        cache(cards: normalizedCards)
+        state = normalizedCards.isEmpty ? .empty : .results
     }
 
     private func cache(cards: [RecommendationCardModel]) {
