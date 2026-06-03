@@ -12,6 +12,39 @@ struct NavigationModelTests {
         #expect(AppRoute.mapFocus(cardID: card.id).cardID == "preview-seoul-park")
     }
 
+    @Test func recommendationCardMapFirstHelpersExposeStablePresentationMetadata() throws {
+        let card = RecommendationCardModel.sample
+
+        #expect(card.mapFirstSummaryChips == ["0.8km", "중구", "공원"])
+        #expect(card.mapFirstAccessibilitySummary == "가까운 산책 추천, 서울 반려 산책 공원, 0.8km, 중구, 공원")
+        #expect(card.mapPrimaryCTATitle == "지도에서 랜덤 장소 보기")
+
+        let url = try #require(card.appleMapsURL)
+        let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
+        let queryItems = components.queryItems ?? []
+        #expect(components.host == "maps.apple.com")
+        #expect(queryItems.contains(URLQueryItem(name: "ll", value: "37.5665,126.978")))
+        #expect(queryItems.contains(URLQueryItem(name: "q", value: "서울 반려 산책 공원")))
+    }
+
+    @Test func recommendationSlotKindDrivesMapPrimaryCTACopy() {
+        let restaurant = RecommendationCardModel.sample.with(
+            title: "도심 간편 식당가",
+            subtitle: "식당 추천",
+            category: "음식점"
+        )
+        let course = RecommendationCardModel.sample.with(
+            title: "시청 인근 전시 공간",
+            subtitle: "랜덤 코스 추천",
+            category: "전시"
+        )
+
+        #expect(restaurant.randomSlotKind == .restaurant)
+        #expect(restaurant.mapPrimaryCTATitle == "지도에서 식당 위치 보기")
+        #expect(course.randomSlotKind == .course)
+        #expect(course.mapPrimaryCTATitle == "지도에서 코스 시작점 보기")
+    }
+
     @Test func recommendationStatesExposeKoreanCopy() {
         #expect(RecommendationState.ready.title == "현재 위치 준비")
         #expect(RecommendationState.loading.title == "지금 갈 곳 찾는 중")
@@ -150,6 +183,23 @@ private extension RecommendationCardModel {
         sourceAttribution: "Preview",
         tags: ["산책", "반려동물"]
     )
+
+    func with(title: String? = nil, subtitle: String? = nil, category: String? = nil) -> RecommendationCardModel {
+        RecommendationCardModel(
+            id: id,
+            title: title ?? self.title,
+            subtitle: subtitle ?? self.subtitle,
+            reason: reason,
+            category: category ?? self.category,
+            district: district,
+            roadAddress: roadAddress,
+            latitude: latitude,
+            longitude: longitude,
+            distanceLabel: distanceLabel,
+            sourceAttribution: sourceAttribution,
+            tags: tags
+        )
+    }
 }
 
 private extension RecommendationResponse {
