@@ -35,9 +35,6 @@ struct HomeRecommendationScreen: View {
             mapOverlay
         }
         .ignoresSafeArea(.container, edges: .bottom)
-        .task {
-            await viewModel.loadGoNowRecommendations()
-        }
         .refreshable {
             await viewModel.loadGoNowRecommendations()
         }
