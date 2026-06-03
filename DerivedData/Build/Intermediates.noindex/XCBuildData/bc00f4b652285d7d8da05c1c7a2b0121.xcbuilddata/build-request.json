@@ -1,0 +1,73 @@
+{
+  "buildCommand" : {
+    "command" : "build",
+    "skipDependencies" : false,
+    "style" : "buildOnly"
+  },
+  "configuredTargets" : [
+    {
+      "guid" : "a9125958c89c56fde9e5dfb5e90f392775d292f74331dd4584566b72d42df8c1"
+    }
+  ],
+  "containerPath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/implement-pero-ios-ma-1d791323/worktrees/worker-3/ios/Pero.xcodeproj",
+  "continueBuildingAfterErrors" : false,
+  "dependencyScope" : "workspace",
+  "enableIndexBuildArena" : false,
+  "hideShellScriptEnvironment" : false,
+  "parameters" : {
+    "action" : "build",
+    "activeArchitecture" : "arm64",
+    "activeRunDestination" : {
+      "disableOnlyActiveArch" : false,
+      "hostTargetedPlatform" : null,
+      "platform" : "iphonesimulator",
+      "sdk" : "iphonesimulator26.5",
+      "sdkVariant" : "iphonesimulator",
+      "supportedArchitectures" : [
+        "arm64"
+      ],
+      "targetArchitecture" : "arm64"
+    },
+    "arenaInfo" : {
+      "buildIntermediatesPath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/implement-pero-ios-ma-1d791323/worktrees/worker-3/DerivedData/Build/Intermediates.noindex",
+      "buildProductsPath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/implement-pero-ios-ma-1d791323/worktrees/worker-3/DerivedData/Build/Products",
+      "derivedDataPath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/implement-pero-ios-ma-1d791323/worktrees/worker-3/DerivedData",
+      "indexDataStoreFolderPath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/implement-pero-ios-ma-1d791323/worktrees/worker-3/DerivedData/Index.noindex/DataStore",
+      "indexEnableDataStore" : true,
+      "indexPCHPath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/implement-pero-ios-ma-1d791323/worktrees/worker-3/DerivedData/Index.noindex/PrecompiledHeaders",
+      "pchPath" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/implement-pero-ios-ma-1d791323/worktrees/worker-3/DerivedData/Build/Intermediates.noindex/PrecompiledHeaders"
+    },
+    "configurationName" : "Debug",
+    "overrides" : {
+      "commandLine" : {
+        "table" : {
+
+        }
+      },
+      "synthesized" : {
+        "table" : {
+          "ACTION" : "build",
+          "ASSETCATALOG_FILTER_FOR_DEVICE_MODEL" : "iPhone18,1",
+          "ASSETCATALOG_FILTER_FOR_DEVICE_OS_VERSION" : "26.5",
+          "ASSETCATALOG_FILTER_FOR_THINNING_DEVICE_CONFIGURATION" : "iPhone18,1",
+          "BUILD_ACTIVE_RESOURCES_ONLY" : "YES",
+          "CLANG_COVERAGE_MAPPING" : "YES",
+          "CLANG_PROFILE_DATA_DIRECTORY" : "/Users/ksj/Desktop/02_Work/Projects/Pero/.omx/team/implement-pero-ios-ma-1d791323/worktrees/worker-3/DerivedData/Build/ProfileData",
+          "ENABLE_PREVIEWS" : "NO",
+          "ENABLE_XOJIT_PREVIEWS" : "YES",
+          "ONLY_ACTIVE_ARCH" : "YES",
+          "TARGET_DEVICE_IDENTIFIER" : "78867352-14AD-4092-BDF0-46DE89BD3A79",
+          "TARGET_DEVICE_MODEL" : "iPhone18,1",
+          "TARGET_DEVICE_OS_VERSION" : "26.5",
+          "TARGET_DEVICE_PLATFORM_NAME" : "iphonesimulator"
+        }
+      }
+    }
+  },
+  "schemeCommand" : "launch",
+  "showNonLoggedProgress" : true,
+  "useDryRun" : false,
+  "useImplicitDependencies" : true,
+  "useLegacyBuildLocations" : false,
+  "useParallelTargets" : true
+}
