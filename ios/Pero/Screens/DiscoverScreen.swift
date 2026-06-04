@@ -52,6 +52,7 @@ struct HomeRecommendationScreen: View {
         GeometryReader { proxy in
             ZStack {
                 KakaoMapView(camera: camera)
+                    .frame(width: proxy.size.width, height: proxy.size.height)
                     .ignoresSafeArea()
 
                 ForEach(candidateCards) { card in
@@ -214,14 +215,14 @@ struct HomeRecommendationScreen: View {
 
     private func select(_ card: RecommendationCardModel) {
         selectedCardID = card.id
-        camera = KakaoMapCamera(latitude: card.latitude, longitude: card.longitude, level: 16)
+        camera = KakaoMapCamera(latitude: card.latitude, longitude: card.longitude, level: 5)
     }
 
     private func recenterOnSelection() {
         if let selectedCard {
             select(selectedCard)
         } else if let first = candidateCards.first {
-            camera = KakaoMapCamera(latitude: first.latitude, longitude: first.longitude, level: 15)
+            camera = KakaoMapCamera(latitude: first.latitude, longitude: first.longitude, level: 7)
         }
     }
 

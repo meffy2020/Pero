@@ -12,8 +12,12 @@ struct MapScreen: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             ZStack {
-                KakaoMapView(camera: KakaoMapCamera(latitude: card.latitude, longitude: card.longitude, level: 17))
-                    .ignoresSafeArea()
+                GeometryReader { proxy in
+                    KakaoMapView(camera: KakaoMapCamera(latitude: card.latitude, longitude: card.longitude, level: 5))
+                        .frame(width: proxy.size.width, height: proxy.size.height)
+                        .ignoresSafeArea()
+                }
+                .ignoresSafeArea()
 
                 VStack(spacing: 6) {
                     Circle()
