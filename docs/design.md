@@ -1,5 +1,9 @@
 # Pero 디자인 문서
 
+> iOS 앱의 최신 메인 방향은 `풀스크린 지도 + 현재 지도 영역 기반 랜덤 뽑기`다.
+> iOS 화면을 수정할 때는 이 문서보다
+> [ios-map-random-picker-design-guidelines.md](./ios-map-random-picker-design-guidelines.md)를 우선한다.
+
 ## 1. 제품 정의
 
 - `Pero`는 관광지 중심 추천 테마맵 서비스다.
