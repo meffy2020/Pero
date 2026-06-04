@@ -12,6 +12,7 @@
 		A10000000000000000000004 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* ContentView.swift */; };
 		A10000000000000000000005 /* DiscoverScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* DiscoverScreen.swift */; };
 		A10000000000000000000006 /* MapScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* MapScreen.swift */; };
+		A10000000000000000000007 /* PeroMapStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000007 /* PeroMapStyle.swift */; };
 		A10000000000000000000008 /* PlaceholderDetailScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000008 /* PlaceholderDetailScreen.swift */; };
 		A10000000000000000000009 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000009 /* Assets.xcassets */; };
 		A10000000000000000000010 /* NavigationModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* NavigationModelTests.swift */; };
@@ -34,6 +35,7 @@
 		A20000000000000000000004 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A20000000000000000000005 /* DiscoverScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverScreen.swift; sourceTree = "<group>"; };
 		A20000000000000000000006 /* MapScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapScreen.swift; sourceTree = "<group>"; };
+		A20000000000000000000007 /* PeroMapStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeroMapStyle.swift; sourceTree = "<group>"; };
 		A20000000000000000000008 /* PlaceholderDetailScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderDetailScreen.swift; sourceTree = "<group>"; };
 		A20000000000000000000009 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A20000000000000000000010 /* NavigationModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationModelTests.swift; sourceTree = "<group>"; };
@@ -62,6 +64,7 @@
 				A20000000000000000000001 /* PeroApp.swift */,
 				A20000000000000000000003 /* AppRoute.swift */,
 				A20000000000000000000004 /* ContentView.swift */,
+				A20000000000000000000007 /* PeroMapStyle.swift */,
 				A70000000000000000000005 /* Screens */,
 				A20000000000000000000009 /* Assets.xcassets */,
 			);
@@ -151,7 +154,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		A90000000000000000000001 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = ( A10000000000000000000001, A10000000000000000000003, A10000000000000000000004, A10000000000000000000005, A10000000000000000000006, A10000000000000000000008 ); runOnlyForDeploymentPostprocessing = 0; };
+		A90000000000000000000001 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = ( A10000000000000000000001, A10000000000000000000003, A10000000000000000000004, A10000000000000000000005, A10000000000000000000006, A10000000000000000000007, A10000000000000000000008 ); runOnlyForDeploymentPostprocessing = 0; };
 		A90000000000000000000003 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = ( A10000000000000000000010 ); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 

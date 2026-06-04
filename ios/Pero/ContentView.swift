@@ -16,7 +16,6 @@ struct ContentView: View {
     var body: some View {
         NavigationStack(path: $path) {
             HomeRecommendationScreen(viewModel: viewModel)
-                .navigationTitle("Pero")
                 .navigationDestination(for: AppRoute.self, destination: routeView)
         }
         .task {

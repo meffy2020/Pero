@@ -1,5 +1,6 @@
 import Foundation
 
+
 struct RecommendationCardModel: Identifiable, Hashable {
     let id: String
     let title: String

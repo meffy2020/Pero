@@ -8,6 +8,7 @@ struct HomeRecommendationScreen: View {
     @State private var selectedCardID: RecommendationCardModel.ID?
     @State private var rerollTask: Task<Void, Never>?
     @State private var cameraPosition: MapCameraPosition = .region(Self.defaultRegion)
+    @State private var pulseSelection = false
 
     private static let defaultRegion = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 37.5665, longitude: 126.9780),
@@ -23,18 +24,22 @@ struct HomeRecommendationScreen: View {
     }
 
     private var selectedCard: RecommendationCardModel? {
-        if let selectedCardID, let card = viewModel.card(for: selectedCardID), pickerMode.matches(card) {
-            return card
+        guard let selectedCardID,
+              let card = viewModel.card(for: selectedCardID),
+              pickerMode.matches(card) else {
+            return nil
         }
-        return candidateCards.first ?? viewModel.cards.first
+        return card
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             mapCanvas
-            mapOverlay
+            overlayChrome
         }
+        .background(PeroMapStyle.paper)
         .ignoresSafeArea(.container, edges: .bottom)
+        .toolbar(.hidden, for: .navigationBar)
         .refreshable {
             await viewModel.loadGoNowRecommendations()
         }
@@ -51,111 +56,149 @@ struct HomeRecommendationScreen: View {
 
     private var mapCanvas: some View {
         Map(position: $cameraPosition) {
-            ForEach(viewModel.cards) { card in
+            ForEach(candidateCards) { card in
                 Annotation(card.title, coordinate: card.coordinate) {
                     Button {
                         select(card)
                     } label: {
-                        VStack(spacing: 4) {
-                            Image(systemName: markerSymbol(for: card))
-                                .font(.system(size: selectedCard?.id == card.id ? 28 : 22, weight: .semibold))
-                                .foregroundStyle(selectedCard?.id == card.id ? Color.blue : Color.secondary)
-                                .background(.regularMaterial, in: Circle())
-                            if selectedCard?.id == card.id {
-                                Text(card.title)
-                                    .font(.caption2)
-                                    .foregroundStyle(.primary)
-                                    .lineLimit(1)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .nativePanel(cornerRadius: 10)
-                            }
-                        }
+                        CandidateMarker(
+                            card: card,
+                            isSelected: selectedCard?.id == card.id,
+                            mode: RecommendationPickerMode(card: card),
+                            pulse: pulseSelection
+                        )
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("\(card.title) 선택")
                 }
             }
         }
-        .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .including([.park, .restaurant, .museum])))
+        .mapStyle(.standard(elevation: .flat, pointsOfInterest: .including([.park, .restaurant, .museum])))
+        .ignoresSafeArea()
     }
 
-    private var mapOverlay: some View {
+    private var overlayChrome: some View {
         VStack(spacing: 0) {
-            headerPanel
+            topFloatingControls
             Spacer(minLength: 0)
-            currentAreaPill
-            randomPickButton
-            selectedResultSheet
+            bottomControls
         }
         .padding(.horizontal, 16)
-        .safeAreaPadding(.top, 12)
-        .safeAreaPadding(.bottom, 14)
+        .safeAreaPadding(.top, 10)
+        .safeAreaPadding(.bottom, 12)
     }
 
-    private var headerPanel: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("지금 뭐 하지?")
-                        .font(.title.weight(.bold))
-                    Text("현재 지도 안 후보에서 하나를 고릅니다")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
+    private var topFloatingControls: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
+                locationPill
                 Spacer(minLength: 8)
-                Label(viewModel.locationLabel, systemImage: "location.fill")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.trailing)
+                sideControls
             }
 
-            Picker("추천 종류", selection: $pickerMode) {
-                ForEach(RecommendationPickerMode.allCases) { mode in
-                    Text(mode.title).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
+            modeChips
         }
-        .padding(16)
-        .nativePanel(cornerRadius: 20)
     }
 
-    private var currentAreaPill: some View {
-        Label("후보 \(visiblePoolCount)개 · \(pickerMode.poolCopy)" + (viewModel.fallbackUsed ? " · 반경 보완" : ""), systemImage: "scope")
-            .font(.footnote.weight(.semibold))
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
+    private var locationPill: some View {
+        Button {
+            recenterOnSelection()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "location.fill")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(PeroMapStyle.accentDeep)
+                Text(viewModel.locationLabel)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(PeroMapStyle.ink)
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(PeroMapStyle.muted)
+            }
+            .padding(.horizontal, 14)
+            .frame(height: 44)
+        }
+        .buttonStyle(.plain)
+        .peroFloatingSurface(cornerRadius: 22)
+        .accessibilityLabel("현재 추천 영역")
+    }
+
+    private var sideControls: some View {
+        VStack(spacing: 10) {
+            MapFloatingButton(systemImage: "location.north.line") {
+                recenterOnSelection()
+            }
+        }
+    }
+
+    private var modeChips: some View {
+        HStack(spacing: 8) {
+            ForEach(RecommendationPickerMode.allCases) { mode in
+                Button {
+                    pickerMode = mode
+                } label: {
+                    Label(mode.title, systemImage: mode.symbolName)
+                        .font(.subheadline.weight(.semibold))
+                        .labelStyle(.titleAndIcon)
+                        .lineLimit(1)
+                        .foregroundStyle(pickerMode == mode ? PeroMapStyle.ink : PeroMapStyle.inkSoft)
+                        .padding(.horizontal, 14)
+                        .frame(height: 40)
+                        .background(pickerMode == mode ? PeroMapStyle.accentPale : PeroMapStyle.surface, in: Capsule())
+                        .overlay {
+                            Capsule().stroke(pickerMode == mode ? PeroMapStyle.accent : PeroMapStyle.line, lineWidth: 0.8)
+                        }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var bottomControls: some View {
+        VStack(spacing: 10) {
+            poolCaption
+            selectedResultSheet
+            randomPickButton
+        }
+    }
+
+    private var poolCaption: some View {
+        Text("현재 추천 영역 후보 \(visiblePoolCount)개" + (viewModel.fallbackUsed ? " · 반경 보완" : ""))
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(PeroMapStyle.inkSoft)
             .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .nativePanel(cornerRadius: 14)
-            .padding(.bottom, 8)
+            .frame(height: 28)
+            .background(PeroMapStyle.surface.opacity(0.92), in: Capsule())
+            .overlay { Capsule().stroke(PeroMapStyle.line, lineWidth: 0.7) }
     }
 
     private var randomPickButton: some View {
         Button {
             pickRandomCandidate()
         } label: {
-            Label(randomButtonTitle, systemImage: viewModel.state == .loading ? "hourglass" : "shuffle")
-                .font(.headline)
+            Label(randomButtonTitle, systemImage: viewModel.state == .loading ? "hourglass" : "sparkle")
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(PeroMapStyle.ink)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 4)
+                .frame(height: 58)
+                .background(PeroMapStyle.surface, in: Capsule())
+                .overlay {
+                    Capsule().stroke(PeroMapStyle.accent, lineWidth: 2)
+                }
         }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
-        .tint(.blue)
+        .buttonStyle(.plain)
         .disabled(viewModel.state == .loading || candidateCards.isEmpty)
-        .padding(.bottom, 10)
+        .opacity(viewModel.state == .loading || candidateCards.isEmpty ? 0.55 : 1)
         .accessibilityIdentifier("mapRandomPickButton")
     }
 
     private var randomButtonTitle: String {
         switch viewModel.state {
         case .loading:
-            "후보 스캔 중"
+            "후보 찾는 중"
         default:
-            "\(pickerMode.shortTitle) 랜덤 선택"
+            selectedCard == nil ? "랜덤 뽑기" : "다시 뽑기"
         }
     }
 
@@ -169,13 +212,13 @@ struct HomeRecommendationScreen: View {
                 reroll: pickRandomCandidate
             )
             .transition(.move(edge: .bottom).combined(with: .opacity))
-        } else {
+        } else if viewModel.state != .results {
             StateMessageView(
                 icon: stateIcon,
                 title: viewModel.state.title,
                 message: stateMessage
             )
-            .nativePanel(cornerRadius: 20)
+            .peroBottomSheetSurface()
         }
     }
 
@@ -187,6 +230,9 @@ struct HomeRecommendationScreen: View {
     }
 
     private func pickRandomCandidate() {
+        withAnimation(.easeInOut(duration: 0.45)) {
+            pulseSelection.toggle()
+        }
         if let random = candidateCards.randomElement() {
             select(random)
             return
@@ -204,20 +250,25 @@ struct HomeRecommendationScreen: View {
         )
     }
 
+    private func recenterOnSelection() {
+        if let selectedCard {
+            select(selectedCard)
+        } else if let first = candidateCards.first {
+            cameraPosition = .region(
+                MKCoordinateRegion(
+                    center: first.coordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.024, longitudeDelta: 0.024)
+                )
+            )
+        }
+    }
+
     private func reconcileSelection(with cards: [RecommendationCardModel]) {
         if let selectedCardID,
            cards.contains(where: { $0.id == selectedCardID && pickerMode.matches($0) }) {
             return
         }
-        if let first = cards.first(where: pickerMode.matches) ?? cards.first {
-            select(first)
-        } else {
-            selectedCardID = nil
-        }
-    }
-
-    private func markerSymbol(for card: RecommendationCardModel) -> String {
-        RecommendationPickerMode(card: card).symbolName
+        selectedCardID = nil
     }
 
     private var stateIcon: String {
@@ -252,6 +303,59 @@ enum HomeMapKoreanCopy {
     static let emptyMessage = "지도를 움직이거나 반경을 넓혀 추천 후보를 다시 확인해 주세요."
 }
 
+private struct CandidateMarker: View {
+    let card: RecommendationCardModel
+    let isSelected: Bool
+    let mode: RecommendationPickerMode
+    let pulse: Bool
+
+    var body: some View {
+        VStack(spacing: 5) {
+            ZStack {
+                if isSelected {
+                    Circle()
+                        .stroke(PeroMapStyle.accent, lineWidth: 3)
+                        .frame(width: pulse ? 44 : 34, height: pulse ? 44 : 34)
+                        .opacity(pulse ? 0.22 : 0.55)
+                }
+                Circle()
+                    .fill(isSelected ? PeroMapStyle.surface : PeroMapStyle.ink)
+                    .frame(width: isSelected ? 24 : 12, height: isSelected ? 24 : 12)
+                    .overlay {
+                        Circle().stroke(isSelected ? PeroMapStyle.accentDeep : PeroMapStyle.surface, lineWidth: isSelected ? 3 : 2)
+                    }
+            }
+            if isSelected {
+                Text(card.title)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(PeroMapStyle.ink)
+                    .lineLimit(1)
+                    .padding(.horizontal, 8)
+                    .frame(height: 26)
+                    .peroFloatingSurface(cornerRadius: 13)
+            }
+        }
+        .animation(.easeInOut(duration: 0.35), value: isSelected)
+        .animation(.easeInOut(duration: 0.45), value: pulse)
+    }
+}
+
+private struct MapFloatingButton: View {
+    let systemImage: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(PeroMapStyle.ink)
+                .frame(width: 46, height: 46)
+        }
+        .buttonStyle(.plain)
+        .peroFloatingSurface(cornerRadius: 23)
+    }
+}
+
 private struct RandomMapResultSheet: View {
     let card: RecommendationCardModel
     let mode: RecommendationPickerMode
@@ -259,46 +363,53 @@ private struct RandomMapResultSheet: View {
     let reroll: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
-                Image(systemName: mode.symbolName)
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
-                    .frame(width: 32, height: 32)
-                    .background(Color.secondary.opacity(0.10), in: Circle())
-
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("후보 \(visiblePoolCount)개 중 선택")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    Text("\(mode.title) · 후보 \(visiblePoolCount)개")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(PeroMapStyle.muted)
                     Text(card.title)
-                        .font(.title3.weight(.semibold))
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(PeroMapStyle.ink)
                         .lineLimit(2)
                     Text(mode.resultCopy(for: card))
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(3)
+                        .foregroundStyle(PeroMapStyle.inkSoft)
+                        .lineLimit(2)
                 }
+                Spacer(minLength: 8)
+                Image(systemName: mode.symbolName)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(PeroMapStyle.ink)
+                    .frame(width: 38, height: 38)
+                    .background(PeroMapStyle.accentPale, in: Circle())
             }
 
             FlowMetadataRow(card: card)
 
             HStack(spacing: 10) {
-                Button(action: reroll) {
-                    Label("다시", systemImage: "shuffle")
-                        .frame(maxWidth: .infinity)
+                if let appleMapsURL = card.appleMapsURL {
+                    Link(destination: appleMapsURL) {
+                        Label("길찾기", systemImage: "arrow.triangle.turn.up.right.circle")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
                 }
-                .buttonStyle(.bordered)
 
                 NavigationLink(value: AppRoute.recommendationDetail(cardID: card.id)) {
-                    Label("이유", systemImage: "info.circle")
+                    Label("상세", systemImage: "info.circle")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(PeroMapStyle.accentDeep)
             }
+            .font(.subheadline.weight(.semibold))
         }
-        .padding(16)
-        .nativePanel(cornerRadius: 20)
+        .padding(.top, 22)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 18)
+        .peroBottomSheetSurface()
         .accessibilityElement(children: .combine)
         .accessibilityLabel(card.mapFirstAccessibilitySummary)
     }
@@ -331,12 +442,12 @@ private struct MetadataChip: View {
 
     var body: some View {
         Label(text, systemImage: systemImage)
-            .font(.caption)
+            .font(.caption.weight(.semibold))
             .lineLimit(1)
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(Color.secondary.opacity(0.08), in: Capsule())
+            .foregroundStyle(PeroMapStyle.inkSoft)
+            .padding(.horizontal, 9)
+            .frame(height: 28)
+            .background(PeroMapStyle.surfaceMuted, in: Capsule())
     }
 }
 
@@ -349,23 +460,14 @@ struct StateMessageView: View {
         VStack(alignment: .leading, spacing: 8) {
             Label(title, systemImage: icon)
                 .font(.headline)
+                .foregroundStyle(PeroMapStyle.ink)
             Text(message)
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(PeroMapStyle.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-    }
-}
-
-private extension View {
-    func nativePanel(cornerRadius: CGFloat) -> some View {
-        background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(.separator.opacity(0.35), lineWidth: 0.5)
-            }
     }
 }
 
@@ -374,7 +476,6 @@ private extension RecommendationCardModel {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 }
-
 
 #Preview {
     NavigationStack {
