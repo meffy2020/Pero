@@ -13,27 +13,15 @@ struct MapScreen: View {
         ZStack(alignment: .bottom) {
             ZStack {
                 GeometryReader { proxy in
-                    KakaoMapView(camera: KakaoMapCamera(latitude: card.latitude, longitude: card.longitude, level: 5))
-                        .frame(width: proxy.size.width, height: proxy.size.height)
-                        .ignoresSafeArea()
+                    KakaoMapView(
+                        camera: KakaoMapCamera(latitude: card.latitude, longitude: card.longitude, level: 5),
+                        markers: [KakaoMapMarker(id: card.id, latitude: card.latitude, longitude: card.longitude, isSelected: true)]
+                    )
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .ignoresSafeArea()
                 }
                 .ignoresSafeArea()
 
-                VStack(spacing: 6) {
-                    Circle()
-                        .fill(PeroMapStyle.surface)
-                        .frame(width: 28, height: 28)
-                        .overlay {
-                            Circle().stroke(PeroMapStyle.accentDeep, lineWidth: 4)
-                        }
-                    Text(card.title)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(PeroMapStyle.ink)
-                        .lineLimit(1)
-                        .padding(.horizontal, 10)
-                        .frame(height: 28)
-                        .peroFloatingSurface(cornerRadius: 14)
-                }
             }
             .ignoresSafeArea()
 

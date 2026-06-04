@@ -7,7 +7,6 @@ struct HomeRecommendationScreen: View {
     @State private var selectedCardID: RecommendationCardModel.ID?
     @State private var rerollTask: Task<Void, Never>?
     @State private var camera = KakaoMapCamera.seoul
-    @State private var pulseSelection = false
 
     private var candidateCards: [RecommendationCardModel] {
         viewModel.cards.filter { pickerMode.matches($0) }
@@ -20,6 +19,21 @@ struct HomeRecommendationScreen: View {
             return nil
         }
         return card
+    }
+
+    private var mapMarkers: [KakaoMapMarker] {
+        var markerCards = Array(candidateCards.prefix(350))
+        if let selectedCard, !markerCards.contains(where: { $0.id == selectedCard.id }) {
+            markerCards.append(selectedCard)
+        }
+        return markerCards.map { card in
+            KakaoMapMarker(
+                id: card.id,
+                latitude: card.latitude,
+                longitude: card.longitude,
+                isSelected: selectedCard?.id == card.id
+            )
+        }
     }
 
     var body: some View {
@@ -46,23 +60,9 @@ struct HomeRecommendationScreen: View {
 
     private var mapCanvas: some View {
         GeometryReader { proxy in
-            ZStack {
-                KakaoMapView(camera: camera)
-                    .frame(width: proxy.size.width, height: proxy.size.height)
-                    .ignoresSafeArea()
-
-                ForEach(candidateCards) { card in
-                    CandidateMarker(
-                        card: card,
-                        isSelected: selectedCard?.id == card.id,
-                        mode: RecommendationPickerMode(card: card),
-                        pulse: pulseSelection
-                    )
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
-                    .position(markerPosition(for: card, in: proxy.size))
-                }
-            }
+            KakaoMapView(camera: camera, markers: mapMarkers)
+                .frame(width: proxy.size.width, height: proxy.size.height)
+                .ignoresSafeArea()
         }
         .ignoresSafeArea()
     }
@@ -171,9 +171,6 @@ struct HomeRecommendationScreen: View {
     }
 
     private func pickRandomCandidate() {
-        withAnimation(.easeInOut(duration: 0.45)) {
-            pulseSelection.toggle()
-        }
         if let random = candidateCards.randomElement() {
             select(random)
             return
@@ -184,16 +181,6 @@ struct HomeRecommendationScreen: View {
     private func select(_ card: RecommendationCardModel) {
         selectedCardID = card.id
         camera = KakaoMapCamera(latitude: card.latitude, longitude: card.longitude, level: 5)
-    }
-
-    private func markerPosition(for card: RecommendationCardModel, in size: CGSize) -> CGPoint {
-        let longitudeDelta = max(min(card.longitude - camera.longitude, 0.03), -0.03)
-        let latitudeDelta = max(min(card.latitude - camera.latitude, 0.03), -0.03)
-        let scale = max(size.width, size.height) * 10
-        return CGPoint(
-            x: size.width / 2 + longitudeDelta * scale,
-            y: size.height / 2 - latitudeDelta * scale
-        )
     }
 
     private func reconcileSelection(with cards: [RecommendationCardModel]) {
@@ -234,43 +221,6 @@ enum HomeMapKoreanCopy {
     static let readyMessage = "시연용 기본 위치의 지도 후보를 준비합니다."
     static let loadingMessage = "지도 안 후보를 불러오고 있습니다."
     static let emptyMessage = "지도를 움직이거나 반경을 넓혀 추천 후보를 다시 확인해 주세요."
-}
-
-private struct CandidateMarker: View {
-    let card: RecommendationCardModel
-    let isSelected: Bool
-    let mode: RecommendationPickerMode
-    let pulse: Bool
-
-    var body: some View {
-        VStack(spacing: 5) {
-            ZStack {
-                if isSelected {
-                    Circle()
-                        .stroke(PeroMapStyle.accent, lineWidth: 3)
-                        .frame(width: pulse ? 44 : 34, height: pulse ? 44 : 34)
-                        .opacity(pulse ? 0.22 : 0.55)
-                }
-                Circle()
-                    .fill(isSelected ? PeroMapStyle.surface : PeroMapStyle.ink)
-                    .frame(width: isSelected ? 24 : 12, height: isSelected ? 24 : 12)
-                    .overlay {
-                        Circle().stroke(isSelected ? PeroMapStyle.accentDeep : PeroMapStyle.surface, lineWidth: isSelected ? 3 : 2)
-                    }
-            }
-            if isSelected {
-                Text(card.title)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(PeroMapStyle.ink)
-                    .lineLimit(1)
-                    .padding(.horizontal, 8)
-                    .frame(height: 26)
-                    .peroFloatingSurface(cornerRadius: 13)
-            }
-        }
-        .animation(.easeInOut(duration: 0.35), value: isSelected)
-        .animation(.easeInOut(duration: 0.45), value: pulse)
-    }
 }
 
 private struct RandomMapResultSheet: View {
