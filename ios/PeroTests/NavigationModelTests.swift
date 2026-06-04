@@ -59,7 +59,7 @@ struct NavigationModelTests {
     }
 
     @Test func recommendationStatesExposeKoreanCopy() {
-        #expect(RecommendationState.ready.title == "현재 위치 준비")
+        #expect(RecommendationState.ready.title == "지도 준비")
         #expect(RecommendationState.loading.title == "지금 갈 곳 찾는 중")
         #expect(RecommendationState.results.title == "추천 결과")
         #expect(RecommendationState.empty.title == "추천 후보 없음")
@@ -67,11 +67,9 @@ struct NavigationModelTests {
     }
 
     @Test func homeMapKoreanCopyExplainsViewportRandomPick() {
-        #expect(HomeMapKoreanCopy.heroSubtitle.contains("현재 보고 있는 지도 안 후보"))
-        #expect(HomeMapKoreanCopy.randomPickCTA == "이 화면에서 랜덤 픽")
-        #expect(HomeMapKoreanCopy.randomPickHint.contains("현재 화면의 추천 후보"))
-        #expect(HomeMapKoreanCopy.mapPreviewEyebrow == "현재 화면 후보")
-        #expect(HomeMapKoreanCopy.reasonCTA == "왜 뽑혔는지 보기")
+        #expect(HomeMapKoreanCopy.readyMessage.contains("지도 후보"))
+        #expect(HomeMapKoreanCopy.loadingMessage == "지도 안 후보를 불러오고 있습니다.")
+        #expect(HomeMapKoreanCopy.emptyMessage.contains("추천 후보"))
     }
 
     @Test func recommendationNormalizerPrefersCardsBeforeCourseStopsAndLimitsToThree() {
@@ -126,14 +124,13 @@ struct NavigationModelTests {
 
         await viewModel.loadGoNowRecommendations()
 
-        #expect(provider.lastRequest?.themeId == "go-now")
+        #expect(provider.lastRequest?.themeId == nil)
         #expect(provider.lastRequest?.latitude == 35.1796)
         #expect(provider.lastRequest?.longitude == 129.0756)
         #expect(provider.recommendationCallCount == 1)
         #expect(provider.searchCallCount == 0)
         #expect(provider.lastRequest?.radiusKm == 3)
         #expect(viewModel.cards.count == 3)
-        #expect(viewModel.locationLabel.contains("35.1796") == true)
     }
 
     @Test @MainActor func viewModelUsesPlacesEndpointAsMapPinPoolWhenAvailable() async {
@@ -151,7 +148,7 @@ struct NavigationModelTests {
         #expect(viewModel.state == .results)
     }
 
-    @Test @MainActor func viewModelFallsBackToPreviewCardsAfterTransientReloadFailure() async {
+    @Test @MainActor func viewModelDoesNotUsePreviewCardsAfterBackendFailure() async {
         let provider = CapturingRecommendationProvider()
         let locationProvider = StaticLocationProvider(latitude: 35.1796, longitude: 129.0756)
         let viewModel = RecommendationViewModel(provider: provider, locationProvider: locationProvider)
@@ -164,9 +161,12 @@ struct NavigationModelTests {
 
         #expect(viewModel.card(for: firstCardID)?.id == firstCardID)
         #expect(viewModel.cards.map(\.id) == ["preview-seoul-park", "preview-market", "preview-gallery"])
-        #expect(viewModel.fallbackUsed)
-        #expect(viewModel.locationLabel == "미리보기 추천 영역")
-        #expect(viewModel.state == .results)
+        #expect(viewModel.fallbackUsed == false)
+        if case .error(let message) = viewModel.state {
+            #expect(message.contains("백엔드에서 장소 후보를 불러오지 못했습니다."))
+        } else {
+            #expect(Bool(false), "Expected backend error state")
+        }
     }
 
     @Test @MainActor func viewModelStartsAsSpontaneousRecommendationSurface() {
@@ -177,7 +177,6 @@ struct NavigationModelTests {
 
         #expect(viewModel.state == .ready)
         #expect(viewModel.cards.isEmpty)
-        #expect(viewModel.locationLabel == "현재 위치 확인 전")
     }
 
     @Test func runtimeConfigurationUsesLiveProviderUnlessPreviewIsExplicit() {

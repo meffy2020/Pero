@@ -1,4 +1,3 @@
-import MapKit
 import SwiftUI
 
 struct MapScreen: View {
@@ -6,45 +5,32 @@ struct MapScreen: View {
 
     let card: RecommendationCardModel
 
-    private var coordinate: CLLocationCoordinate2D {
-        CLLocationCoordinate2D(latitude: card.latitude, longitude: card.longitude)
-    }
-
-    private var position: MapCameraPosition {
-        .region(
-            MKCoordinateRegion(
-                center: coordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.010, longitudeDelta: 0.010)
-            )
-        )
-    }
-
     private var mode: RecommendationPickerMode {
         RecommendationPickerMode(card: card)
     }
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            Map(initialPosition: position) {
-                Annotation(card.title, coordinate: coordinate) {
-                    VStack(spacing: 6) {
-                        Circle()
-                            .fill(PeroMapStyle.surface)
-                            .frame(width: 28, height: 28)
-                            .overlay {
-                                Circle().stroke(PeroMapStyle.accentDeep, lineWidth: 4)
-                            }
-                        Text(card.title)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(PeroMapStyle.ink)
-                            .lineLimit(1)
-                            .padding(.horizontal, 10)
-                            .frame(height: 28)
-                            .peroFloatingSurface(cornerRadius: 14)
-                    }
+            ZStack {
+                KakaoMapView(camera: KakaoMapCamera(latitude: card.latitude, longitude: card.longitude, level: 17))
+                    .ignoresSafeArea()
+
+                VStack(spacing: 6) {
+                    Circle()
+                        .fill(PeroMapStyle.surface)
+                        .frame(width: 28, height: 28)
+                        .overlay {
+                            Circle().stroke(PeroMapStyle.accentDeep, lineWidth: 4)
+                        }
+                    Text(card.title)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(PeroMapStyle.ink)
+                        .lineLimit(1)
+                        .padding(.horizontal, 10)
+                        .frame(height: 28)
+                        .peroFloatingSurface(cornerRadius: 14)
                 }
             }
-            .mapStyle(.standard(elevation: .flat, pointsOfInterest: .including([.park, .restaurant, .museum])))
             .ignoresSafeArea()
 
             VStack(spacing: 0) {

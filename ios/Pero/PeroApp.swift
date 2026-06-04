@@ -1,6 +1,7 @@
 import SwiftUI
 import Foundation
 import PeroCore
+import KakaoMapsSDK
 
 @main
 struct PeroApp: App {
@@ -8,6 +9,7 @@ struct PeroApp: App {
     private let locationProvider: LocationProviding
 
     init() {
+        AppRuntimeConfiguration.initializeKakaoMaps()
         provider = AppRuntimeConfiguration.makeProvider()
         locationProvider = AppRuntimeConfiguration.makeLocationProvider()
     }
@@ -20,6 +22,16 @@ struct PeroApp: App {
 }
 
 enum AppRuntimeConfiguration {
+    static func initializeKakaoMaps(bundle: Bundle = .main) {
+        guard
+            let appKey = bundle.object(forInfoDictionaryKey: "KAKAO_MAP_APP_KEY") as? String,
+            !appKey.isEmpty
+        else {
+            preconditionFailure("Missing KAKAO_MAP_APP_KEY")
+        }
+        SDKInitializer.InitSDK(appKey: appKey)
+    }
+
     static func usesPreviewData(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
         environment["PERO_USE_PREVIEW"] == "1"
     }

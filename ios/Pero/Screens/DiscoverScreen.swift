@@ -1,5 +1,4 @@
 import SwiftUI
-import MapKit
 import PeroCore
 
 struct HomeRecommendationScreen: View {
@@ -7,13 +6,8 @@ struct HomeRecommendationScreen: View {
     @State private var pickerMode: RecommendationPickerMode = .place
     @State private var selectedCardID: RecommendationCardModel.ID?
     @State private var rerollTask: Task<Void, Never>?
-    @State private var cameraPosition: MapCameraPosition = .region(Self.defaultRegion)
+    @State private var camera = KakaoMapCamera.seoul
     @State private var pulseSelection = false
-
-    private static let defaultRegion = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 37.5665, longitude: 126.9780),
-        span: MKCoordinateSpan(latitudeDelta: 0.055, longitudeDelta: 0.055)
-    )
 
     private var candidateCards: [RecommendationCardModel] {
         viewModel.cards.filter { pickerMode.matches($0) }
@@ -55,9 +49,12 @@ struct HomeRecommendationScreen: View {
     }
 
     private var mapCanvas: some View {
-        Map(position: $cameraPosition) {
-            ForEach(candidateCards) { card in
-                Annotation(card.title, coordinate: card.coordinate) {
+        GeometryReader { proxy in
+            ZStack {
+                KakaoMapView(camera: camera)
+                    .ignoresSafeArea()
+
+                ForEach(candidateCards) { card in
                     Button {
                         select(card)
                     } label: {
@@ -70,10 +67,10 @@ struct HomeRecommendationScreen: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("\(card.title) 선택")
+                    .position(markerPosition(for: card, in: proxy.size))
                 }
             }
         }
-        .mapStyle(.standard(elevation: .flat, pointsOfInterest: .including([.park, .restaurant, .museum])))
         .ignoresSafeArea()
     }
 
@@ -91,37 +88,12 @@ struct HomeRecommendationScreen: View {
     private var topFloatingControls: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 10) {
-                locationPill
                 Spacer(minLength: 8)
                 sideControls
             }
 
             modeChips
         }
-    }
-
-    private var locationPill: some View {
-        Button {
-            recenterOnSelection()
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "location.fill")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(PeroMapStyle.accentDeep)
-                Text(viewModel.locationLabel)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(PeroMapStyle.ink)
-                    .lineLimit(1)
-                Image(systemName: "chevron.down")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(PeroMapStyle.muted)
-            }
-            .padding(.horizontal, 14)
-            .frame(height: 44)
-        }
-        .buttonStyle(.plain)
-        .peroFloatingSurface(cornerRadius: 22)
-        .accessibilityLabel("현재 추천 영역")
     }
 
     private var sideControls: some View {
@@ -242,25 +214,25 @@ struct HomeRecommendationScreen: View {
 
     private func select(_ card: RecommendationCardModel) {
         selectedCardID = card.id
-        cameraPosition = .region(
-            MKCoordinateRegion(
-                center: card.coordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.018, longitudeDelta: 0.018)
-            )
-        )
+        camera = KakaoMapCamera(latitude: card.latitude, longitude: card.longitude, level: 16)
     }
 
     private func recenterOnSelection() {
         if let selectedCard {
             select(selectedCard)
         } else if let first = candidateCards.first {
-            cameraPosition = .region(
-                MKCoordinateRegion(
-                    center: first.coordinate,
-                    span: MKCoordinateSpan(latitudeDelta: 0.024, longitudeDelta: 0.024)
-                )
-            )
+            camera = KakaoMapCamera(latitude: first.latitude, longitude: first.longitude, level: 15)
         }
+    }
+
+    private func markerPosition(for card: RecommendationCardModel, in size: CGSize) -> CGPoint {
+        let longitudeDelta = max(min(card.longitude - camera.longitude, 0.03), -0.03)
+        let latitudeDelta = max(min(card.latitude - camera.latitude, 0.03), -0.03)
+        let scale = max(size.width, size.height) * 10
+        return CGPoint(
+            x: size.width / 2 + longitudeDelta * scale,
+            y: size.height / 2 - latitudeDelta * scale
+        )
     }
 
     private func reconcileSelection(with cards: [RecommendationCardModel]) {
@@ -464,12 +436,6 @@ struct StateMessageView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-    }
-}
-
-private extension RecommendationCardModel {
-    var coordinate: CLLocationCoordinate2D {
-        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 }
 

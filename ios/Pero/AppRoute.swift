@@ -160,7 +160,7 @@ enum RecommendationState: Equatable {
 
     var title: String {
         switch self {
-        case .ready: "현재 위치 준비"
+        case .ready: "지도 준비"
         case .loading: "지금 갈 곳 찾는 중"
         case .results: "추천 결과"
         case .empty: "추천 후보 없음"

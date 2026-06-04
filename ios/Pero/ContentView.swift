@@ -46,10 +46,6 @@ struct ContentView: View {
 struct UserCoordinate: Equatable {
     let latitude: Double
     let longitude: Double
-
-    var displayLabel: String {
-        "내 주변"
-    }
 }
 
 protocol LocationProviding: AnyObject, Sendable {
@@ -105,7 +101,6 @@ final class RecommendationViewModel: ObservableObject {
     @Published private(set) var cards: [RecommendationCardModel] = []
     @Published private(set) var fallbackUsed = false
 
-    @Published private(set) var locationLabel = "현재 위치 확인 전"
     private var cardsByID: [RecommendationCardModel.ID: RecommendationCardModel] = [:]
 
     private let provider: PeroAPIProviding
@@ -121,45 +116,34 @@ final class RecommendationViewModel: ObservableObject {
         fallbackUsed = false
         do {
             let coordinate = try await locationProvider.currentCoordinate()
-            locationLabel = coordinate.displayLabel
-            let request = RecommendationRequest(
-                themeId: "go-now",
-                latitude: coordinate.latitude,
-                longitude: coordinate.longitude,
-                radiusKm: 3
-            )
-            let recommendationResponse = try? await provider.recommendations(request)
-            let placesResponse = try? await provider.places()
-            let placePool = Self.normalize(places: placesResponse?.places ?? [], center: coordinate)
-
-            if !placePool.isEmpty {
-                apply(cards: placePool, fallback: recommendationResponse?.fallbackUsed ?? false)
-            } else if let recommendationResponse {
-                apply(response: recommendationResponse)
-            } else {
-                throw LocationProviderError.unavailable
-            }
+            try await loadLiveRecommendations(center: coordinate)
         } catch {
             do {
-                let previewProvider = PeroAPIProviderFactory.preview()
-                let previewCoordinate = StaticLocationProvider.previewCoordinate
-                let places = (try await previewProvider.places()).places
-                let previewPool = Self.normalize(places: places, center: previewCoordinate)
-                if !previewPool.isEmpty {
-                    locationLabel = "미리보기 추천 영역"
-                    apply(cards: previewPool, fallback: true)
-                } else {
-                    let response = try await previewProvider.recommendations(
-                        RecommendationRequest(themeId: "go-now", radiusKm: 3)
-                    )
-                    locationLabel = "미리보기 추천 영역"
-                    apply(response: response, forceFallback: true)
-                }
+                try await loadLiveRecommendations(center: StaticLocationProvider.previewCoordinate, forceFallback: true)
             } catch {
                 fallbackUsed = false
-                locationLabel = "위치 또는 추천 서버 확인 필요"
-                state = .error("현재 위치 기반 추천을 불러오지 못했습니다. \(error.localizedDescription)")
+                state = .error("백엔드에서 장소 후보를 불러오지 못했습니다. \(error.localizedDescription)")
             }
+        }
+    }
+
+    private func loadLiveRecommendations(center coordinate: UserCoordinate, forceFallback: Bool = false) async throws {
+        let request = RecommendationRequest(
+            themeId: nil,
+            latitude: coordinate.latitude,
+            longitude: coordinate.longitude,
+            radiusKm: 3
+        )
+        let recommendationResponse = try? await provider.recommendations(request)
+        let placesResponse = try await provider.places()
+        let placePool = Self.normalize(places: placesResponse.places, center: coordinate)
+
+        if !placePool.isEmpty {
+            apply(cards: placePool, fallback: forceFallback || (recommendationResponse?.fallbackUsed ?? false))
+        } else if let recommendationResponse {
+            apply(response: recommendationResponse, forceFallback: forceFallback)
+        } else {
+            throw LocationProviderError.unavailable
         }
     }
 
