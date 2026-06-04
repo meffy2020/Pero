@@ -29,7 +29,12 @@ enum AppRuntimeConfiguration {
         else {
             preconditionFailure("Missing KAKAO_MAP_APP_KEY")
         }
-        SDKInitializer.InitSDK(appKey: appKey)
+        SDKInitializer.InitSDK(appKey: appKey, phase: .real)
+        #if DEBUG
+        let bundleID = bundle.bundleIdentifier ?? "unknown"
+        let keySuffix = String(appKey.suffix(6))
+        print("Kakao Maps init: bundleID=\(bundleID), keySuffix=\(keySuffix), phase=real")
+        #endif
     }
 
     static func usesPreviewData(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
