@@ -48,7 +48,7 @@ struct UserCoordinate: Equatable {
     let longitude: Double
 
     var displayLabel: String {
-        String(format: "현재 위치 %.4f, %.4f", latitude, longitude)
+        "내 주변"
     }
 }
 

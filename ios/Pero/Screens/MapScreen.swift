@@ -106,10 +106,6 @@ struct MapScreen: View {
                     .font(.title3.weight(.bold))
                     .foregroundStyle(PeroMapStyle.ink)
                     .lineLimit(2)
-                Text(card.reason)
-                    .font(.subheadline)
-                    .foregroundStyle(PeroMapStyle.inkSoft)
-                    .lineLimit(3)
             }
 
             FlowMetadataRow(card: card)

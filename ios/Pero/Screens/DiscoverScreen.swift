@@ -299,7 +299,7 @@ struct HomeRecommendationScreen: View {
 
 enum HomeMapKoreanCopy {
     static let readyMessage = "시연용 기본 위치의 지도 후보를 준비합니다."
-    static let loadingMessage = "지도 안 후보와 추천 이유를 정리하고 있습니다."
+    static let loadingMessage = "지도 안 후보를 불러오고 있습니다."
     static let emptyMessage = "지도를 움직이거나 반경을 넓혀 추천 후보를 다시 확인해 주세요."
 }
 
@@ -372,10 +372,6 @@ private struct RandomMapResultSheet: View {
                     Text(card.title)
                         .font(.title3.weight(.bold))
                         .foregroundStyle(PeroMapStyle.ink)
-                        .lineLimit(2)
-                    Text(mode.resultCopy(for: card))
-                        .font(.subheadline)
-                        .foregroundStyle(PeroMapStyle.inkSoft)
                         .lineLimit(2)
                 }
                 Spacer(minLength: 8)

@@ -13,7 +13,6 @@ struct PlaceExplanationDetailScreen: View {
                 header
                 primaryActions
                 visitSummary
-                reasonSection
             }
             .padding(.horizontal, 18)
             .padding(.top, 18)
@@ -35,10 +34,6 @@ struct PlaceExplanationDetailScreen: View {
                         .font(.title2.weight(.bold))
                         .foregroundStyle(PeroMapStyle.ink)
                         .lineLimit(2)
-                    Text(card.reason)
-                        .font(.subheadline)
-                        .foregroundStyle(PeroMapStyle.inkSoft)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 8)
                 Image(systemName: mode.symbolName)
@@ -86,16 +81,6 @@ struct PlaceExplanationDetailScreen: View {
         .peroFloatingSurface(cornerRadius: 22)
     }
 
-    private var reasonSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            DetailSectionTitle("왜 이 추천인가요")
-            InfoLine(icon: "scope", title: "추천 맥락", value: mode.resultCopy(for: card))
-            InfoLine(icon: "doc.text", title: "데이터 출처", value: card.sourceAttribution)
-            FlowTagRow(tags: card.tags)
-        }
-        .padding(18)
-        .peroFloatingSurface(cornerRadius: 22)
-    }
 }
 
 private struct DetailSectionTitle: View {

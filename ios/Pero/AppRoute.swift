@@ -137,17 +137,6 @@ enum RecommendationPickerMode: String, CaseIterable, Hashable, Identifiable {
     func matches(_ card: RecommendationCardModel) -> Bool {
         RecommendationPickerMode(card: card) == self
     }
-
-    func resultCopy(for card: RecommendationCardModel) -> String {
-        switch self {
-        case .place:
-            "지도 안 장소 후보 중 \(card.distanceLabel) 거리의 \(card.district) 장소를 뽑았어요. \(card.reason)"
-        case .restaurant:
-            "지금 먹기 좋은 식당 후보 중 하나를 뽑았어요. \(card.reason)"
-        case .course:
-            "현재 영역 안 코스 시작점으로 뽑았어요. \(card.reason)"
-        }
-    }
 }
 
 enum AppRoute: Hashable {
