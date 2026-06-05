@@ -33,16 +33,16 @@ struct KakaoMapVisibleBounds: Equatable {
 
     func isReadableMarkerDensity(for visibleCandidateCount: Int) -> Bool {
         guard visibleCandidateCount > 0 else { return false }
-        if latitudeSpan <= 0.45, longitudeSpan <= 0.45 {
-            return true
+        if latitudeSpan <= 0.18, longitudeSpan <= 0.18 {
+            return visibleCandidateCount <= 180
         }
-        if latitudeSpan <= 0.9, longitudeSpan <= 0.9, visibleCandidateCount <= 120 {
-            return true
+        if latitudeSpan <= 0.35, longitudeSpan <= 0.35 {
+            return visibleCandidateCount <= 90
         }
-        if latitudeSpan <= 1.5, longitudeSpan <= 1.5, visibleCandidateCount <= 60 {
-            return true
+        if latitudeSpan <= 0.7, longitudeSpan <= 0.7 {
+            return visibleCandidateCount <= 45
         }
-        return visibleCandidateCount <= 25
+        return visibleCandidateCount <= 18
     }
 }
 
@@ -223,7 +223,7 @@ struct KakaoMapView: UIViewRepresentable {
                     self?.syncVisibleBoundsIfPossible()
                 }
             } else {
-                let options = CameraAnimationOptions(autoElevation: true, consecutive: false, durationInMillis: 520)
+                let options = CameraAnimationOptions(autoElevation: false, consecutive: false, durationInMillis: 240)
                 mapView.animateCamera(cameraUpdate: update, options: options) { [weak self] in
                     self?.syncCameraFromMapIfPossible()
                     self?.syncVisibleBoundsIfPossible()

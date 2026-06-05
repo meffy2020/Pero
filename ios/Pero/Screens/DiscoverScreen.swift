@@ -334,7 +334,7 @@ struct HomeRecommendationScreen: View {
                 currentUserCoordinate = coordinate
                 withAnimation(.snappy(duration: 0.24)) {
                     locationFeedback = "현재 위치로 이동"
-                    camera = KakaoMapCamera(latitude: coordinate.latitude, longitude: coordinate.longitude, level: 4)
+                    camera = KakaoMapCamera(latitude: coordinate.latitude, longitude: coordinate.longitude, level: 3)
                 }
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
                 await viewModel.loadGoNowRecommendations(center: coordinate)
@@ -422,7 +422,7 @@ struct HomeRecommendationScreen: View {
 
         withAnimation(.snappy(duration: 0.28)) {
             selectedCardID = finalCard.id
-            camera = KakaoMapCamera(latitude: finalCard.latitude, longitude: finalCard.longitude, level: min(camera.level, 4))
+            camera = KakaoMapCamera(latitude: finalCard.latitude, longitude: finalCard.longitude, level: 3)
             drawPreviewTitle = nil
             isDrawing = false
         }
