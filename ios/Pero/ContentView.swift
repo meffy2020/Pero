@@ -111,6 +111,10 @@ final class RecommendationViewModel: ObservableObject {
         self.locationProvider = locationProvider
     }
 
+    func currentCoordinate() async throws -> UserCoordinate {
+        try await locationProvider.currentCoordinate()
+    }
+
     func loadGoNowRecommendations() async {
         state = .loading
         fallbackUsed = false

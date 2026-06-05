@@ -9,6 +9,7 @@ struct HomeRecommendationScreen: View {
     @State private var rerollTask: Task<Void, Never>?
     @State private var drawTask: Task<Void, Never>?
     @State private var isDrawing = false
+    @State private var isLocating = false
     @State private var drawPreviewTitle: String?
     @State private var camera = KakaoMapCamera.seoul
     @State private var visibleBounds: KakaoMapVisibleBounds?
@@ -100,7 +101,7 @@ struct HomeRecommendationScreen: View {
             bottomControls
         }
         .padding(.horizontal, 16)
-        .safeAreaPadding(.bottom, 12)
+        .safeAreaPadding(.bottom, 34)
     }
 
     @ViewBuilder
@@ -135,9 +136,38 @@ struct HomeRecommendationScreen: View {
 
     private var bottomControls: some View {
         VStack(spacing: 10) {
+            HStack {
+                Spacer(minLength: 0)
+                currentLocationButton
+            }
             drawControlRow
             selectedResultSheet
         }
+    }
+
+    private var currentLocationButton: some View {
+        Button(action: focusCurrentLocation) {
+            ZStack {
+                Circle()
+                    .fill(PeroMapStyle.surface)
+                    .frame(width: 44, height: 44)
+                if isLocating {
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Image(systemName: "location.fill")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(PeroMapStyle.ink)
+                }
+            }
+            .overlay {
+                Circle().stroke(PeroMapStyle.line, lineWidth: 0.8)
+            }
+            .shadow(color: .black.opacity(0.12), radius: 10, y: 4)
+        }
+        .disabled(isLocating)
+        .accessibilityLabel("현재 위치로 이동")
+        .accessibilityIdentifier("currentLocationButton")
     }
 
     private var drawControlRow: some View {
@@ -255,6 +285,24 @@ struct HomeRecommendationScreen: View {
         rerollTask?.cancel()
         rerollTask = Task {
             await viewModel.loadGoNowRecommendations()
+        }
+    }
+
+    private func focusCurrentLocation() {
+        guard !isLocating else { return }
+        isLocating = true
+        selectedCardID = nil
+        Task {
+            defer { isLocating = false }
+            do {
+                let coordinate = try await viewModel.currentCoordinate()
+                withAnimation(.snappy(duration: 0.24)) {
+                    camera = KakaoMapCamera(latitude: coordinate.latitude, longitude: coordinate.longitude, level: min(camera.level, 5))
+                }
+                await viewModel.loadGoNowRecommendations()
+            } catch {
+                UINotificationFeedbackGenerator().notificationOccurred(.error)
+            }
         }
     }
 
