@@ -14,12 +14,15 @@ struct HomeRecommendationScreen: View {
     @State private var visibleBounds: KakaoMapVisibleBounds?
 
     private var candidateCards: [RecommendationCardModel] {
-        viewModel.cards.filter { pickerMode.matches($0) }
+        candidates(for: pickerMode)
     }
 
     private var viewportCandidateCards: [RecommendationCardModel] {
-        guard let visibleBounds else { return candidateCards }
-        return candidateCards.filter { visibleBounds.contains(latitude: $0.latitude, longitude: $0.longitude) }
+        viewportCandidates(for: pickerMode)
+    }
+
+    private var hasAnyViewportCandidate: Bool {
+        RecommendationPickerMode.allCases.contains { !viewportCandidates(for: $0).isEmpty }
     }
 
     private var selectedCard: RecommendationCardModel? {
@@ -86,58 +89,31 @@ struct HomeRecommendationScreen: View {
 
     private var overlayChrome: some View {
         VStack(spacing: 0) {
-            topFloatingControls
             Spacer(minLength: 0)
             bottomControls
         }
         .padding(.horizontal, 16)
-        .safeAreaPadding(.top, 10)
         .safeAreaPadding(.bottom, 12)
-    }
-
-    private var topFloatingControls: some View {
-        HStack {
-            categoryMenu
-            Spacer(minLength: 0)
-        }
-    }
-
-    private var categoryMenu: some View {
-        Menu {
-            ForEach(RecommendationPickerMode.allCases) { mode in
-                Button {
-                    pickerMode = mode
-                } label: {
-                    Label(mode.title, systemImage: mode.symbolName)
-                }
-            }
-        } label: {
-            Label(pickerMode.title, systemImage: pickerMode.symbolName)
-                .font(.subheadline.weight(.semibold))
-                .lineLimit(1)
-                .foregroundStyle(PeroMapStyle.ink)
-                .padding(.horizontal, 14)
-                .frame(height: 42)
-                .background(PeroMapStyle.surface, in: Capsule())
-                .overlay {
-                    Capsule().stroke(PeroMapStyle.line, lineWidth: 0.8)
-                }
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("뽑기 종류")
-        .accessibilityValue(pickerMode.title)
-        .accessibilityIdentifier("categoryPickerMenu")
     }
 
     private var bottomControls: some View {
         VStack(spacing: 10) {
-            selectedResultSheet
             randomPickButton
+            selectedResultSheet
         }
     }
 
     private var randomPickButton: some View {
-        Button(action: runMapDrawAnimation) {
+        Menu {
+            ForEach(RecommendationPickerMode.allCases) { mode in
+                Button {
+                    runMapDrawAnimation(mode: mode)
+                } label: {
+                    Label(mode.title, systemImage: mode.symbolName)
+                }
+                .disabled(viewportCandidates(for: mode).isEmpty)
+            }
+        } label: {
             randomPickButtonLabel
         }
         .buttonStyle(.borderedProminent)
@@ -147,8 +123,8 @@ struct HomeRecommendationScreen: View {
         .overlay {
             Capsule().stroke(PeroMapStyle.accent, lineWidth: selectedCard == nil ? 2 : 1.2)
         }
-        .disabled(viewModel.state == .loading || viewportCandidateCards.isEmpty || isDrawing)
-        .opacity(viewModel.state == .loading || viewportCandidateCards.isEmpty || isDrawing ? 0.55 : 1)
+        .disabled(viewModel.state == .loading || !hasAnyViewportCandidate || isDrawing)
+        .opacity(viewModel.state == .loading || !hasAnyViewportCandidate || isDrawing ? 0.55 : 1)
         .accessibilityLabel(randomButtonTitle)
         .accessibilityIdentifier("mapRandomPickButton")
     }
@@ -170,10 +146,12 @@ struct HomeRecommendationScreen: View {
         default:
             if isDrawing {
                 "뽑는 중"
-            } else if viewportCandidateCards.isEmpty {
+            } else if !hasAnyViewportCandidate {
                 "화면 안 후보 없음"
+            } else if viewportCandidateCards.isEmpty {
+                "종류 선택"
             } else {
-                selectedCard == nil ? "\(pickerMode.title) 뽑기" : "다시 뽑기"
+                selectedCard == nil ? "\(pickerMode.title) 뽑기" : pickerMode.title
             }
         }
     }
@@ -183,8 +161,7 @@ struct HomeRecommendationScreen: View {
         if let selectedCard {
             RandomMapResultSheet(
                 card: selectedCard,
-                mode: $pickerMode,
-                reroll: runMapDrawAnimation
+                mode: pickerMode
             )
             .transition(.move(edge: .bottom).combined(with: .opacity))
         } else if viewModel.state == .results, viewportCandidateCards.isEmpty {
@@ -211,8 +188,10 @@ struct HomeRecommendationScreen: View {
         }
     }
 
-    private func runMapDrawAnimation() {
-        let pool = viewportCandidateCards
+    private func runMapDrawAnimation(mode: RecommendationPickerMode) {
+        pickerMode = mode
+        selectedCardID = nil
+        let pool = viewportCandidates(for: mode)
         guard !pool.isEmpty else {
             rerollRecommendations()
             return
@@ -221,6 +200,16 @@ struct HomeRecommendationScreen: View {
         drawTask = Task {
             await animateMapDraw(with: pool)
         }
+    }
+
+    private func candidates(for mode: RecommendationPickerMode) -> [RecommendationCardModel] {
+        viewModel.cards.filter { mode.matches($0) }
+    }
+
+    private func viewportCandidates(for mode: RecommendationPickerMode) -> [RecommendationCardModel] {
+        let cards = candidates(for: mode)
+        guard let visibleBounds else { return cards }
+        return cards.filter { visibleBounds.contains(latitude: $0.latitude, longitude: $0.longitude) }
     }
 
     private func reconcileSelection(with cards: [RecommendationCardModel]) {
@@ -312,30 +301,15 @@ enum HomeMapKoreanCopy {
 
 private struct RandomMapResultSheet: View {
     let card: RecommendationCardModel
-    @Binding var mode: RecommendationPickerMode
-    let reroll: () -> Void
+    let mode: RecommendationPickerMode
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Menu {
-                        ForEach(RecommendationPickerMode.allCases) { nextMode in
-                            Button {
-                                mode = nextMode
-                            } label: {
-                                Label(nextMode.title, systemImage: nextMode.symbolName)
-                            }
-                        }
-                    } label: {
-                        Label(mode.title, systemImage: mode.symbolName)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(PeroMapStyle.muted)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("뽑기 종류")
-                    .accessibilityValue(mode.title)
-                    .accessibilityIdentifier("resultCategoryPickerMenu")
+                    Label(mode.title, systemImage: mode.symbolName)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(PeroMapStyle.muted)
                     Text(card.title)
                         .font(.title3.weight(.bold))
                         .foregroundStyle(PeroMapStyle.ink)
