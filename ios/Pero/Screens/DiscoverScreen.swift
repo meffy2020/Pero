@@ -17,6 +17,10 @@ struct HomeRecommendationScreen: View {
         viewportCandidates(for: pickerMode)
     }
 
+    private var isViewportReady: Bool {
+        visibleBounds != nil
+    }
+
     private var selectedCard: RecommendationCardModel? {
         guard let selectedCardID,
               let card = viewModel.card(for: selectedCardID),
@@ -137,13 +141,24 @@ struct HomeRecommendationScreen: View {
     }
 
     private var drawControlRow: some View {
-        HStack(spacing: 8) {
-            categorySwitchButton
-            randomPickButton
+        HStack(spacing: 0) {
+            categoryMenuSegment
+            Rectangle()
+                .fill(PeroMapStyle.line)
+                .frame(width: 1, height: selectedCard == nil ? 28 : 22)
+            drawButtonSegment
         }
+        .frame(maxWidth: selectedCard == nil ? .infinity : nil)
+        .frame(height: selectedCard == nil ? 58 : 42)
+        .background(PeroMapStyle.surface, in: Capsule())
+        .overlay {
+            Capsule().stroke(PeroMapStyle.accent, lineWidth: selectedCard == nil ? 2 : 1.2)
+        }
+        .opacity(viewModel.state == .loading || !isViewportReady || viewportCandidateCards.isEmpty || isDrawing ? 0.55 : 1)
+        .accessibilityElement(children: .contain)
     }
 
-    private var categorySwitchButton: some View {
+    private var categoryMenuSegment: some View {
         Menu {
             ForEach(RecommendationPickerMode.allCases) { mode in
                 Button {
@@ -162,15 +177,11 @@ struct HomeRecommendationScreen: View {
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(PeroMapStyle.muted)
             }
-            .font(.subheadline.weight(.semibold))
-            .frame(width: 104, height: selectedCard == nil ? 58 : 42)
-        }
-        .buttonStyle(.borderedProminent)
-        .buttonBorderShape(.capsule)
-        .tint(PeroMapStyle.surface)
-        .foregroundStyle(PeroMapStyle.ink)
-        .overlay {
-            Capsule().stroke(PeroMapStyle.line, lineWidth: 0.8)
+            .font(selectedCard == nil ? .headline.weight(.semibold) : .subheadline.weight(.semibold))
+            .foregroundStyle(PeroMapStyle.ink)
+            .padding(.leading, selectedCard == nil ? 20 : 16)
+            .padding(.trailing, 14)
+            .frame(height: selectedCard == nil ? 58 : 42)
         }
         .disabled(viewModel.state == .loading || isDrawing)
         .accessibilityLabel("뽑기 종류")
@@ -178,31 +189,22 @@ struct HomeRecommendationScreen: View {
         .accessibilityIdentifier("categorySwitchButton")
     }
 
-    private var randomPickButton: some View {
+    private var drawButtonSegment: some View {
         Button(action: runMapDrawAnimation) {
-            randomPickButtonLabel
-        }
-        .buttonStyle(.borderedProminent)
-        .buttonBorderShape(.capsule)
-        .tint(PeroMapStyle.surface)
-        .foregroundStyle(PeroMapStyle.ink)
-        .overlay {
-            Capsule().stroke(PeroMapStyle.accent, lineWidth: selectedCard == nil ? 2 : 1.2)
-        }
-        .disabled(viewModel.state == .loading || viewportCandidateCards.isEmpty || isDrawing)
-        .opacity(viewModel.state == .loading || viewportCandidateCards.isEmpty || isDrawing ? 0.55 : 1)
-        .accessibilityLabel(randomButtonTitle)
-        .accessibilityIdentifier("mapRandomPickButton")
-    }
-
-    @ViewBuilder
-    private var randomPickButtonLabel: some View {
-        Label(randomButtonTitle, systemImage: viewModel.state == .loading ? "hourglass" : "sparkle")
+            HStack(spacing: 6) {
+                Image(systemName: viewModel.state == .loading ? "hourglass" : "sparkle")
+                Text(drawActionTitle)
+            }
             .font(selectedCard == nil ? .headline.weight(.semibold) : .subheadline.weight(.semibold))
-            .padding(.horizontal, selectedCard == nil ? 0 : 16)
+            .foregroundStyle(PeroMapStyle.ink)
+            .padding(.leading, 14)
+            .padding(.trailing, selectedCard == nil ? 20 : 16)
             .frame(maxWidth: selectedCard == nil ? .infinity : nil)
             .frame(height: selectedCard == nil ? 58 : 42)
-            .fixedSize(horizontal: selectedCard != nil, vertical: false)
+        }
+        .disabled(viewModel.state == .loading || !isViewportReady || viewportCandidateCards.isEmpty || isDrawing)
+        .accessibilityLabel(randomButtonTitle)
+        .accessibilityIdentifier("mapRandomPickButton")
     }
 
     private var randomButtonTitle: String {
@@ -212,12 +214,21 @@ struct HomeRecommendationScreen: View {
         default:
             if isDrawing {
                 "고르는 중"
+            } else if !isViewportReady {
+                "지도 준비 중"
             } else if viewportCandidateCards.isEmpty {
                 "화면 안 후보 없음"
             } else {
                 "\(pickerMode.title) 뽑기"
             }
         }
+    }
+
+    private var drawActionTitle: String {
+        if isDrawing { return "고르는 중" }
+        if viewModel.state == .loading { return "준비 중" }
+        if !isViewportReady { return "준비 중" }
+        return "뽑기"
     }
 
     @ViewBuilder
@@ -271,7 +282,7 @@ struct HomeRecommendationScreen: View {
 
     private func viewportCandidates(for mode: RecommendationPickerMode) -> [RecommendationCardModel] {
         let cards = candidates(for: mode)
-        guard let visibleBounds else { return cards }
+        guard let visibleBounds else { return [] }
         return cards.filter { visibleBounds.contains(latitude: $0.latitude, longitude: $0.longitude) }
     }
 
@@ -389,6 +400,10 @@ private struct RandomMapResultSheet: View {
 
             FlowMetadataRow(card: card)
 
+            if mode == .festival, card.hasFestivalDetail {
+                FestivalInfoPanel(card: card)
+            }
+
             HStack(spacing: 10) {
                 if let appleMapsURL = card.appleMapsURL {
                     Link(destination: appleMapsURL) {
@@ -415,6 +430,32 @@ private struct RandomMapResultSheet: View {
     }
 }
 
+private struct FestivalInfoPanel: View {
+    let card: RecommendationCardModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let eventPeriodLabel = card.eventPeriodLabel {
+                Label(eventPeriodLabel, systemImage: "calendar")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(PeroMapStyle.ink)
+            }
+
+            if let eventSummary = card.eventSummary {
+                Text(eventSummary)
+                    .font(.caption)
+                    .foregroundStyle(PeroMapStyle.inkSoft)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(PeroMapStyle.surfaceMuted, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .accessibilityElement(children: .combine)
+    }
+}
+
 struct FlowMetadataRow: View {
     let card: RecommendationCardModel
 
@@ -429,6 +470,12 @@ struct FlowMetadataRow: View {
     private var chips: some View {
         MetadataChip(text: card.district, systemImage: "mappin.and.ellipse")
         MetadataChip(text: card.category, systemImage: "tag")
+    }
+}
+
+private extension RecommendationCardModel {
+    var hasFestivalDetail: Bool {
+        eventPeriodLabel != nil || eventSummary != nil
     }
 }
 

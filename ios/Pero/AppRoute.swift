@@ -14,6 +14,40 @@ struct RecommendationCardModel: Identifiable, Hashable {
     let distanceLabel: String
     let sourceAttribution: String
     let tags: [String]
+    let eventPeriodLabel: String?
+    let eventSummary: String?
+
+    init(
+        id: String,
+        title: String,
+        subtitle: String,
+        reason: String,
+        category: String,
+        district: String,
+        roadAddress: String,
+        latitude: Double,
+        longitude: Double,
+        distanceLabel: String,
+        sourceAttribution: String,
+        tags: [String],
+        eventPeriodLabel: String? = nil,
+        eventSummary: String? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.subtitle = subtitle
+        self.reason = reason
+        self.category = category
+        self.district = district
+        self.roadAddress = roadAddress
+        self.latitude = latitude
+        self.longitude = longitude
+        self.distanceLabel = distanceLabel
+        self.sourceAttribution = sourceAttribution
+        self.tags = tags
+        self.eventPeriodLabel = eventPeriodLabel
+        self.eventSummary = eventSummary
+    }
 }
 
 extension RecommendationCardModel {

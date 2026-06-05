@@ -201,7 +201,9 @@ final class RecommendationViewModel: ObservableObject {
                 longitude: place.longitude,
                 distanceLabel: String(format: "%.1fkm", distanceKm),
                 sourceAttribution: place.sourceAttribution,
-                tags: Array((place.tags + place.themeTags).uniqued().prefix(4))
+                tags: Array((place.tags + place.themeTags).uniqued().prefix(4)),
+                eventPeriodLabel: Self.eventPeriodLabel(from: place.tourApi),
+                eventSummary: Self.eventSummary(summary: place.summary, tourApi: place.tourApi)
             )
         }
         .sorted { lhs, rhs in
@@ -219,6 +221,53 @@ final class RecommendationViewModel: ObservableObject {
             return "랜덤 코스 추천"
         }
         return "랜덤 장소 추천"
+    }
+
+    nonisolated private static func eventPeriodLabel(from tourApi: TourAPI?) -> String? {
+        guard let common = tourApi?.common else { return nil }
+        let start = formattedEventDate(common.eventStartDate)
+        let end = formattedEventDate(common.eventEndDate)
+        switch (start, end) {
+        case let (start?, end?) where start == end:
+            return start
+        case let (start?, end?):
+            return "\(start) - \(end)"
+        case let (start?, nil):
+            return start
+        case let (nil, end?):
+            return "~ \(end)"
+        default:
+            return nil
+        }
+    }
+
+    nonisolated private static func formattedEventDate(_ rawValue: String?) -> String? {
+        guard let rawValue else { return nil }
+        let digits = rawValue.filter(\.isNumber)
+        guard digits.count == 8 else { return rawValue.isEmpty ? nil : rawValue }
+        let year = digits.prefix(4)
+        let monthStart = digits.index(digits.startIndex, offsetBy: 4)
+        let dayStart = digits.index(digits.startIndex, offsetBy: 6)
+        let month = digits[monthStart..<dayStart]
+        let day = digits[dayStart..<digits.endIndex]
+        return "\(year).\(month).\(day)"
+    }
+
+    nonisolated private static func eventSummary(summary: String, tourApi: TourAPI?) -> String? {
+        let source = tourApi?.common?.overview?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+            ? tourApi?.common?.overview
+            : summary
+        guard let source else { return nil }
+        let flattened = source
+            .replacingOccurrences(of: "<br>", with: " ")
+            .replacingOccurrences(of: "<br/>", with: " ")
+            .replacingOccurrences(of: "<br />", with: " ")
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !flattened.isEmpty else { return nil }
+        if flattened.count <= 96 { return flattened }
+        let endIndex = flattened.index(flattened.startIndex, offsetBy: 96)
+        return String(flattened[..<endIndex]) + "…"
     }
 
     nonisolated private static func append(card: RecommendationCard?, slotTitle: String, into normalized: inout [RecommendationCardModel], seenIDs: inout Set<String>) {
@@ -246,7 +295,9 @@ final class RecommendationViewModel: ObservableObject {
                 longitude: place.longitude,
                 distanceLabel: place.distanceKm.map { String(format: "%.1fkm", $0) } ?? "거리 정보 없음",
                 sourceAttribution: place.sourceAttribution,
-                tags: Array(place.tags.prefix(4))
+                tags: Array(place.tags.prefix(4)),
+                eventPeriodLabel: Self.eventPeriodLabel(from: place.tourApi),
+                eventSummary: Self.eventSummary(summary: place.summary, tourApi: place.tourApi)
             )
         )
     }
