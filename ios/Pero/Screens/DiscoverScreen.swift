@@ -9,7 +9,7 @@ struct HomeRecommendationScreen: View {
     @State private var rerollTask: Task<Void, Never>?
     @State private var drawTask: Task<Void, Never>?
     @State private var isDrawing = false
-    @State private var highlightedCardID: RecommendationCardModel.ID?
+    @State private var drawPreviewTitle: String?
     @State private var camera = KakaoMapCamera.seoul
     @State private var visibleBounds: KakaoMapVisibleBounds?
 
@@ -35,7 +35,7 @@ struct HomeRecommendationScreen: View {
     }
 
     private var mapMarkers: [KakaoMapMarker] {
-        var markerCards = Array(viewportCandidateCards.prefix(350))
+        var markerCards = markerLayerCards
         if let selectedCard, !markerCards.contains(where: { $0.id == selectedCard.id }) {
             markerCards.append(selectedCard)
         }
@@ -44,9 +44,19 @@ struct HomeRecommendationScreen: View {
                 id: card.id,
                 latitude: card.latitude,
                 longitude: card.longitude,
-                isSelected: selectedCard?.id == card.id || highlightedCardID == card.id
+                isSelected: selectedCard?.id == card.id
             )
         }
+    }
+
+    private var markerLayerCards: [RecommendationCardModel] {
+        guard shouldRenderAllVisibleMarkers else { return [] }
+        return viewportCandidateCards
+    }
+
+    private var shouldRenderAllVisibleMarkers: Bool {
+        guard let visibleBounds else { return false }
+        return visibleBounds.isReadableMarkerDensity(for: viewportCandidateCards.count)
     }
 
     var body: some View {
@@ -99,6 +109,7 @@ struct HomeRecommendationScreen: View {
     private var bottomControls: some View {
         VStack(spacing: 10) {
             randomPickButton
+            drawStatusPill
             selectedResultSheet
         }
     }
@@ -139,13 +150,34 @@ struct HomeRecommendationScreen: View {
             .fixedSize(horizontal: selectedCard != nil, vertical: false)
     }
 
+    @ViewBuilder
+    private var drawStatusPill: some View {
+        if isDrawing, let drawPreviewTitle {
+            HStack(spacing: 8) {
+                ProgressView()
+                    .controlSize(.small)
+                Text(drawPreviewTitle)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(PeroMapStyle.ink)
+            .padding(.horizontal, 14)
+            .frame(height: 40)
+            .background(PeroMapStyle.surface, in: Capsule())
+            .overlay {
+                Capsule().stroke(PeroMapStyle.line, lineWidth: 0.8)
+            }
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
+        }
+    }
+
     private var randomButtonTitle: String {
         switch viewModel.state {
         case .loading:
             "후보 찾는 중"
         default:
             if isDrawing {
-                "뽑는 중"
+                "고르는 중"
             } else if !hasAnyViewportCandidate {
                 "화면 안 후보 없음"
             } else if viewportCandidateCards.isEmpty {
@@ -225,6 +257,7 @@ struct HomeRecommendationScreen: View {
     private func animateMapDraw(with pool: [RecommendationCardModel]) async {
         isDrawing = true
         selectedCardID = nil
+        drawPreviewTitle = nil
 
         let impact = UIImpactFeedbackGenerator(style: .light)
         let success = UINotificationFeedbackGenerator()
@@ -234,31 +267,31 @@ struct HomeRecommendationScreen: View {
         let run = drawRun(from: pool)
         for (index, card) in run.enumerated() {
             guard !Task.isCancelled else { break }
-            highlightedCardID = card.id
+            drawPreviewTitle = card.title
             impact.impactOccurred(intensity: index == run.indices.last ? 0.75 : 0.38)
-            try? await Task.sleep(for: .milliseconds(index == run.indices.last ? 260 : 190))
+            try? await Task.sleep(for: .milliseconds(index == run.indices.last ? 240 : 150))
         }
 
         guard !Task.isCancelled, let finalCard = run.last else {
-            highlightedCardID = nil
+            drawPreviewTitle = nil
             isDrawing = false
             return
         }
 
         guard !Task.isCancelled else {
-            highlightedCardID = nil
+            drawPreviewTitle = nil
             isDrawing = false
             return
         }
 
         selectedCardID = finalCard.id
-        highlightedCardID = nil
+        drawPreviewTitle = nil
         isDrawing = false
         success.notificationOccurred(.success)
     }
 
     private func drawRun(from pool: [RecommendationCardModel]) -> [RecommendationCardModel] {
-        let count = min(max(pool.count, 1), 5)
+        let count = min(max(pool.count, 1), 4)
         let shuffled = pool.shuffled()
         if shuffled.count <= count {
             return shuffled

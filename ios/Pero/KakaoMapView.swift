@@ -16,11 +16,33 @@ struct KakaoMapVisibleBounds: Equatable {
     let minLongitude: Double
     let maxLongitude: Double
 
+    var latitudeSpan: Double {
+        maxLatitude - minLatitude
+    }
+
+    var longitudeSpan: Double {
+        maxLongitude - minLongitude
+    }
+
     func contains(latitude: Double, longitude: Double) -> Bool {
         latitude >= minLatitude
         && latitude <= maxLatitude
         && longitude >= minLongitude
         && longitude <= maxLongitude
+    }
+
+    func isReadableMarkerDensity(for visibleCandidateCount: Int) -> Bool {
+        guard visibleCandidateCount > 0 else { return false }
+        if latitudeSpan <= 0.45, longitudeSpan <= 0.45 {
+            return true
+        }
+        if latitudeSpan <= 0.9, longitudeSpan <= 0.9, visibleCandidateCount <= 120 {
+            return true
+        }
+        if latitudeSpan <= 1.5, longitudeSpan <= 1.5, visibleCandidateCount <= 60 {
+            return true
+        }
+        return visibleCandidateCount <= 25
     }
 }
 
