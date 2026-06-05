@@ -11,6 +11,8 @@ struct HomeRecommendationScreen: View {
     @State private var isDrawing = false
     @State private var isLocating = false
     @State private var drawPreviewTitle: String?
+    @State private var locationFeedback: String?
+    @State private var currentUserCoordinate: UserCoordinate?
     @State private var camera = KakaoMapCamera.seoul
     @State private var visibleBounds: KakaoMapVisibleBounds?
 
@@ -36,7 +38,7 @@ struct HomeRecommendationScreen: View {
         if let selectedCard, !markerCards.contains(where: { $0.id == selectedCard.id }) {
             markerCards.append(selectedCard)
         }
-        return markerCards.map { card in
+        var markers = markerCards.map { card in
             KakaoMapMarker(
                 id: card.id,
                 latitude: card.latitude,
@@ -44,6 +46,18 @@ struct HomeRecommendationScreen: View {
                 isSelected: selectedCard?.id == card.id
             )
         }
+        if let currentUserCoordinate {
+            markers.append(
+                KakaoMapMarker(
+                    id: "current-user-location",
+                    latitude: currentUserCoordinate.latitude,
+                    longitude: currentUserCoordinate.longitude,
+                    isSelected: false,
+                    isUserLocation: true
+                )
+            )
+        }
+        return markers
     }
 
     private var markerLayerCards: [RecommendationCardModel] {
@@ -136,12 +150,29 @@ struct HomeRecommendationScreen: View {
 
     private var bottomControls: some View {
         VStack(spacing: 10) {
-            HStack {
+            HStack(alignment: .center, spacing: 8) {
                 Spacer(minLength: 0)
+                locationFeedbackPill
                 currentLocationButton
             }
             drawControlRow
             selectedResultSheet
+        }
+    }
+
+    @ViewBuilder
+    private var locationFeedbackPill: some View {
+        if let locationFeedback {
+            Text(locationFeedback)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(PeroMapStyle.ink)
+                .padding(.horizontal, 12)
+                .frame(height: 34)
+                .background(PeroMapStyle.surface, in: Capsule())
+                .overlay {
+                    Capsule().stroke(PeroMapStyle.line, lineWidth: 0.8)
+                }
+                .transition(.opacity.combined(with: .move(edge: .trailing)))
         }
     }
 
@@ -292,16 +323,34 @@ struct HomeRecommendationScreen: View {
         guard !isLocating else { return }
         isLocating = true
         selectedCardID = nil
+        withAnimation(.snappy(duration: 0.2)) {
+            locationFeedback = "현재 위치 확인 중"
+        }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
         Task {
             defer { isLocating = false }
             do {
                 let coordinate = try await viewModel.currentCoordinate()
+                currentUserCoordinate = coordinate
                 withAnimation(.snappy(duration: 0.24)) {
-                    camera = KakaoMapCamera(latitude: coordinate.latitude, longitude: coordinate.longitude, level: min(camera.level, 5))
+                    locationFeedback = "현재 위치로 이동"
+                    camera = KakaoMapCamera(latitude: coordinate.latitude, longitude: coordinate.longitude, level: 4)
                 }
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
                 await viewModel.loadGoNowRecommendations(center: coordinate)
+                try? await Task.sleep(for: .milliseconds(1200))
+                withAnimation(.snappy(duration: 0.2)) {
+                    locationFeedback = nil
+                }
             } catch {
+                withAnimation(.snappy(duration: 0.2)) {
+                    locationFeedback = "위치 권한 확인 필요"
+                }
                 UINotificationFeedbackGenerator().notificationOccurred(.error)
+                try? await Task.sleep(for: .milliseconds(1600))
+                withAnimation(.snappy(duration: 0.2)) {
+                    locationFeedback = nil
+                }
             }
         }
     }
@@ -373,7 +422,7 @@ struct HomeRecommendationScreen: View {
 
         withAnimation(.snappy(duration: 0.28)) {
             selectedCardID = finalCard.id
-            camera = KakaoMapCamera(latitude: finalCard.latitude, longitude: finalCard.longitude, level: camera.level)
+            camera = KakaoMapCamera(latitude: finalCard.latitude, longitude: finalCard.longitude, level: min(camera.level, 4))
             drawPreviewTitle = nil
             isDrawing = false
         }

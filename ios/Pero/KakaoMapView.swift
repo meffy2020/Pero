@@ -51,6 +51,21 @@ struct KakaoMapMarker: Equatable, Identifiable {
     let latitude: Double
     let longitude: Double
     let isSelected: Bool
+    let isUserLocation: Bool
+
+    init(
+        id: String,
+        latitude: Double,
+        longitude: Double,
+        isSelected: Bool,
+        isUserLocation: Bool = false
+    ) {
+        self.id = id
+        self.latitude = latitude
+        self.longitude = longitude
+        self.isSelected = isSelected
+        self.isUserLocation = isUserLocation
+    }
 
     var mapPoint: MapPoint {
         MapPoint(longitude: longitude, latitude: latitude)
@@ -97,6 +112,7 @@ struct KakaoMapView: UIViewRepresentable {
             static let layerID = "pero-native-marker-layer"
             static let regularStyleID = "pero-native-marker-regular"
             static let selectedStyleID = "pero-native-marker-selected"
+            static let userLocationStyleID = "pero-native-marker-user-location"
         }
 
         var controller: KMController?
@@ -202,8 +218,16 @@ struct KakaoMapView: UIViewRepresentable {
             camera = nextCamera
             let target = MapPoint(longitude: nextCamera.longitude, latitude: nextCamera.latitude)
             let update = CameraUpdate.make(target: target, zoomLevel: nextCamera.level, mapView: mapView)
-            mapView.moveCamera(update) { [weak self] in
-                self?.syncVisibleBoundsIfPossible()
+            if force {
+                mapView.moveCamera(update) { [weak self] in
+                    self?.syncVisibleBoundsIfPossible()
+                }
+            } else {
+                let options = CameraAnimationOptions(autoElevation: true, consecutive: false, durationInMillis: 520)
+                mapView.animateCamera(cameraUpdate: update, options: options) { [weak self] in
+                    self?.syncCameraFromMapIfPossible()
+                    self?.syncVisibleBoundsIfPossible()
+                }
             }
         }
 
@@ -265,10 +289,10 @@ struct KakaoMapView: UIViewRepresentable {
             layer.clearAllItems()
             markers.forEach { marker in
                 let options = PoiOptions(
-                    styleID: marker.isSelected ? Constants.selectedStyleID : Constants.regularStyleID,
+                    styleID: styleID(for: marker),
                     poiID: marker.id
                 )
-                options.rank = marker.isSelected ? 1000 : 1
+                options.rank = marker.isUserLocation ? 1200 : (marker.isSelected ? 1000 : 1)
                 options.clickable = false
                 let poi = layer.addPoi(option: options, at: marker.mapPoint)
                 poi?.show()
@@ -293,7 +317,13 @@ struct KakaoMapView: UIViewRepresentable {
             guard !didRegisterMarkerStyles else { return }
             manager.addPoiStyle(markerStyle(id: Constants.regularStyleID, selected: false))
             manager.addPoiStyle(markerStyle(id: Constants.selectedStyleID, selected: true))
+            manager.addPoiStyle(userLocationStyle(id: Constants.userLocationStyleID))
             didRegisterMarkerStyles = true
+        }
+
+        private func styleID(for marker: KakaoMapMarker) -> String {
+            if marker.isUserLocation { return Constants.userLocationStyleID }
+            return marker.isSelected ? Constants.selectedStyleID : Constants.regularStyleID
         }
 
         private func markerStyle(id: String, selected: Bool) -> PoiStyle {
@@ -302,6 +332,16 @@ struct KakaoMapView: UIViewRepresentable {
                 anchorPoint: CGPoint(x: 0.5, y: 0.5),
                 enableEntranceTransition: false,
                 enableExitTransition: false
+            )
+            return PoiStyle(styleID: id, styles: [PerLevelPoiStyle(iconStyle: iconStyle, level: 0)])
+        }
+
+        private func userLocationStyle(id: String) -> PoiStyle {
+            let iconStyle = PoiIconStyle(
+                symbol: Self.userLocationImage(),
+                anchorPoint: CGPoint(x: 0.5, y: 0.5),
+                enableEntranceTransition: true,
+                enableExitTransition: true
             )
             return PoiStyle(styleID: id, styles: [PerLevelPoiStyle(iconStyle: iconStyle, level: 0)])
         }
@@ -325,6 +365,25 @@ struct KakaoMapView: UIViewRepresentable {
                     strokePath.lineWidth = 3
                     strokePath.stroke()
                 }
+            }
+        }
+
+        private static func userLocationImage() -> UIImage {
+            let size = CGSize(width: 38, height: 38)
+            let renderer = UIGraphicsImageRenderer(size: size)
+            return renderer.image { context in
+                let cgContext = context.cgContext
+                let outerRect = CGRect(origin: .zero, size: size).insetBy(dx: 5, dy: 5)
+                UIColor(red: 0.0, green: 0.48, blue: 1.0, alpha: 0.18).setFill()
+                UIBezierPath(ovalIn: outerRect).fill()
+
+                let ringRect = CGRect(origin: .zero, size: size).insetBy(dx: 10, dy: 10)
+                cgContext.setShadow(offset: CGSize(width: 0, height: 2), blur: 4, color: UIColor.black.withAlphaComponent(0.18).cgColor)
+                UIColor.white.setFill()
+                UIBezierPath(ovalIn: ringRect).fill()
+                cgContext.setShadow(offset: .zero, blur: 0, color: nil)
+                UIColor(red: 0.0, green: 0.48, blue: 1.0, alpha: 1).setFill()
+                UIBezierPath(ovalIn: ringRect.insetBy(dx: 4, dy: 4)).fill()
             }
         }
     }
