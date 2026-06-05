@@ -148,8 +148,8 @@ struct HomeRecommendationScreen: View {
                 .frame(width: 1, height: selectedCard == nil ? 28 : 22)
             drawButtonSegment
         }
-        .frame(maxWidth: selectedCard == nil ? .infinity : nil)
-        .frame(height: selectedCard == nil ? 58 : 42)
+        .fixedSize(horizontal: true, vertical: false)
+        .frame(height: selectedCard == nil ? 44 : 38)
         .background(PeroMapStyle.surface, in: Capsule())
         .overlay {
             Capsule().stroke(PeroMapStyle.accent, lineWidth: selectedCard == nil ? 2 : 1.2)
@@ -170,18 +170,17 @@ struct HomeRecommendationScreen: View {
                 }
             }
         } label: {
-            HStack(spacing: 6) {
-                Image(systemName: pickerMode.symbolName)
+            HStack(spacing: 4) {
                 Text(pickerMode.title)
-                Image(systemName: "chevron.down")
-                    .font(.caption2.weight(.bold))
+                Text("⌄")
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(PeroMapStyle.muted)
             }
-            .font(selectedCard == nil ? .headline.weight(.semibold) : .subheadline.weight(.semibold))
+            .font(.subheadline.weight(.semibold))
             .foregroundStyle(PeroMapStyle.ink)
-            .padding(.leading, selectedCard == nil ? 20 : 16)
-            .padding(.trailing, 14)
-            .frame(height: selectedCard == nil ? 58 : 42)
+            .padding(.leading, 16)
+            .padding(.trailing, 12)
+            .frame(height: selectedCard == nil ? 44 : 38)
         }
         .disabled(viewModel.state == .loading || isDrawing)
         .accessibilityLabel("뽑기 종류")
@@ -191,16 +190,12 @@ struct HomeRecommendationScreen: View {
 
     private var drawButtonSegment: some View {
         Button(action: runMapDrawAnimation) {
-            HStack(spacing: 6) {
-                Image(systemName: viewModel.state == .loading ? "hourglass" : "sparkle")
-                Text(drawActionTitle)
-            }
-            .font(selectedCard == nil ? .headline.weight(.semibold) : .subheadline.weight(.semibold))
-            .foregroundStyle(PeroMapStyle.ink)
-            .padding(.leading, 14)
-            .padding(.trailing, selectedCard == nil ? 20 : 16)
-            .frame(maxWidth: selectedCard == nil ? .infinity : nil)
-            .frame(height: selectedCard == nil ? 58 : 42)
+            Text(drawActionTitle)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(PeroMapStyle.ink)
+                .padding(.leading, 12)
+                .padding(.trailing, 16)
+                .frame(height: selectedCard == nil ? 44 : 38)
         }
         .disabled(viewModel.state == .loading || !isViewportReady || viewportCandidateCards.isEmpty || isDrawing)
         .accessibilityLabel(randomButtonTitle)
