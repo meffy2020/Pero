@@ -66,17 +66,83 @@ enum LocationProviderError: LocalizedError {
     }
 }
 
-final class CoreLocationProvider: LocationProviding, @unchecked Sendable {
+final class CoreLocationProvider: NSObject, LocationProviding, CLLocationManagerDelegate, @unchecked Sendable {
+    private let manager = CLLocationManager()
+    private var pendingContinuation: CheckedContinuation<UserCoordinate, Error>?
+
+    override init() {
+        super.init()
+        manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+    }
+
     func currentCoordinate() async throws -> UserCoordinate {
-        for try await update in CLLocationUpdate.liveUpdates() {
-            if update.authorizationDenied {
-                throw LocationProviderError.permissionDenied
-            }
-            if let location = update.location {
-                return UserCoordinate(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude)
+        try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.main.async { [weak self] in
+                self?.requestCurrentCoordinate(continuation: continuation)
             }
         }
-        throw LocationProviderError.unavailable
+    }
+
+    private func requestCurrentCoordinate(continuation: CheckedContinuation<UserCoordinate, Error>) {
+        guard pendingContinuation == nil else {
+            continuation.resume(throwing: LocationProviderError.unavailable)
+            return
+        }
+
+        switch manager.authorizationStatus {
+        case .notDetermined:
+            pendingContinuation = continuation
+            manager.requestWhenInUseAuthorization()
+        case .authorizedAlways, .authorizedWhenInUse:
+            pendingContinuation = continuation
+            if let location = manager.location, abs(location.timestamp.timeIntervalSinceNow) < 30 {
+                resume(with: location)
+            } else {
+                manager.requestLocation()
+            }
+        case .denied, .restricted:
+            continuation.resume(throwing: LocationProviderError.permissionDenied)
+        @unknown default:
+            continuation.resume(throwing: LocationProviderError.unavailable)
+        }
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        guard pendingContinuation != nil else { return }
+        switch manager.authorizationStatus {
+        case .authorizedAlways, .authorizedWhenInUse:
+            manager.requestLocation()
+        case .denied, .restricted:
+            resume(throwing: LocationProviderError.permissionDenied)
+        case .notDetermined:
+            break
+        @unknown default:
+            resume(throwing: LocationProviderError.unavailable)
+        }
+    }
+
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let location = locations.last else {
+            resume(throwing: LocationProviderError.unavailable)
+            return
+        }
+        resume(with: location)
+    }
+
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        resume(throwing: error)
+    }
+
+    private func resume(with location: CLLocation) {
+        let coordinate = UserCoordinate(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude)
+        pendingContinuation?.resume(returning: coordinate)
+        pendingContinuation = nil
+    }
+
+    private func resume(throwing error: Error) {
+        pendingContinuation?.resume(throwing: error)
+        pendingContinuation = nil
     }
 }
 
@@ -116,11 +182,9 @@ final class RecommendationViewModel: ObservableObject {
     }
 
     func loadGoNowRecommendations() async {
-        state = .loading
-        fallbackUsed = false
         do {
             let coordinate = try await locationProvider.currentCoordinate()
-            try await loadLiveRecommendations(center: coordinate)
+            await loadGoNowRecommendations(center: coordinate)
         } catch {
             do {
                 try await loadLiveRecommendations(center: StaticLocationProvider.previewCoordinate, forceFallback: true)
@@ -128,6 +192,17 @@ final class RecommendationViewModel: ObservableObject {
                 fallbackUsed = false
                 state = .error("백엔드에서 장소 후보를 불러오지 못했습니다. \(error.localizedDescription)")
             }
+        }
+    }
+
+    func loadGoNowRecommendations(center coordinate: UserCoordinate) async {
+        state = .loading
+        fallbackUsed = false
+        do {
+            try await loadLiveRecommendations(center: coordinate)
+        } catch {
+            fallbackUsed = false
+            state = .error("백엔드에서 장소 후보를 불러오지 못했습니다. \(error.localizedDescription)")
         }
     }
 

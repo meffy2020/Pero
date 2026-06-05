@@ -299,7 +299,7 @@ struct HomeRecommendationScreen: View {
                 withAnimation(.snappy(duration: 0.24)) {
                     camera = KakaoMapCamera(latitude: coordinate.latitude, longitude: coordinate.longitude, level: min(camera.level, 5))
                 }
-                await viewModel.loadGoNowRecommendations()
+                await viewModel.loadGoNowRecommendations(center: coordinate)
             } catch {
                 UINotificationFeedbackGenerator().notificationOccurred(.error)
             }
