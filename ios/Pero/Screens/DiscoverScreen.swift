@@ -132,22 +132,29 @@ struct HomeRecommendationScreen: View {
 
     private var randomPickButton: some View {
         Button(action: pickRandomCandidate) {
-            Label(randomButtonTitle, systemImage: viewModel.state == .loading ? "hourglass" : "sparkle")
-                .font(.headline.weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .frame(height: 58)
+            randomPickButtonLabel
         }
         .buttonStyle(.borderedProminent)
         .buttonBorderShape(.capsule)
         .tint(PeroMapStyle.surface)
         .foregroundStyle(PeroMapStyle.ink)
         .overlay {
-            Capsule().stroke(PeroMapStyle.accent, lineWidth: 2)
+            Capsule().stroke(PeroMapStyle.accent, lineWidth: selectedCard == nil ? 2 : 1.2)
         }
         .disabled(viewModel.state == .loading || viewportCandidateCards.isEmpty)
         .opacity(viewModel.state == .loading || viewportCandidateCards.isEmpty ? 0.55 : 1)
         .accessibilityLabel(randomButtonTitle)
         .accessibilityIdentifier("mapRandomPickButton")
+    }
+
+    @ViewBuilder
+    private var randomPickButtonLabel: some View {
+        Label(randomButtonTitle, systemImage: viewModel.state == .loading ? "hourglass" : "sparkle")
+            .font(selectedCard == nil ? .headline.weight(.semibold) : .subheadline.weight(.semibold))
+            .padding(.horizontal, selectedCard == nil ? 0 : 16)
+            .frame(maxWidth: selectedCard == nil ? .infinity : nil)
+            .frame(height: selectedCard == nil ? 58 : 42)
+            .fixedSize(horizontal: selectedCard != nil, vertical: false)
     }
 
     private var randomButtonTitle: String {
@@ -168,7 +175,7 @@ struct HomeRecommendationScreen: View {
         if let selectedCard {
             RandomMapResultSheet(
                 card: selectedCard,
-                mode: pickerMode,
+                mode: $pickerMode,
                 reroll: pickRandomCandidate
             )
             .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -253,16 +260,30 @@ enum HomeMapKoreanCopy {
 
 private struct RandomMapResultSheet: View {
     let card: RecommendationCardModel
-    let mode: RecommendationPickerMode
+    @Binding var mode: RecommendationPickerMode
     let reroll: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(mode.title)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(PeroMapStyle.muted)
+                    Menu {
+                        ForEach(RecommendationPickerMode.allCases) { nextMode in
+                            Button {
+                                mode = nextMode
+                            } label: {
+                                Label(nextMode.title, systemImage: nextMode.symbolName)
+                            }
+                        }
+                    } label: {
+                        Label(mode.title, systemImage: mode.symbolName)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(PeroMapStyle.muted)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("뽑기 종류")
+                    .accessibilityValue(mode.title)
+                    .accessibilityIdentifier("resultCategoryPickerMenu")
                     Text(card.title)
                         .font(.title3.weight(.bold))
                         .foregroundStyle(PeroMapStyle.ink)
@@ -295,7 +316,6 @@ private struct RandomMapResultSheet: View {
         .padding(.horizontal, 20)
         .padding(.bottom, 18)
         .peroBottomSheetSurface()
-        .accessibilityElement(children: .combine)
         .accessibilityLabel("랜덤 \(mode.title) 추천, \(card.title), \(card.district), \(card.category)")
     }
 }
