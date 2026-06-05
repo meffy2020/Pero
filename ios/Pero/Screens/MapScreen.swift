@@ -4,6 +4,12 @@ struct MapScreen: View {
     @Environment(\.dismiss) private var dismiss
 
     let card: RecommendationCardModel
+    @State private var camera: KakaoMapCamera
+
+    init(card: RecommendationCardModel) {
+        self.card = card
+        _camera = State(initialValue: KakaoMapCamera(latitude: card.latitude, longitude: card.longitude, level: 5))
+    }
 
     private var mode: RecommendationPickerMode {
         RecommendationPickerMode(card: card)
@@ -14,7 +20,7 @@ struct MapScreen: View {
             ZStack {
                 GeometryReader { proxy in
                     KakaoMapView(
-                        camera: KakaoMapCamera(latitude: card.latitude, longitude: card.longitude, level: 5),
+                        camera: $camera,
                         markers: [KakaoMapMarker(id: card.id, latitude: card.latitude, longitude: card.longitude, isSelected: true)]
                     )
                     .frame(width: proxy.size.width, height: proxy.size.height)

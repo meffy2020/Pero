@@ -10,6 +10,20 @@ struct KakaoMapCamera: Equatable {
     static let seoul = KakaoMapCamera(latitude: 37.5665, longitude: 126.9780, level: 8)
 }
 
+struct KakaoMapVisibleBounds: Equatable {
+    let minLatitude: Double
+    let maxLatitude: Double
+    let minLongitude: Double
+    let maxLongitude: Double
+
+    func contains(latitude: Double, longitude: Double) -> Bool {
+        latitude >= minLatitude
+        && latitude <= maxLatitude
+        && longitude >= minLongitude
+        && longitude <= maxLongitude
+    }
+}
+
 struct KakaoMapMarker: Equatable, Identifiable {
     let id: String
     let latitude: Double
@@ -22,8 +36,9 @@ struct KakaoMapMarker: Equatable, Identifiable {
 }
 
 struct KakaoMapView: UIViewRepresentable {
-    let camera: KakaoMapCamera
+    @Binding var camera: KakaoMapCamera
     var markers: [KakaoMapMarker] = []
+    var onVisibleBoundsChanged: (KakaoMapVisibleBounds) -> Void = { _ in }
 
     func makeUIView(context: Context) -> KMViewContainer {
         let view = KMViewContainer(frame: UIScreen.main.bounds)
@@ -34,13 +49,14 @@ struct KakaoMapView: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: KMViewContainer, context: Context) {
-        context.coordinator.camera = camera
+        context.coordinator.onCameraChanged = { camera = $0 }
+        context.coordinator.onVisibleBoundsChanged = onVisibleBoundsChanged
         context.coordinator.markers = markers
         context.coordinator.updateViewRect(uiView.bounds)
         if context.coordinator.controller?.isEngineActive == false {
             context.coordinator.controller?.activateEngine()
         }
-        context.coordinator.moveCameraIfPossible()
+        context.coordinator.moveCameraIfNeeded(camera)
         context.coordinator.syncMarkersIfPossible()
     }
 
@@ -50,10 +66,10 @@ struct KakaoMapView: UIViewRepresentable {
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(camera: camera, markers: markers)
+        Coordinator(camera: camera, markers: markers, onCameraChanged: { camera = $0 }, onVisibleBoundsChanged: onVisibleBoundsChanged)
     }
 
-    final class Coordinator: NSObject, MapControllerDelegate {
+    final class Coordinator: NSObject, MapControllerDelegate, KakaoMapEventDelegate {
         private enum Constants {
             static let viewName = "pero-map"
             static let layerID = "pero-native-marker-layer"
@@ -64,15 +80,24 @@ struct KakaoMapView: UIViewRepresentable {
         var controller: KMController?
         var camera: KakaoMapCamera
         var markers: [KakaoMapMarker]
+        var onCameraChanged: (KakaoMapCamera) -> Void
+        var onVisibleBoundsChanged: (KakaoMapVisibleBounds) -> Void
         private var didAddView = false
         private var didMoveInitialCamera = false
         private var didRegisterMarkerStyles = false
         private var lastSyncedMarkers: [KakaoMapMarker] = []
         private var currentViewSize: CGSize = .zero
 
-        init(camera: KakaoMapCamera, markers: [KakaoMapMarker]) {
+        init(
+            camera: KakaoMapCamera,
+            markers: [KakaoMapMarker],
+            onCameraChanged: @escaping (KakaoMapCamera) -> Void,
+            onVisibleBoundsChanged: @escaping (KakaoMapVisibleBounds) -> Void
+        ) {
             self.camera = camera
             self.markers = markers
+            self.onCameraChanged = onCameraChanged
+            self.onVisibleBoundsChanged = onVisibleBoundsChanged
             super.init()
         }
 
@@ -106,7 +131,12 @@ struct KakaoMapView: UIViewRepresentable {
             #if DEBUG
             print("Kakao map view succeeded: \(viewName), \(viewInfoName)")
             #endif
-            moveCameraIfPossible()
+            if let mapView = controller?.getView(Constants.viewName) as? KakaoMap {
+                mapView.eventDelegate = self
+            }
+            moveCameraIfNeeded(camera, force: true)
+            syncCameraFromMapIfPossible()
+            syncVisibleBoundsIfPossible()
             syncMarkersIfPossible(force: true)
         }
 
@@ -117,7 +147,8 @@ struct KakaoMapView: UIViewRepresentable {
         func containerDidResized(_ size: CGSize) {
             updateViewRect(CGRect(origin: .zero, size: size))
             if !didMoveInitialCamera {
-                moveCameraIfPossible()
+                moveCameraIfNeeded(camera, force: true)
+                syncVisibleBoundsIfPossible()
                 didMoveInitialCamera = true
             }
         }
@@ -140,11 +171,65 @@ struct KakaoMapView: UIViewRepresentable {
             print("Kakao map auth failed: \(errorCode), \(desc)")
         }
 
-        func moveCameraIfPossible() {
+        func moveCameraIfNeeded(_ nextCamera: KakaoMapCamera, force: Bool = false) {
+            guard force || nextCamera != camera else { return }
+            guard let mapView = controller?.getView(Constants.viewName) as? KakaoMap else {
+                camera = nextCamera
+                return
+            }
+            camera = nextCamera
+            let target = MapPoint(longitude: nextCamera.longitude, latitude: nextCamera.latitude)
+            let update = CameraUpdate.make(target: target, zoomLevel: nextCamera.level, mapView: mapView)
+            mapView.moveCamera(update) { [weak self] in
+                self?.syncVisibleBoundsIfPossible()
+            }
+        }
+
+        func cameraDidStopped(kakaoMap: KakaoMap, by: MoveBy) {
+            syncCamera(from: kakaoMap)
+            syncVisibleBounds(from: kakaoMap)
+        }
+
+        private func syncCameraFromMapIfPossible() {
             guard let mapView = controller?.getView(Constants.viewName) as? KakaoMap else { return }
-            let target = MapPoint(longitude: camera.longitude, latitude: camera.latitude)
-            let update = CameraUpdate.make(target: target, zoomLevel: camera.level, mapView: mapView)
-            mapView.moveCamera(update)
+            syncCamera(from: mapView)
+        }
+
+        private func syncCamera(from mapView: KakaoMap) {
+            let center = mapView.getPosition(CGPoint(x: currentViewSize.width / 2, y: currentViewSize.height / 2)).wgsCoord
+            let nextCamera = KakaoMapCamera(latitude: center.latitude, longitude: center.longitude, level: mapView.zoomLevel)
+            guard nextCamera != camera else { return }
+            camera = nextCamera
+            onCameraChanged(nextCamera)
+        }
+
+        private func syncVisibleBoundsIfPossible() {
+            guard let mapView = controller?.getView(Constants.viewName) as? KakaoMap else { return }
+            syncVisibleBounds(from: mapView)
+        }
+
+        private func syncVisibleBounds(from mapView: KakaoMap) {
+            guard currentViewSize.width > 0, currentViewSize.height > 0 else { return }
+            let points = [
+                CGPoint(x: 0, y: 0),
+                CGPoint(x: currentViewSize.width, y: 0),
+                CGPoint(x: 0, y: currentViewSize.height),
+                CGPoint(x: currentViewSize.width, y: currentViewSize.height)
+            ]
+            let coordinates = points.map { mapView.getPosition($0).wgsCoord }
+            let latitudes = coordinates.map(\.latitude)
+            let longitudes = coordinates.map(\.longitude)
+            guard let minLatitude = latitudes.min(),
+                  let maxLatitude = latitudes.max(),
+                  let minLongitude = longitudes.min(),
+                  let maxLongitude = longitudes.max() else { return }
+            let bounds = KakaoMapVisibleBounds(
+                minLatitude: minLatitude,
+                maxLatitude: maxLatitude,
+                minLongitude: minLongitude,
+                maxLongitude: maxLongitude
+            )
+            onVisibleBoundsChanged(bounds)
         }
 
         func syncMarkersIfPossible(force: Bool = false) {

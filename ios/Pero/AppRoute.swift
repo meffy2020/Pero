@@ -27,28 +27,33 @@ extension RecommendationCardModel {
 
     var mapPrimaryCTATitle: String {
         switch randomSlotKind {
-        case .place:
-            "지도에서 랜덤 장소 보기"
+        case .attraction:
+            "지도에서 관광지 뽑기"
         case .restaurant:
-            "지도에서 식당 위치 보기"
-        case .course:
-            "지도에서 코스 시작점 보기"
+            "지도에서 식당 뽑기"
+        case .festival:
+            "지도에서 축제 뽑기"
         }
     }
 
     var randomSlotKind: RecommendationSlotKind {
-        let source = "\(subtitle) \(category) \(title)"
-        if source.contains("코스") || source.contains("차") || source.localizedCaseInsensitiveContains("course") {
-            return .course
+        let primarySource = "\(subtitle) \(category)"
+        let taggedSource = "\(primarySource) \(tags.joined(separator: " "))"
+        if taggedSource.contains("축제")
+            || taggedSource.contains("행사")
+            || taggedSource.contains("공연")
+            || taggedSource.localizedCaseInsensitiveContains("festival") {
+            return .festival
         }
-        if source.contains("식사")
-            || source.contains("식당")
-            || source.contains("음식")
-            || source.contains("카페")
-            || source.localizedCaseInsensitiveContains("meal") {
+        if primarySource.contains("식사")
+            || primarySource.contains("식당")
+            || primarySource.contains("음식점")
+            || primarySource.contains("카페")
+            || primarySource.localizedCaseInsensitiveContains("meal")
+            || primarySource.localizedCaseInsensitiveContains("restaurant") {
             return .restaurant
         }
-        return .place
+        return .attraction
     }
 
     var categoryIconName: String {
@@ -79,58 +84,58 @@ extension RecommendationCardModel {
 }
 
 enum RecommendationSlotKind: Hashable {
-    case place
+    case attraction
     case restaurant
-    case course
+    case festival
 }
 
 enum RecommendationPickerMode: String, CaseIterable, Hashable, Identifiable {
-    case place
+    case attraction
     case restaurant
-    case course
+    case festival
 
     var id: String { rawValue }
 
     init(card: RecommendationCardModel) {
         switch card.randomSlotKind {
-        case .place:
-            self = .place
+        case .attraction:
+            self = .attraction
         case .restaurant:
             self = .restaurant
-        case .course:
-            self = .course
+        case .festival:
+            self = .festival
         }
     }
 
     var title: String {
         switch self {
-        case .place: "장소"
+        case .attraction: "관광지"
         case .restaurant: "식당"
-        case .course: "코스"
+        case .festival: "축제"
         }
     }
 
     var shortTitle: String {
         switch self {
-        case .place: "장소"
+        case .attraction: "관광지"
         case .restaurant: "식당"
-        case .course: "코스"
+        case .festival: "축제"
         }
     }
 
     var symbolName: String {
         switch self {
-        case .place: "sparkles.square.filled.on.square"
+        case .attraction: "mappin.and.ellipse"
         case .restaurant: "fork.knife.circle.fill"
-        case .course: "point.topleft.down.curvedto.point.bottomright.up.fill"
+        case .festival: "sparkles"
         }
     }
 
     var poolCopy: String {
         switch self {
-        case .place: "주변 장소 핀"
-        case .restaurant: "식사 후보 핀"
-        case .course: "코스 시작점"
+        case .attraction: "관광지 핀"
+        case .restaurant: "식당 핀"
+        case .festival: "축제 핀"
         }
     }
 

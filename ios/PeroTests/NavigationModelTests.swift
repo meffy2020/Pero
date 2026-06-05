@@ -17,7 +17,7 @@ struct NavigationModelTests {
 
         #expect(card.mapFirstSummaryChips == ["0.8km", "중구", "공원"])
         #expect(card.mapFirstAccessibilitySummary == "가까운 산책 추천, 서울 반려 산책 공원, 0.8km, 중구, 공원")
-        #expect(card.mapPrimaryCTATitle == "지도에서 랜덤 장소 보기")
+        #expect(card.mapPrimaryCTATitle == "지도에서 관광지 뽑기")
 
         let url = try #require(card.appleMapsURL)
         let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
@@ -38,18 +38,18 @@ struct NavigationModelTests {
             subtitle: "식당 추천",
             category: "음식점"
         )
-        let course = RecommendationCardModel.sample.with(
-            title: "시청 인근 전시 공간",
-            subtitle: "랜덤 코스 추천",
-            category: "전시"
+        let festival = RecommendationCardModel.sample.with(
+            title: "서울 야간 축제",
+            subtitle: "축제 추천",
+            category: "행사/공연/축제"
         )
 
-        #expect(place.randomSlotKind == .place)
-        #expect(place.mapPrimaryCTATitle == "지도에서 랜덤 장소 보기")
+        #expect(place.randomSlotKind == .attraction)
+        #expect(place.mapPrimaryCTATitle == "지도에서 관광지 뽑기")
         #expect(restaurant.randomSlotKind == .restaurant)
-        #expect(restaurant.mapPrimaryCTATitle == "지도에서 식당 위치 보기")
-        #expect(course.randomSlotKind == .course)
-        #expect(course.mapPrimaryCTATitle == "지도에서 코스 시작점 보기")
+        #expect(restaurant.mapPrimaryCTATitle == "지도에서 식당 뽑기")
+        #expect(festival.randomSlotKind == .festival)
+        #expect(festival.mapPrimaryCTATitle == "지도에서 축제 뽑기")
     }
 
     @Test func recommendationCardCategoryIconsStayPresentationOnly() {
@@ -87,9 +87,9 @@ struct NavigationModelTests {
 
         #expect(cards.count == 4)
         #expect(cards.map(\.id).contains("preview-cafe"))
-        #expect(cards.filter(RecommendationPickerMode.place.matches).count == 1)
+        #expect(cards.filter(RecommendationPickerMode.attraction.matches).count == 2)
         #expect(cards.filter(RecommendationPickerMode.restaurant.matches).count == 2)
-        #expect(cards.filter(RecommendationPickerMode.course.matches).count == 1)
+        #expect(cards.filter(RecommendationPickerMode.festival.matches).count == 0)
         #expect(cards.first?.distanceLabel.hasSuffix("km") == true)
     }
 
@@ -97,11 +97,11 @@ struct NavigationModelTests {
         let response = RecommendationResponse.previewForTests
         let cards = RecommendationViewModel.normalize(response: response)
 
-        #expect(cards.filter(RecommendationPickerMode.place.matches).map(\.id) == ["preview-seoul-park"])
+        #expect(cards.filter(RecommendationPickerMode.attraction.matches).map(\.id) == ["preview-seoul-park", "preview-gallery"])
         #expect(cards.filter(RecommendationPickerMode.restaurant.matches).map(\.id) == ["preview-market"])
-        #expect(cards.filter(RecommendationPickerMode.course.matches).map(\.id) == ["preview-gallery"])
-        #expect(RecommendationPickerMode.allCases.map(\.title) == ["장소", "식당", "코스"])
-        #expect(RecommendationPickerMode.course.poolCopy == "코스 시작점")
+        #expect(cards.filter(RecommendationPickerMode.festival.matches).isEmpty)
+        #expect(RecommendationPickerMode.allCases.map(\.title) == ["관광지", "식당", "축제"])
+        #expect(RecommendationPickerMode.festival.poolCopy == "축제 핀")
     }
 
     @Test @MainActor func viewModelKeepsSlotIdentityWhenEarlierRecommendationIsMissing() async {

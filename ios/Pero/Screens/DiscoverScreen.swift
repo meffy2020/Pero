@@ -3,13 +3,19 @@ import PeroCore
 
 struct HomeRecommendationScreen: View {
     @ObservedObject var viewModel: RecommendationViewModel
-    @State private var pickerMode: RecommendationPickerMode = .place
+    @State private var pickerMode: RecommendationPickerMode = .attraction
     @State private var selectedCardID: RecommendationCardModel.ID?
     @State private var rerollTask: Task<Void, Never>?
     @State private var camera = KakaoMapCamera.seoul
+    @State private var visibleBounds: KakaoMapVisibleBounds?
 
     private var candidateCards: [RecommendationCardModel] {
         viewModel.cards.filter { pickerMode.matches($0) }
+    }
+
+    private var viewportCandidateCards: [RecommendationCardModel] {
+        guard let visibleBounds else { return candidateCards }
+        return candidateCards.filter { visibleBounds.contains(latitude: $0.latitude, longitude: $0.longitude) }
     }
 
     private var selectedCard: RecommendationCardModel? {
@@ -22,7 +28,7 @@ struct HomeRecommendationScreen: View {
     }
 
     private var mapMarkers: [KakaoMapMarker] {
-        var markerCards = Array(candidateCards.prefix(350))
+        var markerCards = Array(viewportCandidateCards.prefix(350))
         if let selectedCard, !markerCards.contains(where: { $0.id == selectedCard.id }) {
             markerCards.append(selectedCard)
         }
@@ -53,6 +59,9 @@ struct HomeRecommendationScreen: View {
         .onChange(of: pickerMode) { _, _ in
             reconcileSelection(with: viewModel.cards)
         }
+        .onChange(of: visibleBounds) { _, _ in
+            reconcileSelection(with: viewModel.cards)
+        }
         .onDisappear {
             rerollTask?.cancel()
         }
@@ -60,7 +69,9 @@ struct HomeRecommendationScreen: View {
 
     private var mapCanvas: some View {
         GeometryReader { proxy in
-            KakaoMapView(camera: camera, markers: mapMarkers)
+            KakaoMapView(camera: $camera, markers: mapMarkers) { bounds in
+                visibleBounds = bounds
+            }
                 .frame(width: proxy.size.width, height: proxy.size.height)
                 .ignoresSafeArea()
         }
@@ -80,32 +91,36 @@ struct HomeRecommendationScreen: View {
 
     private var topFloatingControls: some View {
         HStack {
-            modeChips
+            categoryMenu
             Spacer(minLength: 0)
         }
     }
 
-    private var modeChips: some View {
-        HStack(spacing: 8) {
+    private var categoryMenu: some View {
+        Menu {
             ForEach(RecommendationPickerMode.allCases) { mode in
                 Button {
                     pickerMode = mode
                 } label: {
                     Label(mode.title, systemImage: mode.symbolName)
-                        .font(.subheadline.weight(.semibold))
-                        .labelStyle(.titleAndIcon)
-                        .lineLimit(1)
-                        .foregroundStyle(pickerMode == mode ? PeroMapStyle.ink : PeroMapStyle.inkSoft)
-                        .padding(.horizontal, 14)
-                        .frame(height: 40)
-                        .background(pickerMode == mode ? PeroMapStyle.accentPale : PeroMapStyle.surface, in: Capsule())
-                        .overlay {
-                            Capsule().stroke(pickerMode == mode ? PeroMapStyle.accent : PeroMapStyle.line, lineWidth: 0.8)
-                        }
                 }
-                .buttonStyle(.plain)
             }
+        } label: {
+            Label(pickerMode.title, systemImage: pickerMode.symbolName)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+                .foregroundStyle(PeroMapStyle.ink)
+                .padding(.horizontal, 14)
+                .frame(height: 42)
+                .background(PeroMapStyle.surface, in: Capsule())
+                .overlay {
+                    Capsule().stroke(PeroMapStyle.line, lineWidth: 0.8)
+                }
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel("뽑기 종류")
+        .accessibilityValue(pickerMode.title)
+        .accessibilityIdentifier("categoryPickerMenu")
     }
 
     private var bottomControls: some View {
@@ -129,8 +144,8 @@ struct HomeRecommendationScreen: View {
         .overlay {
             Capsule().stroke(PeroMapStyle.accent, lineWidth: 2)
         }
-        .disabled(viewModel.state == .loading || candidateCards.isEmpty)
-        .opacity(viewModel.state == .loading || candidateCards.isEmpty ? 0.55 : 1)
+        .disabled(viewModel.state == .loading || viewportCandidateCards.isEmpty)
+        .opacity(viewModel.state == .loading || viewportCandidateCards.isEmpty ? 0.55 : 1)
         .accessibilityLabel(randomButtonTitle)
         .accessibilityIdentifier("mapRandomPickButton")
     }
@@ -140,7 +155,11 @@ struct HomeRecommendationScreen: View {
         case .loading:
             "후보 찾는 중"
         default:
-            selectedCard == nil ? "랜덤 뽑기" : "다시 뽑기"
+            if viewportCandidateCards.isEmpty {
+                "화면 안 후보 없음"
+            } else {
+                selectedCard == nil ? "\(pickerMode.title) 뽑기" : "다시 뽑기"
+            }
         }
     }
 
@@ -153,6 +172,13 @@ struct HomeRecommendationScreen: View {
                 reroll: pickRandomCandidate
             )
             .transition(.move(edge: .bottom).combined(with: .opacity))
+        } else if viewModel.state == .results, viewportCandidateCards.isEmpty {
+            StateMessageView(
+                icon: "map",
+                title: "화면 안 후보 없음",
+                message: HomeMapKoreanCopy.viewportEmptyMessage
+            )
+            .peroBottomSheetSurface()
         } else if viewModel.state != .results {
             StateMessageView(
                 icon: stateIcon,
@@ -171,7 +197,7 @@ struct HomeRecommendationScreen: View {
     }
 
     private func pickRandomCandidate() {
-        if let random = candidateCards.randomElement() {
+        if let random = viewportCandidateCards.randomElement() {
             select(random)
             return
         }
@@ -185,7 +211,8 @@ struct HomeRecommendationScreen: View {
 
     private func reconcileSelection(with cards: [RecommendationCardModel]) {
         if let selectedCardID,
-           cards.contains(where: { $0.id == selectedCardID && pickerMode.matches($0) }) {
+           cards.contains(where: { $0.id == selectedCardID && pickerMode.matches($0) }),
+           selectedCard.map({ visibleBounds?.contains(latitude: $0.latitude, longitude: $0.longitude) ?? true }) == true {
             return
         }
         selectedCardID = nil
@@ -221,6 +248,7 @@ enum HomeMapKoreanCopy {
     static let readyMessage = "시연용 기본 위치의 지도 후보를 준비합니다."
     static let loadingMessage = "지도 안 후보를 불러오고 있습니다."
     static let emptyMessage = "지도를 움직이거나 반경을 넓혀 추천 후보를 다시 확인해 주세요."
+    static let viewportEmptyMessage = "지도를 축소하거나 다른 종류를 선택하세요."
 }
 
 private struct RandomMapResultSheet: View {
