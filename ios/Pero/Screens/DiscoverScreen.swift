@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import PeroCore
 
 struct HomeRecommendationScreen: View {
@@ -6,6 +7,9 @@ struct HomeRecommendationScreen: View {
     @State private var pickerMode: RecommendationPickerMode = .attraction
     @State private var selectedCardID: RecommendationCardModel.ID?
     @State private var rerollTask: Task<Void, Never>?
+    @State private var drawTask: Task<Void, Never>?
+    @State private var isDrawing = false
+    @State private var highlightedCardID: RecommendationCardModel.ID?
     @State private var camera = KakaoMapCamera.seoul
     @State private var visibleBounds: KakaoMapVisibleBounds?
 
@@ -37,7 +41,7 @@ struct HomeRecommendationScreen: View {
                 id: card.id,
                 latitude: card.latitude,
                 longitude: card.longitude,
-                isSelected: selectedCard?.id == card.id
+                isSelected: selectedCard?.id == card.id || highlightedCardID == card.id
             )
         }
     }
@@ -60,10 +64,12 @@ struct HomeRecommendationScreen: View {
             reconcileSelection(with: viewModel.cards)
         }
         .onChange(of: visibleBounds) { _, _ in
+            guard !isDrawing else { return }
             reconcileSelection(with: viewModel.cards)
         }
         .onDisappear {
             rerollTask?.cancel()
+            drawTask?.cancel()
         }
     }
 
@@ -131,7 +137,7 @@ struct HomeRecommendationScreen: View {
     }
 
     private var randomPickButton: some View {
-        Button(action: pickRandomCandidate) {
+        Button(action: runMapDrawAnimation) {
             randomPickButtonLabel
         }
         .buttonStyle(.borderedProminent)
@@ -141,8 +147,8 @@ struct HomeRecommendationScreen: View {
         .overlay {
             Capsule().stroke(PeroMapStyle.accent, lineWidth: selectedCard == nil ? 2 : 1.2)
         }
-        .disabled(viewModel.state == .loading || viewportCandidateCards.isEmpty)
-        .opacity(viewModel.state == .loading || viewportCandidateCards.isEmpty ? 0.55 : 1)
+        .disabled(viewModel.state == .loading || viewportCandidateCards.isEmpty || isDrawing)
+        .opacity(viewModel.state == .loading || viewportCandidateCards.isEmpty || isDrawing ? 0.55 : 1)
         .accessibilityLabel(randomButtonTitle)
         .accessibilityIdentifier("mapRandomPickButton")
     }
@@ -162,7 +168,9 @@ struct HomeRecommendationScreen: View {
         case .loading:
             "후보 찾는 중"
         default:
-            if viewportCandidateCards.isEmpty {
+            if isDrawing {
+                "뽑는 중"
+            } else if viewportCandidateCards.isEmpty {
                 "화면 안 후보 없음"
             } else {
                 selectedCard == nil ? "\(pickerMode.title) 뽑기" : "다시 뽑기"
@@ -176,7 +184,7 @@ struct HomeRecommendationScreen: View {
             RandomMapResultSheet(
                 card: selectedCard,
                 mode: $pickerMode,
-                reroll: pickRandomCandidate
+                reroll: runMapDrawAnimation
             )
             .transition(.move(edge: .bottom).combined(with: .opacity))
         } else if viewModel.state == .results, viewportCandidateCards.isEmpty {
@@ -203,17 +211,16 @@ struct HomeRecommendationScreen: View {
         }
     }
 
-    private func pickRandomCandidate() {
-        if let random = viewportCandidateCards.randomElement() {
-            select(random)
+    private func runMapDrawAnimation() {
+        let pool = viewportCandidateCards
+        guard !pool.isEmpty else {
+            rerollRecommendations()
             return
         }
-        rerollRecommendations()
-    }
-
-    private func select(_ card: RecommendationCardModel) {
-        selectedCardID = card.id
-        camera = KakaoMapCamera(latitude: card.latitude, longitude: card.longitude, level: 5)
+        drawTask?.cancel()
+        drawTask = Task {
+            await animateMapDraw(with: pool)
+        }
     }
 
     private func reconcileSelection(with cards: [RecommendationCardModel]) {
@@ -223,6 +230,51 @@ struct HomeRecommendationScreen: View {
             return
         }
         selectedCardID = nil
+    }
+
+    @MainActor
+    private func animateMapDraw(with pool: [RecommendationCardModel]) async {
+        isDrawing = true
+        selectedCardID = nil
+
+        let impact = UIImpactFeedbackGenerator(style: .light)
+        let success = UINotificationFeedbackGenerator()
+        impact.prepare()
+        success.prepare()
+
+        let run = drawRun(from: pool)
+        for (index, card) in run.enumerated() {
+            guard !Task.isCancelled else { break }
+            highlightedCardID = card.id
+            impact.impactOccurred(intensity: index == run.indices.last ? 0.75 : 0.38)
+            try? await Task.sleep(for: .milliseconds(index == run.indices.last ? 260 : 190))
+        }
+
+        guard !Task.isCancelled, let finalCard = run.last else {
+            highlightedCardID = nil
+            isDrawing = false
+            return
+        }
+
+        guard !Task.isCancelled else {
+            highlightedCardID = nil
+            isDrawing = false
+            return
+        }
+
+        selectedCardID = finalCard.id
+        highlightedCardID = nil
+        isDrawing = false
+        success.notificationOccurred(.success)
+    }
+
+    private func drawRun(from pool: [RecommendationCardModel]) -> [RecommendationCardModel] {
+        let count = min(max(pool.count, 1), 5)
+        let shuffled = pool.shuffled()
+        if shuffled.count <= count {
+            return shuffled
+        }
+        return Array(shuffled.prefix(count))
     }
 
     private var stateIcon: String {
