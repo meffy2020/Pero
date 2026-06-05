@@ -13,16 +13,8 @@ struct HomeRecommendationScreen: View {
     @State private var camera = KakaoMapCamera.seoul
     @State private var visibleBounds: KakaoMapVisibleBounds?
 
-    private var candidateCards: [RecommendationCardModel] {
-        candidates(for: pickerMode)
-    }
-
     private var viewportCandidateCards: [RecommendationCardModel] {
         viewportCandidates(for: pickerMode)
-    }
-
-    private var hasAnyViewportCandidate: Bool {
-        RecommendationPickerMode.allCases.contains { !viewportCandidates(for: $0).isEmpty }
     }
 
     private var selectedCard: RecommendationCardModel? {
@@ -62,6 +54,7 @@ struct HomeRecommendationScreen: View {
     var body: some View {
         ZStack {
             mapCanvas
+            drawCenterOverlay
             overlayChrome
         }
         .background(PeroMapStyle.paper)
@@ -106,25 +99,87 @@ struct HomeRecommendationScreen: View {
         .safeAreaPadding(.bottom, 12)
     }
 
+    @ViewBuilder
+    private var drawCenterOverlay: some View {
+        if isDrawing, let drawPreviewTitle {
+            VStack(spacing: 10) {
+                Label("고르는 중", systemImage: "sparkles")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(PeroMapStyle.muted)
+                Text(drawPreviewTitle)
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(PeroMapStyle.ink)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .id(drawPreviewTitle)
+                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
+            }
+            .padding(.horizontal, 22)
+            .padding(.vertical, 18)
+            .frame(maxWidth: 260)
+            .background(PeroMapStyle.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(PeroMapStyle.accent, lineWidth: 1.4)
+            }
+            .shadow(color: .black.opacity(0.14), radius: 18, y: 8)
+            .transition(.opacity.combined(with: .scale(scale: 0.92)))
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("뽑는 중, \(drawPreviewTitle)")
+        }
+    }
+
     private var bottomControls: some View {
         VStack(spacing: 10) {
-            randomPickButton
-            drawStatusPill
+            drawControlRow
             selectedResultSheet
         }
     }
 
-    private var randomPickButton: some View {
+    private var drawControlRow: some View {
+        HStack(spacing: 8) {
+            categorySwitchButton
+            randomPickButton
+        }
+    }
+
+    private var categorySwitchButton: some View {
         Menu {
             ForEach(RecommendationPickerMode.allCases) { mode in
                 Button {
-                    runMapDrawAnimation(mode: mode)
+                    pickerMode = mode
+                    selectedCardID = nil
+                    drawPreviewTitle = nil
                 } label: {
                     Label(mode.title, systemImage: mode.symbolName)
                 }
-                .disabled(viewportCandidates(for: mode).isEmpty)
             }
         } label: {
+            HStack(spacing: 6) {
+                Image(systemName: pickerMode.symbolName)
+                Text(pickerMode.title)
+                Image(systemName: "chevron.down")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(PeroMapStyle.muted)
+            }
+            .font(.subheadline.weight(.semibold))
+            .frame(width: 104, height: selectedCard == nil ? 58 : 42)
+        }
+        .buttonStyle(.borderedProminent)
+        .buttonBorderShape(.capsule)
+        .tint(PeroMapStyle.surface)
+        .foregroundStyle(PeroMapStyle.ink)
+        .overlay {
+            Capsule().stroke(PeroMapStyle.line, lineWidth: 0.8)
+        }
+        .disabled(viewModel.state == .loading || isDrawing)
+        .accessibilityLabel("뽑기 종류")
+        .accessibilityValue(pickerMode.title)
+        .accessibilityIdentifier("categorySwitchButton")
+    }
+
+    private var randomPickButton: some View {
+        Button(action: runMapDrawAnimation) {
             randomPickButtonLabel
         }
         .buttonStyle(.borderedProminent)
@@ -134,8 +189,8 @@ struct HomeRecommendationScreen: View {
         .overlay {
             Capsule().stroke(PeroMapStyle.accent, lineWidth: selectedCard == nil ? 2 : 1.2)
         }
-        .disabled(viewModel.state == .loading || !hasAnyViewportCandidate || isDrawing)
-        .opacity(viewModel.state == .loading || !hasAnyViewportCandidate || isDrawing ? 0.55 : 1)
+        .disabled(viewModel.state == .loading || viewportCandidateCards.isEmpty || isDrawing)
+        .opacity(viewModel.state == .loading || viewportCandidateCards.isEmpty || isDrawing ? 0.55 : 1)
         .accessibilityLabel(randomButtonTitle)
         .accessibilityIdentifier("mapRandomPickButton")
     }
@@ -150,27 +205,6 @@ struct HomeRecommendationScreen: View {
             .fixedSize(horizontal: selectedCard != nil, vertical: false)
     }
 
-    @ViewBuilder
-    private var drawStatusPill: some View {
-        if isDrawing, let drawPreviewTitle {
-            HStack(spacing: 8) {
-                ProgressView()
-                    .controlSize(.small)
-                Text(drawPreviewTitle)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(1)
-            }
-            .foregroundStyle(PeroMapStyle.ink)
-            .padding(.horizontal, 14)
-            .frame(height: 40)
-            .background(PeroMapStyle.surface, in: Capsule())
-            .overlay {
-                Capsule().stroke(PeroMapStyle.line, lineWidth: 0.8)
-            }
-            .transition(.opacity.combined(with: .move(edge: .bottom)))
-        }
-    }
-
     private var randomButtonTitle: String {
         switch viewModel.state {
         case .loading:
@@ -178,12 +212,10 @@ struct HomeRecommendationScreen: View {
         default:
             if isDrawing {
                 "고르는 중"
-            } else if !hasAnyViewportCandidate {
-                "화면 안 후보 없음"
             } else if viewportCandidateCards.isEmpty {
-                "종류 선택"
+                "화면 안 후보 없음"
             } else {
-                selectedCard == nil ? "\(pickerMode.title) 뽑기" : pickerMode.title
+                "\(pickerMode.title) 뽑기"
             }
         }
     }
@@ -220,10 +252,9 @@ struct HomeRecommendationScreen: View {
         }
     }
 
-    private func runMapDrawAnimation(mode: RecommendationPickerMode) {
-        pickerMode = mode
+    private func runMapDrawAnimation() {
         selectedCardID = nil
-        let pool = viewportCandidates(for: mode)
+        let pool = viewportCandidateCards
         guard !pool.isEmpty else {
             rerollRecommendations()
             return
@@ -267,9 +298,11 @@ struct HomeRecommendationScreen: View {
         let run = drawRun(from: pool)
         for (index, card) in run.enumerated() {
             guard !Task.isCancelled else { break }
-            drawPreviewTitle = card.title
+            withAnimation(.snappy(duration: 0.16)) {
+                drawPreviewTitle = card.title
+            }
             impact.impactOccurred(intensity: index == run.indices.last ? 0.75 : 0.38)
-            try? await Task.sleep(for: .milliseconds(index == run.indices.last ? 240 : 150))
+            try? await Task.sleep(for: .milliseconds(index == run.indices.last ? 360 : 180))
         }
 
         guard !Task.isCancelled, let finalCard = run.last else {
@@ -284,9 +317,12 @@ struct HomeRecommendationScreen: View {
             return
         }
 
-        selectedCardID = finalCard.id
-        drawPreviewTitle = nil
-        isDrawing = false
+        withAnimation(.snappy(duration: 0.28)) {
+            selectedCardID = finalCard.id
+            camera = KakaoMapCamera(latitude: finalCard.latitude, longitude: finalCard.longitude, level: camera.level)
+            drawPreviewTitle = nil
+            isDrawing = false
+        }
         success.notificationOccurred(.success)
     }
 
