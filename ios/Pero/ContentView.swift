@@ -169,8 +169,10 @@ final class RecommendationViewModel: ObservableObject {
     @Published private(set) var cards: [RecommendationCardModel] = []
     @Published private(set) var fallbackUsed = false
     @Published private(set) var activeCenterCoordinate: UserCoordinate?
+    @Published private(set) var dataStatusMessage: String?
 
     private var cardsByID: [RecommendationCardModel.ID: RecommendationCardModel] = [:]
+    private var recentPlaceIDs: [RecommendationCardModel.ID] = []
 
     private let provider: PeroAPIProviding
     private let locationProvider: LocationProviding
@@ -198,28 +200,63 @@ final class RecommendationViewModel: ObservableObject {
         }
     }
 
-    func loadGoNowRecommendations(center coordinate: UserCoordinate) async {
+    func loadGoNowRecommendations(
+        center coordinate: UserCoordinate,
+        visibleBounds: KakaoMapVisibleBounds? = nil,
+        camera: KakaoMapCamera? = nil,
+        mode: RecommendationPickerMode? = nil
+    ) async {
         activeCenterCoordinate = coordinate
         state = .loading
         fallbackUsed = false
         do {
-            try await loadLiveRecommendations(center: coordinate)
+            try await loadLiveRecommendations(center: coordinate, visibleBounds: visibleBounds, camera: camera, mode: mode)
         } catch {
             fallbackUsed = false
+            dataStatusMessage = nil
             state = .error("백엔드에서 장소 후보를 불러오지 못했습니다. \(error.localizedDescription)")
         }
     }
 
-    private func loadLiveRecommendations(center coordinate: UserCoordinate, forceFallback: Bool = false) async throws {
+    private func loadLiveRecommendations(
+        center coordinate: UserCoordinate,
+        visibleBounds: KakaoMapVisibleBounds? = nil,
+        camera: KakaoMapCamera? = nil,
+        mode: RecommendationPickerMode? = nil,
+        forceFallback: Bool = false
+    ) async throws {
+        let apiMode = mode?.apiMode
+        let apiCategory = mode?.apiCategory
+        let density = Self.mapDensity(camera: camera)
         let request = RecommendationRequest(
             themeId: nil,
             latitude: coordinate.latitude,
             longitude: coordinate.longitude,
-            radiusKm: 3
+            radiusKm: 3,
+            north: visibleBounds?.maxLatitude,
+            south: visibleBounds?.minLatitude,
+            east: visibleBounds?.maxLongitude,
+            west: visibleBounds?.minLongitude,
+            zoom: camera.map { Double($0.level) },
+            density: density,
+            category: apiCategory,
+            mode: apiMode,
+            limit: Self.mapPlacePoolLimit,
+            recentPlaceIds: recentPlaceIDs.isEmpty ? nil : recentPlaceIDs,
+            includeTourApi: false
         )
         let placePoolQuery = PlacesQuery(
             latitude: coordinate.latitude,
             longitude: coordinate.longitude,
+            radiusKm: 3,
+            north: visibleBounds?.maxLatitude,
+            south: visibleBounds?.minLatitude,
+            east: visibleBounds?.maxLongitude,
+            west: visibleBounds?.minLongitude,
+            zoom: camera.map { Double($0.level) },
+            density: density,
+            category: apiCategory,
+            mode: apiMode,
             limit: Self.mapPlacePoolLimit,
             includeTourApi: false
         )
@@ -232,9 +269,10 @@ final class RecommendationViewModel: ObservableObject {
             center: coordinate,
             limit: Self.mapPlacePoolLimit
         )
+        dataStatusMessage = recommendationResponse?.randomScope ?? placesResponse.randomScope
 
         if !placePool.isEmpty {
-            apply(cards: placePool, fallback: forceFallback || (recommendationResponse?.fallbackUsed ?? false))
+            apply(cards: placePool, fallback: forceFallback || placesResponse.fallbackUsed == true || (recommendationResponse?.fallbackUsed ?? false))
         } else if let recommendationResponse {
             apply(response: recommendationResponse, forceFallback: forceFallback)
         } else {
@@ -250,7 +288,14 @@ final class RecommendationViewModel: ObservableObject {
         cards.first { $0.subtitle == slotTitle }
     }
 
+    func recordRecentPick(cardID: RecommendationCardModel.ID) {
+        recentPlaceIDs.removeAll { $0 == cardID }
+        recentPlaceIDs.insert(cardID, at: 0)
+        recentPlaceIDs = Array(recentPlaceIDs.prefix(8))
+    }
+
     private func apply(response: RecommendationResponse, forceFallback: Bool = false) {
+        dataStatusMessage = response.randomScope
         apply(cards: Self.normalize(response: response), fallback: forceFallback || response.fallbackUsed)
     }
 
@@ -280,6 +325,11 @@ final class RecommendationViewModel: ObservableObject {
 
         return Array(normalized.prefix(3))
     }
+    nonisolated static func mapDensity(camera: KakaoMapCamera?) -> String {
+        guard let camera else { return "detail" }
+        return camera.level <= 10 ? "summary" : "detail"
+    }
+
     nonisolated static func normalize(places: [PlaceListItem], center: UserCoordinate, limit: Int? = nil) -> [RecommendationCardModel] {
         let normalized: [RecommendationCardModel] = places.compactMap { (place: PlaceListItem) -> RecommendationCardModel? in
             guard place.latitude.isFinite, place.longitude.isFinite else { return nil }

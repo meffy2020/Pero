@@ -181,6 +181,22 @@ enum RecommendationPickerMode: String, CaseIterable, Hashable, Identifiable {
         }
     }
 
+    var apiMode: String {
+        switch self {
+        case .attraction: "tour"
+        case .restaurant: "cafe"
+        case .festival: "festival"
+        }
+    }
+
+    var apiCategory: String {
+        switch self {
+        case .attraction: "관광지"
+        case .restaurant: "카페"
+        case .festival: "행사/공연/축제"
+        }
+    }
+
     func matches(_ card: RecommendationCardModel) -> Bool {
         RecommendationPickerMode(card: card) == self
     }

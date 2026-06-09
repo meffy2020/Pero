@@ -103,6 +103,9 @@ struct NavigationModelTests {
         #expect(RecommendationPickerMode.allCases.map(\.title) == ["장소", "식당", "축제"])
         #expect(RecommendationPickerMode.attraction.poolCopy == "장소 핀")
         #expect(RecommendationPickerMode.festival.poolCopy == "축제 핀")
+        #expect(RecommendationPickerMode.attraction.apiMode == "tour")
+        #expect(RecommendationPickerMode.restaurant.apiMode == "cafe")
+        #expect(RecommendationPickerMode.festival.apiCategory == "행사/공연/축제")
     }
 
     @Test func placePoolNormalizerKeepsBackendCategorySeparateFromPickerBucket() throws {
@@ -179,7 +182,10 @@ struct NavigationModelTests {
         #expect(provider.recommendationCallCount == 1)
         #expect(provider.searchCallCount == 0)
         #expect(provider.lastRequest?.radiusKm == 3)
+        #expect(provider.lastRequest?.limit == 360)
+        #expect(provider.lastRequest?.includeTourApi == false)
         #expect(viewModel.cards.count == 3)
+        #expect(viewModel.dataStatusMessage == "테스트 랜덤")
     }
 
     @Test @MainActor func viewModelUsesPlacesEndpointAsMapPinPoolWhenAvailable() async {
@@ -207,6 +213,31 @@ struct NavigationModelTests {
         #expect(provider.lastPlacesQuery?.latitude == 35.1796)
         #expect(provider.lastPlacesQuery?.longitude == 129.0756)
         #expect(provider.lastPlacesQuery?.limit == 360)
+        #expect(provider.lastPlacesQuery?.includeTourApi == false)
+    }
+
+
+    @Test @MainActor func viewModelSendsViewportModeAndRecentIdsForMapRandomRefresh() async {
+        let provider = CapturingRecommendationProvider(placePool: PlaceListItem.previewPoolForTests)
+        let locationProvider = StaticLocationProvider(latitude: 35.1796, longitude: 129.0756)
+        let viewModel = RecommendationViewModel(provider: provider, locationProvider: locationProvider)
+        let bounds = KakaoMapVisibleBounds(minLatitude: 35.1, maxLatitude: 35.3, minLongitude: 128.9, maxLongitude: 129.2)
+        let camera = KakaoMapCamera(latitude: 35.1796, longitude: 129.0756, level: 8)
+
+        viewModel.recordRecentPick(cardID: "preview-market")
+        await viewModel.loadGoNowRecommendations(center: UserCoordinate(latitude: 35.1796, longitude: 129.0756), visibleBounds: bounds, camera: camera, mode: .restaurant)
+
+        #expect(provider.lastRequest?.north == 35.3)
+        #expect(provider.lastRequest?.south == 35.1)
+        #expect(provider.lastRequest?.east == 129.2)
+        #expect(provider.lastRequest?.west == 128.9)
+        #expect(provider.lastRequest?.zoom == 8)
+        #expect(provider.lastRequest?.density == "summary")
+        #expect(provider.lastRequest?.mode == "cafe")
+        #expect(provider.lastRequest?.category == "카페")
+        #expect(provider.lastRequest?.recentPlaceIds == ["preview-market"])
+        #expect(provider.lastPlacesQuery?.north == 35.3)
+        #expect(provider.lastPlacesQuery?.mode == "cafe")
         #expect(provider.lastPlacesQuery?.includeTourApi == false)
     }
 
@@ -493,7 +524,14 @@ private final class CapturingRecommendationProvider: PeroAPIProviding, @unchecke
         if shouldFailPlaces {
             throw URLError(.cannotLoadFromNetwork)
         }
-        return PlacesResponse(source: SearchSourceMeta(providerId: "test", providerName: "test", status: "loaded", generatedAt: Date(timeIntervalSince1970: 0), count: placePool.count), total: placePool.count, places: placePool)
+        return PlacesResponse(
+            source: SearchSourceMeta(providerId: "test", providerName: "test", status: "loaded", generatedAt: Date(timeIntervalSince1970: 0), count: placePool.count),
+            generatedAt: Date(timeIntervalSince1970: 0),
+            fallbackUsed: false,
+            randomScope: "테스트 지도 후보",
+            total: placePool.count,
+            places: placePool
+        )
     }
 
     func places(query: PlacesQuery) async throws -> PlacesResponse {

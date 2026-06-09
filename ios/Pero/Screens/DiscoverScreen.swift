@@ -376,7 +376,7 @@ struct HomeRecommendationScreen: View {
     }
 
     private func refreshRecommendationsNearCurrentLocation(_ coordinate: UserCoordinate) async {
-        await viewModel.loadGoNowRecommendations(center: coordinate)
+        await viewModel.loadGoNowRecommendations(center: coordinate, visibleBounds: visibleBounds, camera: camera, mode: pickerMode)
         try? await Task.sleep(for: .milliseconds(800))
         await MainActor.run {
             withAnimation(.snappy(duration: 0.16)) {
@@ -452,6 +452,7 @@ struct HomeRecommendationScreen: View {
 
         withAnimation(.snappy(duration: 0.28)) {
             selectedCardID = finalCard.id
+            viewModel.recordRecentPick(cardID: finalCard.id)
             camera = KakaoMapCamera(latitude: finalCard.latitude, longitude: finalCard.longitude, level: KakaoMapCamera.focusedLevel)
             drawPreviewTitle = nil
             isDrawing = false
