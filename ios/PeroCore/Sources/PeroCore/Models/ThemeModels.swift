@@ -65,6 +65,7 @@ public struct ThemeEvent: Decodable, Equatable, Sendable, Identifiable {
     public let longitude: Double
     public let sourceAttribution: String
     public let summary: String
+    public let officialUrl: String?
     public let themeId: String
     public let relatedPlaceId: String?
 }

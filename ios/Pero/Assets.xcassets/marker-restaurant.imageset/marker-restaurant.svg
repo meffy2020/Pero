@@ -1,0 +1,19 @@
+<svg width="64" height="76" viewBox="0 0 64 76" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="s" x="0" y="0" width="64" height="76" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#152238" flood-opacity="0.22"/>
+    </filter>
+    <linearGradient id="g" x1="14" y1="7" x2="50" y2="63" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F05A3C"/><stop offset="1" stop-color="#c44931"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="32" cy="69" rx="14" ry="4" fill="#152238" fill-opacity="0.18"/>
+  <g filter="url(#s)">
+    <path d="M32 5.5c-13.2 0-24 10.6-24 23.8C8 46.9 32 68 32 68s24-21.1 24-38.7C56 16.1 45.2 5.5 32 5.5Z" fill="url(#g)"/>
+    <path d="M32 5.5c-13.2 0-24 10.6-24 23.8C8 46.9 32 68 32 68s24-21.1 24-38.7C56 16.1 45.2 5.5 32 5.5Z" stroke="#FFF6E7" stroke-width="4"/>
+    <circle cx="32" cy="29" r="17.5" fill="#FFF6E7"/>
+    <circle cx="32" cy="29" r="15" fill="#FFFFFF" fill-opacity="0.58"/>
+    <g transform="translate(11 10)" fill="#152238"><path d="M16.2 12.1h2.1v8.1h-2.1v-8.1Zm3.1 0h2.1v8.1h-2.1v-8.1Zm-4.2 8.5h7.5v2.9h-2.2v5.5h-3.1v-5.5h-2.2v-2.9Zm12-8.7c3.3 2.3 3.4 8.6.2 10.8v6.3h-3.1V12.1c1.1-.5 2-.6 2.9-.2Z"/></g>
+    <path d="M45.5 17.2 47 21l3.8 1.5L47 24l-1.5 3.8L44 24l-3.8-1.5L44 21l1.5-3.8Z" fill="#FFF6E7" fill-opacity="0.9"/>
+  </g>
+</svg>

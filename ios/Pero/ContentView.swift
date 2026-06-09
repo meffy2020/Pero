@@ -195,7 +195,7 @@ final class RecommendationViewModel: ObservableObject {
                 try await loadLiveRecommendations(center: StaticLocationProvider.previewCoordinate, forceFallback: true)
             } catch {
                 fallbackUsed = false
-                state = .error("백엔드에서 장소 후보를 불러오지 못했습니다. \(error.localizedDescription)")
+                state = .error("장소를 불러오지 못했습니다. \(error.localizedDescription)")
             }
         }
     }
@@ -214,7 +214,7 @@ final class RecommendationViewModel: ObservableObject {
         } catch {
             fallbackUsed = false
             dataStatusMessage = nil
-            state = .error("백엔드에서 장소 후보를 불러오지 못했습니다. \(error.localizedDescription)")
+            state = .error("장소를 불러오지 못했습니다. \(error.localizedDescription)")
         }
     }
 
@@ -227,6 +227,8 @@ final class RecommendationViewModel: ObservableObject {
     ) async throws {
         let apiMode = mode?.apiMode
         let apiCategory = mode?.apiCategory
+        let apiSource = mode?.apiSource
+        let apiActiveFestival = mode?.apiActiveFestival
         let density = Self.mapDensity(camera: camera)
         let request = RecommendationRequest(
             themeId: nil,
@@ -241,6 +243,7 @@ final class RecommendationViewModel: ObservableObject {
             density: density,
             category: apiCategory,
             mode: apiMode,
+            source: apiSource,
             limit: Self.mapPlacePoolLimit,
             recentPlaceIds: recentPlaceIDs.isEmpty ? nil : recentPlaceIDs,
             includeTourApi: false
@@ -257,6 +260,8 @@ final class RecommendationViewModel: ObservableObject {
             density: density,
             category: apiCategory,
             mode: apiMode,
+            source: apiSource,
+            activeFestival: apiActiveFestival,
             limit: Self.mapPlacePoolLimit,
             includeTourApi: false
         )
@@ -264,8 +269,11 @@ final class RecommendationViewModel: ObservableObject {
         async let placesResponseTask = provider.places(query: placePoolQuery)
         let recommendationResponse = try? await recommendationResponseTask
         let placesResponse = try await placesResponseTask
+        let rawPlacePool = mode == .restaurant
+            ? placesResponse.places.filter(Self.isStrictRestaurantPlace)
+            : placesResponse.places
         let placePool = Self.normalize(
-            places: placesResponse.places,
+            places: rawPlacePool,
             center: coordinate,
             limit: Self.mapPlacePoolLimit
         )
@@ -273,6 +281,8 @@ final class RecommendationViewModel: ObservableObject {
 
         if !placePool.isEmpty {
             apply(cards: placePool, fallback: forceFallback || placesResponse.fallbackUsed == true || (recommendationResponse?.fallbackUsed ?? false))
+        } else if mode == .restaurant {
+            apply(cards: [], fallback: placesResponse.fallbackUsed == true)
         } else if let recommendationResponse {
             apply(response: recommendationResponse, forceFallback: forceFallback)
         } else {
@@ -338,7 +348,7 @@ final class RecommendationViewModel: ObservableObject {
                 id: place.id,
                 title: place.name,
                 subtitle: Self.slotTitle(for: place),
-                reason: place.summary.isEmpty ? "현재 지도 후보 풀에 포함된 장소입니다." : place.summary,
+                reason: place.summary.isEmpty ? "현재 범위에 있는 장소입니다." : place.summary,
                 category: place.category,
                 district: place.district,
                 roadAddress: place.roadAddress,
@@ -348,7 +358,8 @@ final class RecommendationViewModel: ObservableObject {
                 sourceAttribution: place.sourceAttribution,
                 tags: Array((place.tags + place.themeTags).uniqued().prefix(4)),
                 eventPeriodLabel: Self.eventPeriodLabel(from: place.tourApi),
-                eventSummary: Self.eventSummary(summary: place.summary, tourApi: place.tourApi)
+                eventSummary: Self.eventSummary(summary: place.summary, tourApi: place.tourApi),
+                officialURL: Self.officialURL(from: place.tourApi)
             )
         }
         .sorted { lhs, rhs in
@@ -364,13 +375,39 @@ final class RecommendationViewModel: ObservableObject {
         if source.contains("축제") || source.contains("행사") || source.contains("공연") {
             return "축제 추천"
         }
-        if source.contains("식사") || source.contains("식당") || source.contains("음식") || source.contains("카페") {
+        if source.contains("식사") || source.contains("식당") || source.contains("음식") || source.contains("레스토랑") {
             return "식당 추천"
         }
         if source.contains("코스") || source.contains("전시") || source.contains("문화") || source.contains("관광") || source.contains("체험") {
             return "랜덤 코스 추천"
         }
         return "랜덤 장소 추천"
+    }
+
+
+
+    nonisolated private static func isStrictRestaurantPlace(_ place: PlaceListItem) -> Bool {
+        let haystack = ([place.name, place.category, place.summary, place.sourceAttribution] + place.tags + place.themeTags)
+            .joined(separator: " ")
+        let denied = [
+            "카페", "커피", "스타벅스", "투썸", "컴포즈", "메가", "빽다방", "이디야", "할리스",
+            "엔제리너스", "커피빈", "파스쿠찌", "폴바셋", "공차", "팀홀튼", "매머드", "텐퍼센트",
+            "다방", "전통찻집", "디저트", "베이커리", "제과", "파리바게뜨", "뚜레쥬르",
+            "도넛", "아이스크림", "배스킨", "설빙", "브런치", "샐러드", "샌드위치",
+            "술집", "호프", "와인바", "칵테일바", "이벤트기획", "대행"
+        ]
+        if denied.contains(where: { haystack.localizedCaseInsensitiveContains($0) }) {
+            return false
+        }
+        let allowed = [
+            "음식", "음식점", "식당", "한식", "중식", "일식", "양식", "분식", "고기", "육류", "레스토랑",
+            "국밥", "찌개", "전골", "국수", "칼국수", "냉면", "초밥", "롤", "회", "해물", "생선",
+            "닭", "치킨", "족발", "보쌈", "곱창", "막창", "갈비", "순대", "떡볶이", "돈까스",
+            "우동", "삼계탕", "감자탕", "곰탕", "설렁탕", "해장국", "추어", "두부", "피자",
+            "버거", "맥도날드", "롯데리아", "맘스터치", "버거킹", "김밥", "만두", "죽", "도시락",
+            "라면", "베트남", "태국", "멕시칸", "이탈리안", "파스타", "구내식당", "한정식"
+        ]
+        return allowed.contains(where: { haystack.localizedCaseInsensitiveContains($0) })
     }
 
     nonisolated private static func eventPeriodLabel(from tourApi: TourAPI?) -> String? {
@@ -401,6 +438,25 @@ final class RecommendationViewModel: ObservableObject {
         let month = digits[monthStart..<dayStart]
         let day = digits[dayStart..<digits.endIndex]
         return "\(year).\(month).\(day)"
+    }
+
+
+    nonisolated private static func officialURL(from tourApi: TourAPI?) -> URL? {
+        guard let homepage = tourApi?.common?.homepage?.trimmingCharacters(in: .whitespacesAndNewlines), !homepage.isEmpty else { return nil }
+        if let hrefRange = homepage.range(of: #"href=[\"']([^\"']+)[\"']"#, options: .regularExpression) {
+            let fragment = String(homepage[hrefRange])
+            let cleaned = fragment
+                .replacingOccurrences(of: #"href=[\"']"#, with: "", options: .regularExpression)
+                .replacingOccurrences(of: #"[\"']$"#, with: "", options: .regularExpression)
+            return URL(string: cleaned)
+        }
+        if let url = URL(string: homepage), url.scheme != nil {
+            return url
+        }
+        if homepage.hasPrefix("www.") {
+            return URL(string: "https://\(homepage)")
+        }
+        return nil
     }
 
     nonisolated private static func eventSummary(summary: String, tourApi: TourAPI?) -> String? {
@@ -447,7 +503,8 @@ final class RecommendationViewModel: ObservableObject {
                 sourceAttribution: place.sourceAttribution,
                 tags: Array(place.tags.prefix(4)),
                 eventPeriodLabel: Self.eventPeriodLabel(from: place.tourApi),
-                eventSummary: Self.eventSummary(summary: place.summary, tourApi: place.tourApi)
+                eventSummary: Self.eventSummary(summary: place.summary, tourApi: place.tourApi),
+                officialURL: Self.officialURL(from: place.tourApi)
             )
         )
     }

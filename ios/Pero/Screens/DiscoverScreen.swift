@@ -1,21 +1,30 @@
 import SwiftUI
 import UIKit
 import PeroCore
+import KakaoSDKShare
+import KakaoSDKTemplate
 
 struct HomeRecommendationScreen: View {
     @ObservedObject var viewModel: RecommendationViewModel
-    @State private var pickerMode: RecommendationPickerMode = .attraction
+    @State private var pickerMode: RecommendationPickerMode = .restaurant
     @State private var selectedCardID: RecommendationCardModel.ID?
     @State private var rerollTask: Task<Void, Never>?
     @State private var drawTask: Task<Void, Never>?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isDrawing = false
     @State private var isLocating = false
+    @State private var drawPhase: DrawPhase = .idle
     @State private var drawPreviewTitle: String?
+    @State private var drawCandidateTrail: [RecommendationCardModel] = []
+    @State private var drawHighlightedCardIDs: Set<RecommendationCardModel.ID> = []
+    @State private var drawRevealedCardID: RecommendationCardModel.ID?
     @State private var locationFeedback: String?
     @State private var currentUserCoordinate: UserCoordinate?
     @State private var didCenterOnInitialLocation = false
     @State private var camera = KakaoMapCamera.seoul
     @State private var visibleBounds: KakaoMapVisibleBounds?
+    @State private var mapRefreshTask: Task<Void, Never>?
+    @State private var lastMapRefreshKey: String?
 
     private var viewportCandidateCards: [RecommendationCardModel] {
         viewportCandidates(for: pickerMode)
@@ -35,16 +44,17 @@ struct HomeRecommendationScreen: View {
     }
 
     private var mapMarkers: [KakaoMapMarker] {
-        var markerCards = markerLayerCards
-        if let selectedCard, !markerCards.contains(where: { $0.id == selectedCard.id }) {
-            markerCards.append(selectedCard)
-        }
-        var markers = markerCards.map { card in
-            KakaoMapMarker(
-                id: card.id,
-                latitude: card.latitude,
-                longitude: card.longitude,
-                isSelected: selectedCard?.id == card.id
+        var markers: [KakaoMapMarker] = []
+        if let selectedCard {
+            markers.append(
+                KakaoMapMarker(
+                    id: selectedCard.id,
+                    latitude: selectedCard.latitude,
+                    longitude: selectedCard.longitude,
+                    kind: selectedCard.mapMarkerKind,
+                    isSelected: true,
+                    isHighlighted: false
+                )
             )
         }
         if let currentUserCoordinate {
@@ -54,6 +64,7 @@ struct HomeRecommendationScreen: View {
                     latitude: currentUserCoordinate.latitude,
                     longitude: currentUserCoordinate.longitude,
                     isSelected: false,
+                    isHighlighted: false,
                     isUserLocation: true
                 )
             )
@@ -61,20 +72,18 @@ struct HomeRecommendationScreen: View {
         return markers
     }
 
-    private var markerLayerCards: [RecommendationCardModel] {
-        guard shouldRenderAllVisibleMarkers else { return [] }
-        return viewportCandidateCards
-    }
-
-    private var shouldRenderAllVisibleMarkers: Bool {
-        guard let visibleBounds else { return false }
-        return visibleBounds.isReadableMarkerDensity(for: viewportCandidateCards.count)
+    private var markerCandidateCards: [RecommendationCardModel] {
+        let cards = candidates(for: pickerMode)
+        guard let visibleBounds else {
+            return Array(cards.prefix(80))
+        }
+        return cards.filter { visibleBounds.contains(latitude: $0.latitude, longitude: $0.longitude) }
     }
 
     var body: some View {
         ZStack {
             mapCanvas
-            drawCenterOverlay
+            drawExperienceOverlay
             overlayChrome
         }
         .background(PeroMapStyle.paper)
@@ -93,15 +102,22 @@ struct HomeRecommendationScreen: View {
             centerOnInitialLocationIfNeeded(coordinate)
         }
         .onChange(of: pickerMode) { _, _ in
-            reconcileSelection(with: viewModel.cards)
+            selectedCardID = nil
+            scheduleMapScopedRefresh()
         }
         .onChange(of: visibleBounds) { _, _ in
             guard !isDrawing else { return }
             reconcileSelection(with: viewModel.cards)
+            scheduleMapScopedRefresh()
+        }
+        .onChange(of: camera) { _, _ in
+            guard !isDrawing else { return }
+            scheduleMapScopedRefresh()
         }
         .onDisappear {
             rerollTask?.cancel()
             drawTask?.cancel()
+            mapRefreshTask?.cancel()
         }
     }
 
@@ -126,32 +142,16 @@ struct HomeRecommendationScreen: View {
     }
 
     @ViewBuilder
-    private var drawCenterOverlay: some View {
-        if isDrawing, let drawPreviewTitle {
-            VStack(spacing: 10) {
-                Label("고르는 중", systemImage: "sparkles")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(PeroMapStyle.muted)
-                Text(drawPreviewTitle)
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(PeroMapStyle.ink)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
-                    .id(drawPreviewTitle)
-                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
-            }
-            .padding(.horizontal, 22)
-            .padding(.vertical, 18)
-            .frame(maxWidth: 260)
-            .background(PeroMapStyle.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(PeroMapStyle.accent, lineWidth: 1.4)
-            }
-            .shadow(color: .black.opacity(0.14), radius: 18, y: 8)
-            .transition(.opacity.combined(with: .scale(scale: 0.92)))
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("뽑는 중, \(drawPreviewTitle)")
+    private var drawExperienceOverlay: some View {
+        if isDrawing || drawPhase != .idle {
+            DrawExperienceOverlay(
+                phase: drawPhase,
+                previewTitle: drawPreviewTitle,
+                candidateTrail: drawCandidateTrail,
+                modeTitle: pickerMode.title,
+                reduceMotion: reduceMotion
+            )
+            .transition(.opacity.combined(with: .scale(scale: reduceMotion ? 1 : 0.94)))
         }
     }
 
@@ -193,8 +193,8 @@ struct HomeRecommendationScreen: View {
                     ProgressView()
                         .controlSize(.small)
                 } else {
-                    Image(systemName: "location.fill")
-                        .font(.system(size: 17, weight: .semibold))
+                    Image(systemName: "scope")
+                        .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(PeroMapStyle.ink)
                 }
             }
@@ -222,7 +222,7 @@ struct HomeRecommendationScreen: View {
         .overlay {
             Capsule().stroke(PeroMapStyle.accent, lineWidth: selectedCard == nil ? 2 : 1.2)
         }
-        .opacity(viewModel.state == .loading || !isViewportReady || viewportCandidateCards.isEmpty || isDrawing ? 0.55 : 1)
+        .opacity(isDrawing ? 0.72 : 1)
         .accessibilityElement(children: .contain)
     }
 
@@ -233,17 +233,14 @@ struct HomeRecommendationScreen: View {
                     pickerMode = mode
                     selectedCardID = nil
                     drawPreviewTitle = nil
+                    drawPhase = .idle
+                    drawCandidateTrail = []
                 } label: {
-                    Label(mode.title, systemImage: mode.symbolName)
+                    Text(mode.title)
                 }
             }
         } label: {
-            HStack(spacing: 4) {
-                Text(pickerMode.title)
-                Text("⌄")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(PeroMapStyle.muted)
-            }
+            Text(pickerMode.title)
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(PeroMapStyle.ink)
             .padding(.leading, 16)
@@ -258,14 +255,14 @@ struct HomeRecommendationScreen: View {
 
     private var drawButtonSegment: some View {
         Button(action: runMapDrawAnimation) {
-            Text(drawActionTitle)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(PeroMapStyle.ink)
-                .padding(.leading, 12)
-                .padding(.trailing, 16)
-                .frame(height: selectedCard == nil ? 44 : 38)
+            RangePickButtonLabel(
+                title: drawActionTitle,
+                phase: drawPhase,
+                compact: selectedCard != nil
+            )
         }
-        .disabled(viewModel.state == .loading || !isViewportReady || viewportCandidateCards.isEmpty || isDrawing)
+        .buttonStyle(RangePickButtonStyle(isActive: isDrawing || drawPhase != .idle, reduceMotion: reduceMotion))
+        .disabled(isDrawing)
         .accessibilityLabel(randomButtonTitle)
         .accessibilityIdentifier("mapRandomPickButton")
     }
@@ -273,25 +270,19 @@ struct HomeRecommendationScreen: View {
     private var randomButtonTitle: String {
         switch viewModel.state {
         case .loading:
-            "후보 찾는 중"
+            "찾는 중"
         default:
             if isDrawing {
-                "고르는 중"
-            } else if !isViewportReady {
-                "지도 준비 중"
-            } else if viewportCandidateCards.isEmpty {
-                "화면 안 후보 없음"
+                drawPhase.accessibilityTitle
             } else {
-                "\(pickerMode.title) 뽑기"
+                HomeMapKoreanCopy.rangePickTitle(for: pickerMode.title)
             }
         }
     }
 
     private var drawActionTitle: String {
-        if isDrawing { return "고르는 중" }
-        if viewModel.state == .loading { return "준비 중" }
-        if !isViewportReady { return "준비 중" }
-        return "뽑기"
+        if isDrawing { return drawPhase.buttonTitle }
+        return HomeMapKoreanCopy.rangePickTitle(for: pickerMode.title)
     }
 
     @ViewBuilder
@@ -301,14 +292,7 @@ struct HomeRecommendationScreen: View {
                 card: selectedCard
             )
             .transition(.move(edge: .bottom).combined(with: .opacity))
-        } else if viewModel.state == .results, viewportCandidateCards.isEmpty {
-            StateMessageView(
-                icon: "map",
-                title: "화면 안 후보 없음",
-                message: HomeMapKoreanCopy.viewportEmptyMessage
-            )
-            .peroBottomSheetSurface()
-        } else if viewModel.state != .results {
+        } else if viewModel.state != .results && viewModel.state != .empty {
             StateMessageView(
                 icon: stateIcon,
                 title: viewModel.state.title,
@@ -333,8 +317,45 @@ struct HomeRecommendationScreen: View {
     private func rerollRecommendations() {
         rerollTask?.cancel()
         rerollTask = Task {
-            await viewModel.loadGoNowRecommendations()
+            if let visibleBounds {
+                let center = UserCoordinate(latitude: camera.latitude, longitude: camera.longitude)
+                await viewModel.loadGoNowRecommendations(center: center, visibleBounds: visibleBounds, camera: camera, mode: pickerMode)
+            } else {
+                let center = UserCoordinate(latitude: camera.latitude, longitude: camera.longitude)
+                await viewModel.loadGoNowRecommendations(center: center, visibleBounds: nil, camera: camera, mode: pickerMode)
+            }
         }
+    }
+
+    private func scheduleMapScopedRefresh() {
+        guard let visibleBounds else { return }
+        let refreshKey = mapRefreshKey(bounds: visibleBounds, camera: camera, mode: pickerMode)
+        guard refreshKey != lastMapRefreshKey else { return }
+        lastMapRefreshKey = refreshKey
+        mapRefreshTask?.cancel()
+        mapRefreshTask = Task {
+            try? await Task.sleep(for: .milliseconds(450))
+            guard !Task.isCancelled else { return }
+            let center = UserCoordinate(latitude: camera.latitude, longitude: camera.longitude)
+            await viewModel.loadGoNowRecommendations(center: center, visibleBounds: visibleBounds, camera: camera, mode: pickerMode)
+        }
+    }
+
+    private func mapRefreshKey(
+        bounds: KakaoMapVisibleBounds,
+        camera: KakaoMapCamera,
+        mode: RecommendationPickerMode
+    ) -> String {
+        [
+            mode.rawValue,
+            String(format: "%.3f", camera.latitude),
+            String(format: "%.3f", camera.longitude),
+            String(camera.level),
+            String(format: "%.3f", bounds.minLatitude),
+            String(format: "%.3f", bounds.maxLatitude),
+            String(format: "%.3f", bounds.minLongitude),
+            String(format: "%.3f", bounds.maxLongitude)
+        ].joined(separator: "|")
     }
 
     private func focusCurrentLocation() {
@@ -387,15 +408,25 @@ struct HomeRecommendationScreen: View {
 
     private func runMapDrawAnimation() {
         selectedCardID = nil
-        let pool = viewportCandidateCards
-        guard !pool.isEmpty else {
-            rerollRecommendations()
-            return
-        }
         drawTask?.cancel()
-        drawTask = Task {
+        drawTask = Task { @MainActor in
+            if viewportCandidateCards.isEmpty {
+                await refreshCandidatesForDraw()
+            }
+            guard !Task.isCancelled else { return }
+            let pool = viewportCandidateCards
+            guard !pool.isEmpty else {
+                resetDrawState()
+                return
+            }
             await animateMapDraw(with: pool)
         }
+    }
+
+    @MainActor
+    private func refreshCandidatesForDraw() async {
+        let center = UserCoordinate(latitude: camera.latitude, longitude: camera.longitude)
+        await viewModel.loadGoNowRecommendations(center: center, visibleBounds: visibleBounds, camera: camera, mode: pickerMode)
     }
 
     private func candidates(for mode: RecommendationPickerMode) -> [RecommendationCardModel] {
@@ -404,7 +435,7 @@ struct HomeRecommendationScreen: View {
 
     private func viewportCandidates(for mode: RecommendationPickerMode) -> [RecommendationCardModel] {
         let cards = candidates(for: mode)
-        guard let visibleBounds else { return [] }
+        guard let visibleBounds else { return cards }
         return cards.filter { visibleBounds.contains(latitude: $0.latitude, longitude: $0.longitude) }
     }
 
@@ -422,51 +453,136 @@ struct HomeRecommendationScreen: View {
         isDrawing = true
         selectedCardID = nil
         drawPreviewTitle = nil
+        drawCandidateTrail = []
+        drawHighlightedCardIDs = []
+        drawRevealedCardID = nil
 
-        let impact = UIImpactFeedbackGenerator(style: .light)
+        let tickImpact = UIImpactFeedbackGenerator(style: .light)
+        let lockImpact = UIImpactFeedbackGenerator(style: .medium)
         let success = UINotificationFeedbackGenerator()
-        impact.prepare()
+        tickImpact.prepare()
+        lockImpact.prepare()
         success.prepare()
 
         let run = drawRun(from: pool)
-        for (index, card) in run.enumerated() {
-            guard !Task.isCancelled else { break }
-            withAnimation(.snappy(duration: 0.16)) {
-                drawPreviewTitle = card.title
-            }
-            impact.impactOccurred(intensity: index == run.indices.last ? 0.75 : 0.38)
-            try? await Task.sleep(for: .milliseconds(index == run.indices.last ? 260 : 120))
+        guard let finalCard = run.last else {
+            resetDrawState()
+            return
         }
 
-        guard !Task.isCancelled, let finalCard = run.last else {
-            drawPreviewTitle = nil
-            isDrawing = false
-            return
+        withAnimation(.snappy(duration: reduceMotion ? 0.12 : 0.22)) {
+            drawPhase = .scanning
+            drawPreviewTitle = HomeMapKoreanCopy.drawScanningTitle
+            drawHighlightedCardIDs = []
+        }
+        tickImpact.impactOccurred(intensity: 0.35)
+        try? await Task.sleep(for: .milliseconds(reduceMotion ? 120 : 330))
+        if !reduceMotion {
+            withAnimation(.snappy(duration: 0.18)) {
+                drawHighlightedCardIDs = []
+            }
+            try? await Task.sleep(for: .milliseconds(190))
         }
 
         guard !Task.isCancelled else {
-            drawPreviewTitle = nil
-            isDrawing = false
+            resetDrawState()
             return
         }
 
-        withAnimation(.snappy(duration: 0.28)) {
+        if reduceMotion {
+            withAnimation(.easeInOut(duration: 0.16)) {
+                drawPhase = .locking
+                drawPreviewTitle = finalCard.title
+                drawCandidateTrail = [finalCard]
+            }
+            try? await Task.sleep(for: .milliseconds(180))
+        } else {
+            withAnimation(.snappy(duration: 0.16)) {
+                drawPhase = .shuffling
+            }
+            let intervals: [Int] = [54, 58, 64, 72, 84, 98, 116, 138, 166, 202, 246, 304]
+            let shuffledRun = expandedDrawRun(from: run, targetCount: intervals.count)
+            for (index, card) in shuffledRun.enumerated() {
+                guard !Task.isCancelled else {
+                    resetDrawState()
+                    return
+                }
+                withAnimation(.snappy(duration: 0.13)) {
+                    drawPreviewTitle = card.title
+                    drawCandidateTrail = Array(shuffledRun.prefix(index + 1).suffix(3))
+                    drawHighlightedCardIDs = [card.id]
+                }
+                if index % 2 == 0 || index == shuffledRun.indices.last {
+                    tickImpact.impactOccurred(intensity: index == shuffledRun.indices.last ? 0.7 : 0.36)
+                }
+                try? await Task.sleep(for: .milliseconds(intervals[min(index, intervals.count - 1)]))
+            }
+        }
+
+        guard !Task.isCancelled else {
+            resetDrawState()
+            return
+        }
+
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.72)) {
+            drawPhase = .locking
+            drawPreviewTitle = finalCard.title
+            drawCandidateTrail = Array(drawCandidateTrail.suffix(2)) + [finalCard]
+            drawHighlightedCardIDs = [finalCard.id]
+        }
+        lockImpact.impactOccurred(intensity: 0.85)
+        try? await Task.sleep(for: .milliseconds(reduceMotion ? 120 : 260))
+
+        guard !Task.isCancelled else {
+            resetDrawState()
+            return
+        }
+
+        withAnimation(.snappy(duration: reduceMotion ? 0.16 : 0.28)) {
             selectedCardID = finalCard.id
+            drawRevealedCardID = finalCard.id
+            drawHighlightedCardIDs = []
             viewModel.recordRecentPick(cardID: finalCard.id)
             camera = KakaoMapCamera(latitude: finalCard.latitude, longitude: finalCard.longitude, level: KakaoMapCamera.focusedLevel)
-            drawPreviewTitle = nil
-            isDrawing = false
+            drawPhase = .revealed
         }
         success.notificationOccurred(.success)
+
+        try? await Task.sleep(for: .milliseconds(reduceMotion ? 120 : 520))
+        withAnimation(.snappy(duration: 0.18)) {
+            resetDrawState()
+        }
+    }
+
+    private func resetDrawState() {
+        drawPreviewTitle = nil
+        drawCandidateTrail = []
+        drawHighlightedCardIDs = []
+        drawRevealedCardID = nil
+        drawPhase = .idle
+        isDrawing = false
     }
 
     private func drawRun(from pool: [RecommendationCardModel]) -> [RecommendationCardModel] {
-        let count = min(max(pool.count, 1), 4)
+        let count = min(max(pool.count, 1), 5)
         let shuffled = pool.shuffled()
         if shuffled.count <= count {
             return shuffled
         }
         return Array(shuffled.prefix(count))
+    }
+
+    private func expandedDrawRun(from run: [RecommendationCardModel], targetCount: Int) -> [RecommendationCardModel] {
+        guard !run.isEmpty else { return [] }
+        var expanded: [RecommendationCardModel] = []
+        while expanded.count < targetCount {
+            expanded.append(contentsOf: run.shuffled())
+        }
+        expanded = Array(expanded.prefix(targetCount))
+        if let finalCard = run.last {
+            expanded[expanded.count - 1] = finalCard
+        }
+        return expanded
     }
 
     private var stateIcon: String {
@@ -486,9 +602,9 @@ struct HomeRecommendationScreen: View {
         case .loading:
             HomeMapKoreanCopy.loadingMessage
         case .results:
-            "지도 안 후보를 선택해 결과를 확인하세요."
+            "뽑기 결과를 확인하세요."
         case .empty:
-            HomeMapKoreanCopy.emptyMessage
+            pickerMode == .restaurant ? HomeMapKoreanCopy.restaurantEmptyMessage : HomeMapKoreanCopy.emptyMessage
         case .error(let message):
             message
         }
@@ -496,10 +612,252 @@ struct HomeRecommendationScreen: View {
 }
 
 enum HomeMapKoreanCopy {
-    static let readyMessage = "시연용 기본 위치의 지도 후보를 준비합니다."
-    static let loadingMessage = "지도 안 후보를 불러오고 있습니다."
-    static let emptyMessage = "지도를 움직이거나 반경을 넓혀 추천 후보를 다시 확인해 주세요."
-    static let viewportEmptyMessage = "지도를 축소하거나 다른 종류를 선택하세요."
+    static let readyMessage = "위치를 확인하고 있습니다."
+    static let loadingMessage = "가까운 장소를 불러오고 있습니다."
+    static let emptyMessage = ""
+    static let restaurantEmptyMessage = ""
+    static let viewportEmptyMessage = ""
+    static let drawScanningTitle = "현재 범위 확인 중"
+
+    static func rangePickTitle(for modeTitle: String) -> String {
+        "이 범위에서 \(modeTitle) 뽑기"
+    }
+}
+
+
+private enum DrawPhase: Equatable {
+    case idle
+    case scanning
+    case shuffling
+    case locking
+    case revealed
+
+    var buttonTitle: String {
+        switch self {
+        case .idle:
+            "이 범위에서 뽑기"
+        case .scanning:
+            "스캔 중"
+        case .shuffling:
+            "섞는 중"
+        case .locking:
+            "잠금"
+        case .revealed:
+            "완료"
+        }
+    }
+
+    var accessibilityTitle: String {
+        switch self {
+        case .idle:
+            "뽑기 준비"
+        case .scanning:
+            "지도 범위 확인 중"
+        case .shuffling:
+            "섞는 중"
+        case .locking:
+            "결과 확정 중"
+        case .revealed:
+            "뽑기 완료"
+        }
+    }
+
+    var overlayTitle: String {
+        switch self {
+        case .idle:
+            "준비"
+        case .scanning:
+            "스캔 중"
+        case .shuffling:
+            "섞는 중"
+        case .locking:
+            "여기로 결정"
+        case .revealed:
+            "뽑기 완료"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .idle:
+            "sparkles"
+        case .scanning:
+            "scope"
+        case .shuffling:
+            "shuffle"
+        case .locking:
+            "mappin.and.ellipse"
+        case .revealed:
+            "checkmark.seal.fill"
+        }
+    }
+}
+
+private struct RangePickButtonLabel: View {
+    let title: String
+    let phase: DrawPhase
+    let compact: Bool
+
+    var body: some View {
+        Text(title)
+            .lineLimit(1)
+        .font(.subheadline.weight(.semibold))
+        .foregroundStyle(PeroMapStyle.ink)
+        .padding(.leading, 12)
+        .padding(.trailing, 16)
+        .frame(height: compact ? 38 : 44)
+    }
+}
+
+private struct RangePickButtonStyle: ButtonStyle {
+    let isActive: Bool
+    let reduceMotion: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(alignment: .center) {
+                if isActive || configuration.isPressed {
+                    Capsule()
+                        .fill(PeroMapStyle.accentPale.opacity(configuration.isPressed ? 0.90 : 0.55))
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 3)
+                }
+            }
+            .overlay(alignment: .center) {
+                if isActive && !reduceMotion {
+                    Capsule()
+                        .stroke(PeroMapStyle.accentDeep.opacity(0.55), lineWidth: 1.2)
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 3)
+                        .transition(.opacity)
+                }
+            }
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.94 : 1)
+            .animation(.spring(response: 0.22, dampingFraction: 0.72), value: configuration.isPressed)
+            .animation(.snappy(duration: 0.18), value: isActive)
+    }
+}
+
+private struct DrawExperienceOverlay: View {
+    let phase: DrawPhase
+    let previewTitle: String?
+    let candidateTrail: [RecommendationCardModel]
+    let modeTitle: String
+    let reduceMotion: Bool
+
+    var body: some View {
+        ZStack {
+            if !reduceMotion {
+                DrawRadarPulse(phase: phase)
+                    .allowsHitTesting(false)
+            }
+            DrawTickerCard(
+                phase: phase,
+                previewTitle: previewTitle,
+                candidateTrail: candidateTrail,
+                modeTitle: modeTitle,
+                reduceMotion: reduceMotion
+            )
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var accessibilityLabel: String {
+        if let previewTitle, !previewTitle.isEmpty {
+            "\(phase.accessibilityTitle), \(previewTitle)"
+        } else {
+            phase.accessibilityTitle
+        }
+    }
+}
+
+private struct DrawRadarPulse: View {
+    let phase: DrawPhase
+
+    var body: some View {
+        TimelineView(.animation) { timeline in
+            let base = timeline.date.timeIntervalSinceReferenceDate
+            ZStack {
+                ForEach(0..<3, id: \.self) { index in
+                    let progress = (base * 0.82 + Double(index) * 0.34).truncatingRemainder(dividingBy: 1)
+                    Circle()
+                        .stroke(PeroMapStyle.accentDeep.opacity(opacity(for: progress)), lineWidth: 2)
+                        .frame(width: 116 + CGFloat(progress) * 190, height: 116 + CGFloat(progress) * 190)
+                        .scaleEffect(phase == .locking ? 0.76 : 1)
+                }
+                Circle()
+                    .fill(PeroMapStyle.accent.opacity(0.12))
+                    .frame(width: phase == .locking ? 86 : 72, height: phase == .locking ? 86 : 72)
+                Image(systemName: phase == .locking ? "mappin.and.ellipse" : "scope")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundStyle(PeroMapStyle.accentDeep)
+            }
+            .animation(.snappy(duration: 0.22), value: phase)
+        }
+    }
+
+    private func opacity(for progress: Double) -> Double {
+        max(0.04, 0.32 * (1 - progress))
+    }
+}
+
+private struct DrawTickerCard: View {
+    let phase: DrawPhase
+    let previewTitle: String?
+    let candidateTrail: [RecommendationCardModel]
+    let modeTitle: String
+    let reduceMotion: Bool
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Label(phase.overlayTitle, systemImage: phase.systemImage)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(PeroMapStyle.muted)
+
+            Text(displayTitle)
+                .font(.title3.weight(.bold))
+                .foregroundStyle(PeroMapStyle.ink)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .id(displayTitle)
+                .transition(.opacity.combined(with: .scale(scale: reduceMotion ? 1 : 0.95)))
+
+            if !candidateTrail.isEmpty && !reduceMotion {
+                HStack(spacing: -7) {
+                    ForEach(candidateTrail.suffix(3)) { card in
+                        Text(card.category.prefix(2))
+                            .font(.caption2.weight(.black))
+                            .foregroundStyle(PeroMapStyle.inkSoft)
+                            .frame(width: 34, height: 34)
+                            .background(PeroMapStyle.accentPale, in: Circle())
+                            .overlay { Circle().stroke(PeroMapStyle.surface, lineWidth: 2) }
+                            .shadow(color: PeroMapStyle.ink.opacity(0.08), radius: 5, y: 2)
+                    }
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.9)))
+            }
+        }
+        .padding(.horizontal, 22)
+        .padding(.vertical, 18)
+        .frame(maxWidth: 286)
+        .background(PeroMapStyle.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(phase == .locking ? PeroMapStyle.accentDeep : PeroMapStyle.accent, lineWidth: phase == .locking ? 2 : 1.4)
+        }
+        .shadow(color: .black.opacity(0.15), radius: 20, y: 9)
+        .scaleEffect(phase == .locking && !reduceMotion ? 1.04 : 1)
+        .animation(.spring(response: 0.26, dampingFraction: 0.76), value: phase)
+    }
+
+    private var displayTitle: String {
+        if let previewTitle, !previewTitle.isEmpty {
+            return previewTitle
+        }
+        return "\(modeTitle) 확인 중"
+    }
 }
 
 private struct RandomMapResultSheet: View {
@@ -527,6 +885,9 @@ private struct RandomMapResultSheet: View {
             }
 
             HStack(spacing: 10) {
+                KakaoTalkShareButton(card: card)
+                    .buttonStyle(.bordered)
+
                 if let appleMapsURL = card.appleMapsURL {
                     Link(destination: appleMapsURL) {
                         Label("길찾기", systemImage: "arrow.triangle.turn.up.right.circle")
@@ -552,6 +913,78 @@ private struct RandomMapResultSheet: View {
     }
 }
 
+
+private struct KakaoTalkShareButton: View {
+    let card: RecommendationCardModel
+    @State private var shareErrorMessage: String?
+
+    var body: some View {
+        Button(action: shareToKakaoTalk) {
+            Label("카톡", systemImage: "message.fill")
+                .frame(maxWidth: .infinity)
+        }
+        .alert("카카오톡 공유 실패", isPresented: Binding(
+            get: { shareErrorMessage != nil },
+            set: { if !$0 { shareErrorMessage = nil } }
+        )) {
+            Button("확인", role: .cancel) { shareErrorMessage = nil }
+        } message: {
+            Text(shareErrorMessage ?? "")
+        }
+    }
+
+    private func shareToKakaoTalk() {
+        let kakaoMapURL = card.kakaoMapMobileWebURL
+        let peroLink = Link(
+            webUrl: kakaoMapURL,
+            mobileWebUrl: kakaoMapURL,
+            iosExecutionParams: ["placeId": card.id]
+        )
+        let kakaoMapLink = Link(webUrl: kakaoMapURL, mobileWebUrl: kakaoMapURL)
+        let template = FeedTemplate(
+            content: Content(
+                title: card.kakaoShareTitle,
+                imageUrl: card.kakaoShareImageURL,
+                imageWidth: 800,
+                imageHeight: 400,
+                description: card.kakaoShareDescription,
+                link: peroLink
+            ),
+            itemContent: ItemContent(
+                profileText: "Pero 랜덤 뽑기",
+                titleImageText: card.kakaoShareBadge,
+                titleImageCategory: card.category,
+                items: card.kakaoShareItems,
+                sum: "카카오맵에서 바로 보기"
+            ),
+            social: Social(sharedCount: 1),
+            buttons: [
+                Button(title: "카카오맵에서 보기", link: kakaoMapLink),
+                Button(title: "Pero에서 다시 뽑기", link: peroLink)
+            ]
+        )
+
+        guard ShareApi.isKakaoTalkSharingAvailable() else {
+            shareErrorMessage = "이 기기에 카카오톡이 설치되어 있지 않습니다."
+            return
+        }
+
+        ShareApi.shared.shareDefault(templatable: template, shareType: .default, limit: 5) { sharingResult, error in
+            DispatchQueue.main.async {
+                if let error {
+                    shareErrorMessage = error.localizedDescription
+                    return
+                }
+                guard let url = sharingResult?.url else {
+                    shareErrorMessage = "공유 링크를 만들지 못했습니다."
+                    return
+                }
+                UIApplication.shared.open(url)
+            }
+        }
+    }
+}
+
 private struct FestivalInfoPanel: View {
     let card: RecommendationCardModel
 
@@ -569,6 +1002,14 @@ private struct FestivalInfoPanel: View {
                     .foregroundStyle(PeroMapStyle.inkSoft)
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let officialURL = card.officialURL {
+                Link(destination: officialURL) {
+                    Label("공식 사이트", systemImage: "safari")
+                        .font(.caption.weight(.bold))
+                }
+                .foregroundStyle(PeroMapStyle.accentDeep)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -597,7 +1038,75 @@ struct FlowMetadataRow: View {
 
 private extension RecommendationCardModel {
     var hasFestivalDetail: Bool {
-        eventPeriodLabel != nil || eventSummary != nil
+        eventPeriodLabel != nil || eventSummary != nil || officialURL != nil
+    }
+
+    var kakaoShareTitle: String {
+        "Pero가 랜덤으로 뽑은 곳"
+    }
+
+    var kakaoShareBadge: String {
+        switch randomSlotKind {
+        case .restaurant:
+            "오늘의 식당"
+        case .festival:
+            "지금 갈 축제"
+        case .attraction:
+            "근처 장소"
+        }
+    }
+
+    var kakaoShareDescription: String {
+        let placeLine = "\(title) · \(category)"
+        let addressLine = !roadAddress.isEmpty ? roadAddress : district
+        if addressLine.isEmpty {
+            return placeLine
+        }
+        return "\(placeLine)\n\(addressLine)"
+    }
+
+    var kakaoShareItems: [ItemInfo] {
+        var items = [
+            ItemInfo(item: "뽑기 결과", itemOp: title),
+            ItemInfo(item: "카테고리", itemOp: category)
+        ]
+        let address = !roadAddress.isEmpty ? roadAddress : district
+        if !address.isEmpty {
+            items.append(ItemInfo(item: "위치", itemOp: address))
+        }
+        if sourceAttribution == "kakaoLocal" || id.hasPrefix("kakao-") {
+            items.append(ItemInfo(item: "출처", itemOp: "카카오 로컬 캐시"))
+        }
+        return Array(items.prefix(4))
+    }
+
+    var kakaoMapMobileWebURL: URL {
+        if let placeID = kakaoPlaceID {
+            return URL(string: "https://m.map.kakao.com/scheme/place?id=\(placeID)")!
+        }
+        let query = "\(title) \(roadAddress.isEmpty ? district : roadAddress)".trimmedForURLQuery
+        return URL(string: "https://m.map.kakao.com/scheme/search?q=\(query)&p=\(latitude),\(longitude)")!
+    }
+
+    var kakaoShareImageURL: URL? {
+        guard
+            let baseURLString = Bundle.main.object(forInfoDictionaryKey: "PERO_API_BASE_URL") as? String,
+            let baseURL = URL(string: baseURLString)
+        else { return nil }
+        return baseURL.appendingPathComponent("assets/share/pero-random.png")
+    }
+
+    private var kakaoPlaceID: String? {
+        guard id.hasPrefix("kakao-") else { return nil }
+        let placeID = String(id.dropFirst("kakao-".count))
+        return placeID.isEmpty ? nil : placeID
+    }
+}
+
+private extension String {
+    var trimmedForURLQuery: String {
+        trimmingCharacters(in: .whitespacesAndNewlines)
+            .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? self
     }
 }
 

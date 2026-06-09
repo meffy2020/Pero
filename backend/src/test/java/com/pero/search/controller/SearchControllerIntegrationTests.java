@@ -134,6 +134,65 @@ class SearchControllerIntegrationTests {
     }
 
 
+
+    @Test
+    void placesEndpointUsesKakaoCacheForRestaurantCandidatesInBounds() throws Exception {
+        String body = mockMvc.perform(get("/api/places")
+                        .param("latitude", "37.6542")
+                        .param("longitude", "127.0568")
+                        .param("radiusKm", "3")
+                        .param("north", "37.68")
+                        .param("south", "37.61")
+                        .param("east", "127.10")
+                        .param("west", "127.02")
+                        .param("mode", "restaurant")
+                        .param("source", "kakaoLocal")
+                        .param("limit", "20")
+                        .param("includeTourApi", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fallbackUsed").value(false))
+                .andExpect(jsonPath("$.cacheMiss").value(false))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        PlacesResponse response = objectMapper.readValue(body, PlacesResponse.class);
+
+        assertThat(response.total()).isPositive();
+        assertThat(response.randomScope()).contains("source=kakaoLocal");
+        assertThat(response.places()).allSatisfy(place -> assertThat(place.sourceAttribution()).isEqualTo("kakaoLocal"));
+        assertThat(response.places()).anySatisfy(place ->
+                assertThat(place.address() + place.roadAddress() + place.name()).containsAnyOf("노원", "하계", "중계", "상계", "공릉"));
+    }
+
+    @Test
+    void placesEndpointDoesNotExpandKakaoSourceOutsideVisibleBounds() throws Exception {
+        String body = mockMvc.perform(get("/api/places")
+                        .param("latitude", "0.0")
+                        .param("longitude", "0.0")
+                        .param("radiusKm", "1")
+                        .param("north", "0.01")
+                        .param("south", "-0.01")
+                        .param("east", "0.01")
+                        .param("west", "-0.01")
+                        .param("mode", "restaurant")
+                        .param("source", "kakaoLocal")
+                        .param("limit", "20")
+                        .param("includeTourApi", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fallbackUsed").value(false))
+                .andExpect(jsonPath("$.cacheMiss").value(true))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        PlacesResponse response = objectMapper.readValue(body, PlacesResponse.class);
+
+        assertThat(response.total()).isZero();
+        assertThat(response.randomScope()).contains("source=kakaoLocal");
+        assertThat(response.places()).isEmpty();
+    }
+
     @Test
     void placesEndpointExpandsScopeWhenVisibleBoundsHaveNoCandidates() throws Exception {
         String body = mockMvc.perform(get("/api/places")
@@ -181,7 +240,8 @@ class SearchControllerIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "mode": "cafe",
+                                  "mode": "restaurant",
+                                  "source": "kakaoLocal",
                                   "limit": 10,
                                   "includeTourApi": false
                                 }
@@ -190,8 +250,10 @@ class SearchControllerIntegrationTests {
                 .andReturn();
 
         JsonNode cafeJson = objectMapper.readTree(cafeResult.getResponse().getContentAsByteArray());
-        assertThat(cafeJson.path("fallbackUsed").asBoolean()).isTrue();
-        assertThat(cafeJson.path("randomScope").asText()).contains("mode 후보 부족");
+        assertThat(cafeJson.path("fallbackUsed").asBoolean()).isFalse();
+        assertThat(cafeJson.path("randomScope").asText()).contains("source=kakaoLocal");
+        assertThat(cafeJson.path("nearbyPick").path("place").path("id").asText()).startsWith("kakao-");
+        assertThat(cafeJson.path("nearbyPick").path("place").path("sourceAttribution").asText()).isEqualTo("kakaoLocal");
         assertThat(cafeJson.path("nearbyPick").path("place").path("tourApi").isNull()).isTrue();
     }
 
@@ -393,6 +455,61 @@ class SearchControllerIntegrationTests {
                                 + " "
                                 + place.path("district").asText()
                 ).contains("서울"));
+    }
+
+
+
+    @Test
+    void restaurantPlacesUseOnlyKakaoRestaurantCacheWithoutCafeLikeResults() throws Exception {
+        String body = mockMvc.perform(get("/api/places")
+                        .param("latitude", "37.6367")
+                        .param("longitude", "127.0679")
+                        .param("radiusKm", "10")
+                        .param("north", "37.70")
+                        .param("south", "37.60")
+                        .param("east", "127.12")
+                        .param("west", "127.02")
+                        .param("mode", "restaurant")
+                        .param("source", "kakaoLocal")
+                        .param("limit", "80")
+                        .param("includeTourApi", "false"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        JsonNode json = objectMapper.readTree(body);
+        JsonNode places = json.path("places");
+
+        assertThat(json.path("randomScope").asText()).contains("source=kakaoLocal");
+        assertThat(json.path("fallbackUsed").asBoolean()).isFalse();
+        assertThat(places.isArray()).isTrue();
+        assertThat(places.size()).isGreaterThan(0);
+        assertThat(places).allSatisfy(place -> {
+            String haystack = String.join(" ",
+                    place.path("name").asText(),
+                    place.path("category").asText(),
+                    place.path("summary").asText());
+            assertThat(haystack).doesNotContain(
+                    "카페", "커피", "스타벅스", "투썸", "컴포즈", "메가", "빽다방", "이디야",
+                    "디저트", "베이커리", "제과", "파리바게뜨", "뚜레쥬르", "도넛", "아이스크림",
+                    "브런치", "샐러드", "샌드위치", "술집", "호프", "와인바", "칵테일바");
+        });
+    }
+
+    @Test
+    void eventsEndpointDefaultsToOnlyActiveEvents() throws Exception {
+        String body = mockMvc.perform(get("/api/events")
+                        .param("limit", "10"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        JsonNode events = objectMapper.readTree(body).path("events");
+
+        assertThat(events.isArray()).isTrue();
+        assertThat(events).allSatisfy(event -> assertThat(event.path("status").asText()).isEqualTo("ACTIVE"));
     }
 
     @Test

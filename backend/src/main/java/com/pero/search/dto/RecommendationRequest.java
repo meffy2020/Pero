@@ -40,12 +40,13 @@ public record RecommendationRequest(
         String density,
         String category,
         String mode,
+        String source,
         Integer limit,
         List<String> recentPlaceIds,
         Boolean includeTourApi
 ) {
     public RecommendationRequest(String themeId, Double latitude, Double longitude, Double radiusKm) {
-        this(themeId, latitude, longitude, radiusKm, null, null, null, null, null, null, null, null, null, List.of(), true);
+        this(themeId, latitude, longitude, radiusKm, null, null, null, null, null, null, null, null, null, null, List.of(), true);
     }
 
     public double resolvedRadiusKm() {

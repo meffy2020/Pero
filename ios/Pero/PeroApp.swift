@@ -2,6 +2,7 @@ import SwiftUI
 import Foundation
 import PeroCore
 import KakaoMapsSDK
+import KakaoSDKCommon
 
 @main
 struct PeroApp: App {
@@ -30,6 +31,7 @@ enum AppRuntimeConfiguration {
             preconditionFailure("Missing KAKAO_MAP_APP_KEY")
         }
         SDKInitializer.InitSDK(appKey: appKey, phase: .real)
+        KakaoSDK.initSDK(appKey: appKey)
         #if DEBUG
         let bundleID = bundle.bundleIdentifier ?? "unknown"
         let keySuffix = String(appKey.suffix(6))
@@ -56,6 +58,9 @@ enum AppRuntimeConfiguration {
         guard let baseURL = resolvedLiveBaseURL(baseURLString) else {
             preconditionFailure("Invalid PERO_API_BASE_URL: \(baseURLString)")
         }
+        #if DEBUG
+        print("Pero API baseURL=\(baseURL.absoluteString)")
+        #endif
         return PeroAPIProviderFactory.live(baseURL: baseURL)
     }
 
@@ -66,7 +71,11 @@ enum AppRuntimeConfiguration {
             return StaticLocationProvider.preview
         }
 
+        #if targetEnvironment(simulator)
+        return StaticLocationProvider.preview
+        #else
         return CoreLocationProvider()
+        #endif
     }
 
     static func resolvedLiveBaseURL(_ baseURLString: String) -> URL? {

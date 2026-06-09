@@ -47,6 +47,7 @@ public struct RecommendationRequest: Codable, Equatable, Sendable {
     public var density: String?
     public var category: String?
     public var mode: String?
+    public var source: String?
     public var limit: Int?
     public var recentPlaceIds: [String]?
     public var includeTourApi: Bool?
@@ -64,6 +65,7 @@ public struct RecommendationRequest: Codable, Equatable, Sendable {
         density: String? = nil,
         category: String? = nil,
         mode: String? = nil,
+        source: String? = nil,
         limit: Int? = nil,
         recentPlaceIds: [String]? = nil,
         includeTourApi: Bool? = nil
@@ -80,6 +82,7 @@ public struct RecommendationRequest: Codable, Equatable, Sendable {
         self.density = density
         self.category = category
         self.mode = mode
+        self.source = source
         self.limit = limit
         self.recentPlaceIds = recentPlaceIds
         self.includeTourApi = includeTourApi
@@ -102,14 +105,16 @@ public struct PlacesResponse: Decodable, Equatable, Sendable {
     public let generatedAt: Date?
     public let fallbackUsed: Bool?
     public let randomScope: String?
+    public let cacheMiss: Bool?
     public let total: Int
     public let places: [PlaceListItem]
 
-    public init(source: SearchSourceMeta, generatedAt: Date? = nil, fallbackUsed: Bool? = nil, randomScope: String? = nil, total: Int, places: [PlaceListItem]) {
+    public init(source: SearchSourceMeta, generatedAt: Date? = nil, fallbackUsed: Bool? = nil, randomScope: String? = nil, cacheMiss: Bool? = nil, total: Int, places: [PlaceListItem]) {
         self.source = source
         self.generatedAt = generatedAt
         self.fallbackUsed = fallbackUsed
         self.randomScope = randomScope
+        self.cacheMiss = cacheMiss
         self.total = total
         self.places = places
     }

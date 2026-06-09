@@ -17,7 +17,7 @@ struct NavigationModelTests {
 
         #expect(card.mapFirstSummaryChips == ["0.8km", "중구", "공원"])
         #expect(card.mapFirstAccessibilitySummary == "가까운 산책 추천, 서울 반려 산책 공원, 0.8km, 중구, 공원")
-        #expect(card.mapPrimaryCTATitle == "지도에서 장소 뽑기")
+        #expect(card.mapPrimaryCTATitle == "이 범위에서 장소 뽑기")
 
         let url = try #require(card.appleMapsURL)
         let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
@@ -45,11 +45,11 @@ struct NavigationModelTests {
         )
 
         #expect(place.randomSlotKind == .attraction)
-        #expect(place.mapPrimaryCTATitle == "지도에서 장소 뽑기")
+        #expect(place.mapPrimaryCTATitle == "이 범위에서 장소 뽑기")
         #expect(restaurant.randomSlotKind == .restaurant)
-        #expect(restaurant.mapPrimaryCTATitle == "지도에서 식당 뽑기")
+        #expect(restaurant.mapPrimaryCTATitle == "이 범위에서 식당 뽑기")
         #expect(festival.randomSlotKind == .festival)
-        #expect(festival.mapPrimaryCTATitle == "지도에서 축제 뽑기")
+        #expect(festival.mapPrimaryCTATitle == "이 범위에서 축제 뽑기")
     }
 
     @Test func recommendationCardCategoryIconsStayPresentationOnly() {
@@ -104,8 +104,13 @@ struct NavigationModelTests {
         #expect(RecommendationPickerMode.attraction.poolCopy == "장소 핀")
         #expect(RecommendationPickerMode.festival.poolCopy == "축제 핀")
         #expect(RecommendationPickerMode.attraction.apiMode == "tour")
-        #expect(RecommendationPickerMode.restaurant.apiMode == "cafe")
+        #expect(RecommendationPickerMode.attraction.apiCategory == nil)
+        #expect(RecommendationPickerMode.restaurant.apiMode == "restaurant")
+        #expect(RecommendationPickerMode.restaurant.apiCategory == nil)
+        #expect(RecommendationPickerMode.restaurant.apiSource == "kakaoLocal")
+        #expect(RecommendationPickerMode.restaurant.apiActiveFestival == nil)
         #expect(RecommendationPickerMode.festival.apiCategory == "행사/공연/축제")
+        #expect(RecommendationPickerMode.festival.apiActiveFestival == true)
     }
 
     @Test func placePoolNormalizerKeepsBackendCategorySeparateFromPickerBucket() throws {
@@ -233,11 +238,14 @@ struct NavigationModelTests {
         #expect(provider.lastRequest?.west == 128.9)
         #expect(provider.lastRequest?.zoom == 8)
         #expect(provider.lastRequest?.density == "summary")
-        #expect(provider.lastRequest?.mode == "cafe")
-        #expect(provider.lastRequest?.category == "카페")
+        #expect(provider.lastRequest?.mode == "restaurant")
+        #expect(provider.lastRequest?.category == nil)
+        #expect(provider.lastRequest?.source == "kakaoLocal")
         #expect(provider.lastRequest?.recentPlaceIds == ["preview-market"])
         #expect(provider.lastPlacesQuery?.north == 35.3)
-        #expect(provider.lastPlacesQuery?.mode == "cafe")
+        #expect(provider.lastPlacesQuery?.mode == "restaurant")
+        #expect(provider.lastPlacesQuery?.category == nil)
+        #expect(provider.lastPlacesQuery?.source == "kakaoLocal")
         #expect(provider.lastPlacesQuery?.includeTourApi == false)
     }
 
@@ -284,7 +292,11 @@ struct NavigationModelTests {
         let liveLocationProvider = AppRuntimeConfiguration.makeLocationProvider(environment: [:])
         let previewLocationProvider = AppRuntimeConfiguration.makeLocationProvider(environment: ["PERO_USE_PREVIEW": "1"])
 
+        #if targetEnvironment(simulator)
+        #expect(liveLocationProvider is StaticLocationProvider)
+        #else
         #expect(liveLocationProvider is CoreLocationProvider)
+        #endif
         #expect(previewLocationProvider is StaticLocationProvider)
     }
 

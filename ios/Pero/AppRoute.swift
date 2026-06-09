@@ -16,6 +16,7 @@ struct RecommendationCardModel: Identifiable, Hashable {
     let tags: [String]
     let eventPeriodLabel: String?
     let eventSummary: String?
+    let officialURL: URL?
 
     init(
         id: String,
@@ -31,7 +32,8 @@ struct RecommendationCardModel: Identifiable, Hashable {
         sourceAttribution: String,
         tags: [String],
         eventPeriodLabel: String? = nil,
-        eventSummary: String? = nil
+        eventSummary: String? = nil,
+        officialURL: URL? = nil
     ) {
         self.id = id
         self.title = title
@@ -47,6 +49,7 @@ struct RecommendationCardModel: Identifiable, Hashable {
         self.tags = tags
         self.eventPeriodLabel = eventPeriodLabel
         self.eventSummary = eventSummary
+        self.officialURL = officialURL
     }
 }
 
@@ -62,11 +65,11 @@ extension RecommendationCardModel {
     var mapPrimaryCTATitle: String {
         switch randomSlotKind {
         case .attraction:
-            "지도에서 장소 뽑기"
+            "이 범위에서 장소 뽑기"
         case .restaurant:
-            "지도에서 식당 뽑기"
+            "이 범위에서 식당 뽑기"
         case .festival:
-            "지도에서 축제 뽑기"
+            "이 범위에서 축제 뽑기"
         }
     }
 
@@ -82,7 +85,6 @@ extension RecommendationCardModel {
         if primarySource.contains("식사")
             || primarySource.contains("식당")
             || primarySource.contains("음식점")
-            || primarySource.contains("카페")
             || primarySource.localizedCaseInsensitiveContains("meal")
             || primarySource.localizedCaseInsensitiveContains("restaurant") {
             return .restaurant
@@ -92,7 +94,7 @@ extension RecommendationCardModel {
 
     var categoryIconName: String {
         switch category {
-        case let value where value.contains("음식") || value.contains("식당") || value.contains("카페"):
+        case let value where value.contains("음식") || value.contains("식당") || value.contains("레스토랑"):
             "fork.knife.circle.fill"
         case let value where value.contains("행사") || value.contains("축제") || value.contains("공연"):
             "sparkles"
@@ -107,6 +109,29 @@ extension RecommendationCardModel {
         default:
             "leaf.circle.fill"
         }
+    }
+
+    var mapMarkerKind: KakaoMapMarker.Kind {
+        let source = "\(subtitle) \(category) \(tags.joined(separator: " "))"
+        if source.contains("행사") || source.contains("축제") || source.contains("공연") {
+            return .festival
+        }
+        if source.contains("음식") || source.contains("식당") || source.contains("레스토랑") {
+            return .restaurant
+        }
+        if source.contains("쇼핑") || source.contains("시장") {
+            return .shopping
+        }
+        if source.contains("숙박") || source.contains("호텔") {
+            return .lodging
+        }
+        if source.contains("레포츠") || source.contains("스포츠") || source.contains("체험") {
+            return .activity
+        }
+        if source.contains("전시") || source.contains("문화") || source.contains("박물관") || source.contains("미술") {
+            return .culture
+        }
+        return .attraction
     }
 
     var appleMapsURL: URL? {
@@ -184,16 +209,30 @@ enum RecommendationPickerMode: String, CaseIterable, Hashable, Identifiable {
     var apiMode: String {
         switch self {
         case .attraction: "tour"
-        case .restaurant: "cafe"
+        case .restaurant: "restaurant"
         case .festival: "festival"
         }
     }
 
-    var apiCategory: String {
+    var apiCategory: String? {
         switch self {
-        case .attraction: "관광지"
-        case .restaurant: "카페"
+        case .attraction: nil
+        case .restaurant: nil
         case .festival: "행사/공연/축제"
+        }
+    }
+
+    var apiSource: String? {
+        switch self {
+        case .restaurant: "kakaoLocal"
+        default: nil
+        }
+    }
+
+    var apiActiveFestival: Bool? {
+        switch self {
+        case .festival: true
+        default: nil
         }
     }
 
@@ -226,7 +265,7 @@ enum RecommendationState: Equatable {
         case .ready: "지도 준비"
         case .loading: "지금 갈 곳 찾는 중"
         case .results: "추천 결과"
-        case .empty: "추천 후보 없음"
+        case .empty: ""
         case .error: "연결 확인 필요"
         }
     }

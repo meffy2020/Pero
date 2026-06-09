@@ -13,6 +13,7 @@ public record EventSeed(
         double longitude,
         String summary,
         String sourceAttribution,
+        String officialUrl,
         String relatedPlaceId
 ) {
 }

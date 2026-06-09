@@ -72,6 +72,19 @@ struct PlaceExplanationDetailScreen: View {
             InfoLine(icon: "road.lanes", title: "주소", value: card.roadAddress)
             InfoLine(icon: "tag", title: "분류", value: card.category)
             InfoLine(icon: "mappin.and.ellipse", title: "지역", value: card.district)
+            if let eventPeriodLabel = card.eventPeriodLabel {
+                InfoLine(icon: "calendar", title: "일정", value: eventPeriodLabel)
+            }
+            if let eventSummary = card.eventSummary {
+                InfoLine(icon: "text.alignleft", title: "축제 설명", value: eventSummary)
+            }
+            if let officialURL = card.officialURL {
+                Link(destination: officialURL) {
+                    Label("공식 사이트", systemImage: "safari")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+            }
         }
         .padding(18)
         .peroFloatingSurface(cornerRadius: 22)

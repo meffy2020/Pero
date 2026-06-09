@@ -17,7 +17,7 @@ import java.util.Set;
 @Component
 public class PlaceDataProviderRegistry {
 
-    private static final String DEFAULT_ORDER = "smartSeoul,koreaTour";
+    private static final String DEFAULT_ORDER = "kakaoLocal,smartSeoul,koreaTour";
 
     private final Map<String, PlaceDataProvider> providers;
     private final List<String> orderedProviderIds;

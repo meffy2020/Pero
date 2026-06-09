@@ -48,23 +48,39 @@ struct KakaoMapVisibleBounds: Equatable {
 }
 
 struct KakaoMapMarker: Equatable, Identifiable {
+    enum Kind: String, CaseIterable {
+        case attraction
+        case restaurant
+        case festival
+        case shopping
+        case lodging
+        case activity
+        case culture
+    }
+
     let id: String
     let latitude: Double
     let longitude: Double
+    let kind: Kind
     let isSelected: Bool
+    let isHighlighted: Bool
     let isUserLocation: Bool
 
     init(
         id: String,
         latitude: Double,
         longitude: Double,
+        kind: Kind = .attraction,
         isSelected: Bool,
+        isHighlighted: Bool = false,
         isUserLocation: Bool = false
     ) {
         self.id = id
         self.latitude = latitude
         self.longitude = longitude
+        self.kind = kind
         self.isSelected = isSelected
+        self.isHighlighted = isHighlighted
         self.isUserLocation = isUserLocation
     }
 
@@ -111,8 +127,6 @@ struct KakaoMapView: UIViewRepresentable {
         private enum Constants {
             static let viewName = "pero-map"
             static let layerID = "pero-native-marker-layer"
-            static let regularStyleID = "pero-native-marker-regular"
-            static let selectedStyleID = "pero-native-marker-selected"
             static let userLocationStyleID = "pero-native-marker-user-location"
         }
 
@@ -308,7 +322,7 @@ struct KakaoMapView: UIViewRepresentable {
                     styleID: styleID(for: marker),
                     poiID: marker.id
                 )
-                options.rank = marker.isUserLocation ? 1200 : (marker.isSelected ? 1000 : 1)
+                options.rank = marker.isUserLocation ? 1200 : (marker.isSelected ? 1100 : (marker.isHighlighted ? 900 : 1))
                 options.clickable = false
                 let poi = layer.addPoi(option: options, at: marker.mapPoint)
                 poi?.show()
@@ -331,21 +345,29 @@ struct KakaoMapView: UIViewRepresentable {
 
         private func registerMarkerStylesIfNeeded(manager: LabelManager) {
             guard !didRegisterMarkerStyles else { return }
-            manager.addPoiStyle(markerStyle(id: Constants.regularStyleID, selected: false))
-            manager.addPoiStyle(markerStyle(id: Constants.selectedStyleID, selected: true))
+            for kind in KakaoMapMarker.Kind.allCases {
+                manager.addPoiStyle(markerStyle(id: styleID(kind: kind, selected: false, highlighted: false), kind: kind, selected: false, highlighted: false))
+                manager.addPoiStyle(markerStyle(id: styleID(kind: kind, selected: true, highlighted: false), kind: kind, selected: true, highlighted: false))
+                manager.addPoiStyle(markerStyle(id: styleID(kind: kind, selected: false, highlighted: true), kind: kind, selected: false, highlighted: true))
+            }
             manager.addPoiStyle(userLocationStyle(id: Constants.userLocationStyleID))
             didRegisterMarkerStyles = true
         }
 
         private func styleID(for marker: KakaoMapMarker) -> String {
             if marker.isUserLocation { return Constants.userLocationStyleID }
-            return marker.isSelected ? Constants.selectedStyleID : Constants.regularStyleID
+            return styleID(kind: marker.kind, selected: marker.isSelected, highlighted: marker.isHighlighted)
         }
 
-        private func markerStyle(id: String, selected: Bool) -> PoiStyle {
+        private func styleID(kind: KakaoMapMarker.Kind, selected: Bool, highlighted: Bool) -> String {
+            let state = selected ? "selected" : (highlighted ? "highlighted" : "regular")
+            return "pero-native-marker-\(kind.rawValue)-\(state)"
+        }
+
+        private func markerStyle(id: String, kind: KakaoMapMarker.Kind, selected: Bool, highlighted: Bool) -> PoiStyle {
             let iconStyle = PoiIconStyle(
-                symbol: Self.markerImage(selected: selected),
-                anchorPoint: CGPoint(x: 0.5, y: 0.5),
+                symbol: Self.markerImage(kind: kind, selected: selected, highlighted: highlighted),
+                anchorPoint: CGPoint(x: 0.5, y: 1.0),
                 enableEntranceTransition: false,
                 enableExitTransition: false
             )
@@ -362,25 +384,178 @@ struct KakaoMapView: UIViewRepresentable {
             return PoiStyle(styleID: id, styles: [PerLevelPoiStyle(iconStyle: iconStyle, level: 0)])
         }
 
-        private static func markerImage(selected: Bool) -> UIImage {
-            let size = CGSize(width: selected ? 34 : 18, height: selected ? 34 : 18)
+        private static func markerImage(kind: KakaoMapMarker.Kind, selected: Bool, highlighted: Bool = false) -> UIImage {
+            if let assetImage = UIImage(named: markerAssetName(kind: kind)) {
+                return composedMarkerImage(assetImage: assetImage, kind: kind, selected: selected, highlighted: highlighted)
+            }
+            let size = CGSize(width: selected ? 42 : (highlighted ? 36 : 30), height: selected ? 50 : (highlighted ? 44 : 38))
             let renderer = UIGraphicsImageRenderer(size: size)
             return renderer.image { context in
-                let rect = CGRect(origin: .zero, size: size).insetBy(dx: selected ? 3 : 2, dy: selected ? 3 : 2)
                 let cgContext = context.cgContext
-                cgContext.setShadow(offset: CGSize(width: 0, height: 2), blur: selected ? 5 : 3, color: UIColor.black.withAlphaComponent(0.18).cgColor)
-                UIColor.white.setFill()
-                UIBezierPath(ovalIn: rect).fill()
+                let scale = min(size.width / 42, size.height / 50)
+                let bodyWidth = 30 * scale
+                let bodyHeight = 30 * scale
+                let bodyRect = CGRect(
+                    x: (size.width - bodyWidth) / 2,
+                    y: selected ? 3 : 4,
+                    width: bodyWidth,
+                    height: bodyHeight
+                )
+                let tip = CGPoint(x: size.width / 2, y: size.height - (selected ? 5 : 4))
+                let bodyCenter = CGPoint(x: bodyRect.midX, y: bodyRect.midY)
+                let fillColor = markerFillColor(kind: kind, selected: selected, highlighted: highlighted)
+                let strokeColor: UIColor = selected || highlighted
+                    ? UIColor.white
+                    : markerStrokeColor(kind: kind)
+
+                let shadowRect = CGRect(x: size.width / 2 - 8 * scale, y: size.height - 7 * scale, width: 16 * scale, height: 5 * scale)
+                UIColor.black.withAlphaComponent(selected ? 0.22 : (highlighted ? 0.20 : 0.15)).setFill()
+                UIBezierPath(ovalIn: shadowRect).fill()
+
+                let pinPath = UIBezierPath(arcCenter: bodyCenter, radius: bodyWidth / 2, startAngle: .pi * 0.88, endAngle: .pi * 2.12, clockwise: true)
+                pinPath.addQuadCurve(to: tip, controlPoint: CGPoint(x: bodyRect.maxX + 1.5 * scale, y: bodyRect.maxY + 9 * scale))
+                pinPath.addQuadCurve(to: CGPoint(x: bodyCenter.x - bodyWidth / 2 * cos(.pi * 0.12), y: bodyCenter.y + bodyHeight / 2 * sin(.pi * 0.12)), controlPoint: CGPoint(x: bodyRect.minX - 1.5 * scale, y: bodyRect.maxY + 9 * scale))
+                pinPath.close()
+
+                cgContext.setShadow(offset: CGSize(width: 0, height: selected ? 5 : (highlighted ? 4 : 3)), blur: selected ? 10 : (highlighted ? 9 : 6), color: UIColor.black.withAlphaComponent(selected ? 0.28 : (highlighted ? 0.25 : 0.20)).cgColor)
+                fillColor.setFill()
+                pinPath.fill()
                 cgContext.setShadow(offset: .zero, blur: 0, color: nil)
-                let innerInset = selected ? CGFloat(8) : CGFloat(5)
-                UIColor(red: 0.13, green: 0.13, blue: 0.12, alpha: 1).setFill()
-                UIBezierPath(ovalIn: rect.insetBy(dx: innerInset, dy: innerInset)).fill()
-                if selected {
-                    UIColor(red: 0.82, green: 0.54, blue: 0.18, alpha: 1).setStroke()
-                    let strokePath = UIBezierPath(ovalIn: rect.insetBy(dx: 1.5, dy: 1.5))
-                    strokePath.lineWidth = 3
-                    strokePath.stroke()
+
+                strokeColor.setStroke()
+                pinPath.lineWidth = selected ? 3 : (highlighted ? 2.6 : 2)
+                pinPath.stroke()
+
+                UIColor.white.withAlphaComponent(selected ? 0.95 : 0.92).setFill()
+                UIBezierPath(ovalIn: bodyRect.insetBy(dx: selected ? 8 : 6, dy: selected ? 8 : 6)).fill()
+                if let symbol = UIImage(systemName: markerSymbolName(kind: kind)) {
+                    let symbolInset = selected ? 9.5 * scale : 7.5 * scale
+                    let symbolRect = bodyRect.insetBy(dx: symbolInset, dy: symbolInset)
+                    let configuration = UIImage.SymbolConfiguration(pointSize: symbolRect.height, weight: .bold)
+                    let configured = symbol.withConfiguration(configuration).withTintColor(fillColor, renderingMode: .alwaysOriginal)
+                    configured.draw(in: symbolRect)
+                } else {
+                    fillColor.withAlphaComponent(selected ? 0.92 : 0.85).setFill()
+                    UIBezierPath(ovalIn: bodyRect.insetBy(dx: selected ? 12 : 9, dy: selected ? 12 : 9)).fill()
                 }
+
+                if selected || highlighted {
+                    UIColor.white.withAlphaComponent(0.34).setStroke()
+                    let shine = UIBezierPath()
+                    shine.move(to: CGPoint(x: bodyRect.minX + 9, y: bodyRect.minY + 8))
+                    shine.addQuadCurve(to: CGPoint(x: bodyRect.midX + 2, y: bodyRect.minY + 5), controlPoint: CGPoint(x: bodyRect.minX + 14, y: bodyRect.minY + 3))
+                    shine.lineWidth = 2
+                    shine.lineCapStyle = .round
+                    shine.stroke()
+                }
+            }
+        }
+
+        private static func composedMarkerImage(assetImage: UIImage, kind: KakaoMapMarker.Kind, selected: Bool, highlighted: Bool) -> UIImage {
+            let size = CGSize(width: selected ? 42 : (highlighted ? 36 : 30), height: selected ? 50 : (highlighted ? 44 : 38))
+            let renderer = UIGraphicsImageRenderer(size: size)
+            return renderer.image { context in
+                let cgContext = context.cgContext
+                let shadowRect = CGRect(x: size.width / 2 - 8, y: size.height - 7, width: 16, height: 5)
+                UIColor.black.withAlphaComponent(selected ? 0.22 : (highlighted ? 0.20 : 0.15)).setFill()
+                UIBezierPath(ovalIn: shadowRect).fill()
+
+                if selected || highlighted {
+                    let ringRect = CGRect(x: 1.5, y: 1.5, width: size.width - 3, height: size.height - 4)
+                    cgContext.setShadow(offset: CGSize(width: 0, height: selected ? 4 : 3), blur: selected ? 8 : 6, color: UIColor.black.withAlphaComponent(0.24).cgColor)
+                    UIColor.white.setStroke()
+                    let ringPath = UIBezierPath(roundedRect: ringRect, cornerRadius: size.width / 2)
+                    ringPath.lineWidth = selected ? 3 : 2.4
+                    ringPath.stroke()
+                    cgContext.setShadow(offset: .zero, blur: 0, color: nil)
+                }
+
+                let imageRect = CGRect(
+                    x: (size.width - assetImage.size.width) / 2,
+                    y: selected ? 2 : 3,
+                    width: assetImage.size.width,
+                    height: assetImage.size.height
+                )
+                let scale = min((size.width - 2) / imageRect.width, (size.height - 4) / imageRect.height)
+                let scaledRect = CGRect(
+                    x: (size.width - imageRect.width * scale) / 2,
+                    y: selected ? 2 : 3,
+                    width: imageRect.width * scale,
+                    height: imageRect.height * scale
+                )
+                assetImage.draw(in: scaledRect)
+
+                if highlighted {
+                    markerFillColor(kind: kind, selected: false, highlighted: true).withAlphaComponent(0.18).setFill()
+                    UIBezierPath(ovalIn: CGRect(x: 7, y: 7, width: size.width - 14, height: size.width - 14)).fill(with: .plusDarker, alpha: 0.18)
+                }
+            }
+        }
+
+        private static func markerAssetName(kind: KakaoMapMarker.Kind) -> String {
+            switch kind {
+            case .attraction:
+                return "marker-attraction"
+            case .restaurant:
+                return "marker-restaurant"
+            case .festival:
+                return "marker-festival"
+            case .shopping:
+                return "marker-shopping"
+            case .lodging:
+                return "marker-lodging"
+            case .activity:
+                return "marker-activity"
+            case .culture:
+                return "marker-culture"
+            }
+        }
+
+        private static func markerFillColor(kind: KakaoMapMarker.Kind, selected: Bool, highlighted: Bool) -> UIColor {
+            if selected {
+                return UIColor(red: 1.0, green: 0.48, blue: 0.18, alpha: 1)
+            }
+            if highlighted {
+                return UIColor(red: 1.0, green: 0.80, blue: 0.18, alpha: 1)
+            }
+            switch kind {
+            case .attraction:
+                return UIColor(red: 0.11, green: 0.41, blue: 0.72, alpha: 1)
+            case .restaurant:
+                return UIColor(red: 0.88, green: 0.20, blue: 0.17, alpha: 1)
+            case .festival:
+                return UIColor(red: 0.58, green: 0.23, blue: 0.88, alpha: 1)
+            case .shopping:
+                return UIColor(red: 0.84, green: 0.46, blue: 0.07, alpha: 1)
+            case .lodging:
+                return UIColor(red: 0.20, green: 0.33, blue: 0.70, alpha: 1)
+            case .activity:
+                return UIColor(red: 0.05, green: 0.55, blue: 0.38, alpha: 1)
+            case .culture:
+                return UIColor(red: 0.20, green: 0.47, blue: 0.48, alpha: 1)
+            }
+        }
+
+        private static func markerStrokeColor(kind: KakaoMapMarker.Kind) -> UIColor {
+            markerFillColor(kind: kind, selected: false, highlighted: false).withAlphaComponent(0.88)
+        }
+
+        private static func markerSymbolName(kind: KakaoMapMarker.Kind) -> String {
+            switch kind {
+            case .attraction:
+                return "mappin.and.ellipse"
+            case .restaurant:
+                return "fork.knife"
+            case .festival:
+                return "sparkles"
+            case .shopping:
+                return "bag.fill"
+            case .lodging:
+                return "bed.double.fill"
+            case .activity:
+                return "figure.run"
+            case .culture:
+                return "building.columns.fill"
             }
         }
 

@@ -124,7 +124,7 @@ public class SearchService {
         validateBounds(request.north(), request.south(), request.east(), request.west());
         SearchSourceMeta sourceMeta = toSourceMeta(placeRepository.source());
         List<IndexedPlace> scopedPlaces = themeMapService.filterPlacesByTheme(
-                indexedCandidates(null, request.category(), null, null),
+                indexedCandidates(null, request.category(), request.source(), activeFestivalForMode(request.mode(), null)),
                 request.themeId()
         );
         List<IndexedPlace> modeCandidates = filterByMode(scopedPlaces, request.mode());
@@ -284,6 +284,7 @@ public class SearchService {
                 OffsetDateTime.now(),
                 selection.fallbackUsed(),
                 selection.randomScope(),
+                selection.cacheMiss(),
                 places.size(),
                 places
         );
@@ -306,13 +307,15 @@ public class SearchService {
             Integer limit
     ) {
         int resolvedLimit = resolvedPlacesLimit(limit, zoom, density);
-        List<IndexedPlace> candidates = indexedCandidates(null, category, source, activeFestival);
+        List<IndexedPlace> candidates = indexedCandidates(null, category, source, activeFestivalForMode(mode, activeFestival));
         candidates = filterByMode(candidates, mode);
         List<IndexedPlace> boundedCandidates = candidates.stream()
                 .filter(place -> withinBounds(place, north, south, east, west))
                 .filter(place -> radiusKm == null || withinRadius(place, latitude, longitude, radiusKm))
                 .toList();
-        boolean fallbackUsed = boundedCandidates.isEmpty() && !candidates.isEmpty();
+        boolean strictScope = source != null && !source.isBlank();
+        boolean fallbackUsed = !strictScope && boundedCandidates.isEmpty() && !candidates.isEmpty();
+        boolean cacheMiss = strictScope && boundedCandidates.isEmpty();
         List<IndexedPlace> effectiveCandidates = fallbackUsed ? candidates : boundedCandidates;
 
         List<IndexedPlace> selected;
@@ -332,7 +335,8 @@ public class SearchService {
         return new SelectionResult(
                 selected,
                 fallbackUsed,
-                placesScope(north, south, east, west, zoom, density, category, mode, fallbackUsed, selected.size())
+                cacheMiss,
+                placesScope(north, south, east, west, zoom, density, category, mode, source, fallbackUsed, selected.size())
         );
     }
 
@@ -361,13 +365,24 @@ public class SearchService {
 
     private List<IndexedPlace> indexedCandidates(String region, String category, String source, Boolean activeFestival) {
         List<IndexedPlace> indexed = placeRepository.indexedCandidates(region, category, source, activeFestival);
-        if (category == null || category.isBlank() || !indexed.isEmpty()) {
+        if (category == null || category.isBlank() || !indexed.isEmpty() || (source != null && !source.isBlank())) {
             return indexed;
         }
         String normalizedCategory = normalizer.normalize(category);
         return placeRepository.findAll().stream()
                 .filter(place -> normalizer.normalize(place.category()).contains(normalizedCategory))
                 .toList();
+    }
+
+    private Boolean activeFestivalForMode(String mode, Boolean requestedActiveFestival) {
+        if (requestedActiveFestival != null) {
+            return requestedActiveFestival;
+        }
+        String normalizedMode = normalizeFreeText(mode);
+        return switch (normalizedMode) {
+            case "festival", "event", "축제", "행사" -> true;
+            default -> null;
+        };
     }
 
     private List<IndexedPlace> filterByMode(List<IndexedPlace> candidates, String mode) {
@@ -383,6 +398,7 @@ public class SearchService {
     private boolean matchesMode(IndexedPlace place, String normalizedMode) {
         return switch (normalizedMode) {
             case "cafe", "카페" -> isCafePlace(place);
+            case "restaurant", "meal", "food", "식당", "음식", "음식점", "맛집" -> isMealPlace(place);
             case "festival", "event", "축제", "행사" -> isFestivalPlace(place);
             case "walk", "walking", "산책" -> hasAnyToken(place, List.of("산책", "공원", "길", "둘레", "거리"));
             case "culture", "문화" -> hasAnyToken(place, List.of("문화", "전시", "미술", "박물관", "공연"));
@@ -439,6 +455,7 @@ public class SearchService {
             String density,
             String category,
             String mode,
+            String source,
             boolean fallbackUsed,
             int count
     ) {
@@ -456,6 +473,9 @@ public class SearchService {
         }
         if (mode != null && !mode.isBlank()) {
             base += " · mode=" + mode;
+        }
+        if (source != null && !source.isBlank()) {
+            base += " · source=" + source;
         }
         return base + " · " + count + "개";
     }
@@ -480,6 +500,9 @@ public class SearchService {
         }
         if (recentFallback) {
             base += " · 최근 후보만 남아 반복 허용";
+        }
+        if (request.source() != null && !request.source().isBlank()) {
+            base += " · source=" + request.source();
         }
         return base + " · " + count + "개 후보";
     }
@@ -621,7 +644,7 @@ public class SearchService {
                 List.of(),
                 latitude,
                 longitude,
-                "koreaTour",
+                request.source() == null || request.source().isBlank() ? "cache" : request.source(),
                 null,
                 reason,
                 null
@@ -738,14 +761,143 @@ public class SearchService {
     }
 
     private boolean isMealPlace(IndexedPlace place) {
-        String category = normalizer.normalize(place.category());
-        if (category.contains("브런치") || category.contains("레스토랑")) {
-            return true;
+        String haystack = normalizer.normalize(String.join(
+                " ",
+                place.name(),
+                place.category(),
+                place.summary(),
+                String.join(" ", place.tags()),
+                String.join(" ", place.themeTags())
+        ));
+        if (isNonMealPlace(haystack)) {
+            return false;
         }
+        return isRestaurantLikePlace(haystack);
+    }
 
-        return place.tags().stream()
-                .map(normalizer::normalize)
-                .anyMatch(tag -> tag.contains("브런치") || tag.contains("베이커리") || tag.contains("주말"));
+    private boolean isRestaurantLikePlace(String haystack) {
+        return haystack.contains("음식")
+                || haystack.contains("음식점")
+                || haystack.contains("식당")
+                || haystack.contains("한식")
+                || haystack.contains("중식")
+                || haystack.contains("중국")
+                || haystack.contains("일식")
+                || haystack.contains("일본")
+                || haystack.contains("양식")
+                || haystack.contains("분식")
+                || haystack.contains("고기")
+                || haystack.contains("육류")
+                || haystack.contains("레스토랑")
+                || haystack.contains("국밥")
+                || haystack.contains("찌개")
+                || haystack.contains("전골")
+                || haystack.contains("국수")
+                || haystack.contains("칼국수")
+                || haystack.contains("냉면")
+                || haystack.contains("초밥")
+                || haystack.contains("롤")
+                || haystack.contains("회")
+                || haystack.contains("해물")
+                || haystack.contains("생선")
+                || haystack.contains("닭")
+                || haystack.contains("치킨")
+                || haystack.contains("족발")
+                || haystack.contains("보쌈")
+                || haystack.contains("곱창")
+                || haystack.contains("막창")
+                || haystack.contains("갈비")
+                || haystack.contains("순대")
+                || haystack.contains("떡볶이")
+                || haystack.contains("돈까스")
+                || haystack.contains("우동")
+                || haystack.contains("삼계탕")
+                || haystack.contains("감자탕")
+                || haystack.contains("곰탕")
+                || haystack.contains("설렁탕")
+                || haystack.contains("해장국")
+                || haystack.contains("추어")
+                || haystack.contains("두부")
+                || haystack.contains("피자")
+                || haystack.contains("버거")
+                || haystack.contains("맥도날드")
+                || haystack.contains("롯데리아")
+                || haystack.contains("맘스터치")
+                || haystack.contains("버거킹")
+                || haystack.contains("김밥")
+                || haystack.contains("만두")
+                || haystack.contains("죽")
+                || haystack.contains("도시락")
+                || haystack.contains("라면")
+                || haystack.contains("베트남")
+                || haystack.contains("태국")
+                || haystack.contains("멕시칸")
+                || haystack.contains("브라질")
+                || haystack.contains("이탈리안")
+                || haystack.contains("파스타")
+                || haystack.contains("구내식당")
+                || haystack.contains("한정식")
+                || haystack.contains("오리")
+                || haystack.contains("장어")
+                || haystack.contains("조개")
+                || haystack.contains("복어")
+                || haystack.contains("아구")
+                || haystack.contains("불고기")
+                || haystack.contains("수제비")
+                || haystack.contains("샤브")
+                || haystack.contains("백반");
+    }
+
+    private boolean isNonMealPlace(String haystack) {
+        return haystack.contains("카페")
+                || haystack.contains("커피")
+                || haystack.contains("스타벅스")
+                || haystack.contains("투썸")
+                || haystack.contains("컴포즈")
+                || haystack.contains("메가")
+                || haystack.contains("빽다방")
+                || haystack.contains("이디야")
+                || haystack.contains("할리스")
+                || haystack.contains("엔제리너스")
+                || haystack.contains("커피빈")
+                || haystack.contains("파스쿠찌")
+                || haystack.contains("폴바셋")
+                || haystack.contains("쥬씨")
+                || haystack.contains("주스")
+                || haystack.contains("공차")
+                || haystack.contains("팀홀튼")
+                || haystack.contains("매머드")
+                || haystack.contains("텐퍼센트")
+                || haystack.contains("카페인")
+                || haystack.contains("다방")
+                || haystack.contains("전통찻집")
+                || haystack.contains("디저트")
+                || haystack.contains("베이커리")
+                || haystack.contains("제과")
+                || haystack.contains("파리바게뜨")
+                || haystack.contains("뚜레쥬르")
+                || haystack.contains("던킨")
+                || haystack.contains("도넛")
+                || haystack.contains("아이스크림")
+                || haystack.contains("배스킨")
+                || haystack.contains("설빙")
+                || haystack.contains("브런치")
+                || haystack.contains("샐러드")
+                || haystack.contains("샌드위치")
+                || haystack.contains("생과일")
+                || haystack.contains("요거트")
+                || haystack.contains("빙수")
+                || haystack.contains("케이크")
+                || haystack.contains("마카롱")
+                || haystack.contains("술집")
+                || haystack.contains("호프")
+                || haystack.contains("요리주점")
+                || haystack.contains("와인바")
+                || haystack.contains("칵테일바")
+                || haystack.contains("뮤직바")
+                || haystack.contains("포장마차")
+                || haystack.contains("이벤트기획")
+                || haystack.contains("대행");
     }
 
     private boolean isHighlightPlace(IndexedPlace place) {
@@ -1170,6 +1322,7 @@ public class SearchService {
     private record SelectionResult(
             List<IndexedPlace> places,
             boolean fallbackUsed,
+            boolean cacheMiss,
             String randomScope
     ) {
     }

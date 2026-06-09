@@ -110,18 +110,10 @@ public class ThemeMapService {
                     .toList();
         }
 
-        if (activeOn != null) {
-            events = events.stream()
-                    .filter(event -> "ACTIVE".equals(eventStatus(event, activeOn)))
-                    .toList();
-        } else {
-            events = events.stream()
-                    .filter(event -> {
-                        String status = eventStatus(event, LocalDate.now());
-                        return "ACTIVE".equals(status) || "UPCOMING".equals(status);
-                    })
-                    .toList();
-        }
+        LocalDate referenceDate = activeOn == null ? LocalDate.now() : activeOn;
+        events = events.stream()
+                .filter(event -> "ACTIVE".equals(eventStatus(event, referenceDate)))
+                .toList();
 
         List<ThemeEventResponse> limited = events.stream()
                 .limit(resolvedLimit)
@@ -251,6 +243,7 @@ public class ThemeMapService {
                 place.longitude(),
                 tourApi.common().overview() == null || tourApi.common().overview().isBlank() ? place.summary() : tourApi.common().overview(),
                 place.sourceAttribution(),
+                officialUrl(tourApi.common().homepage()),
                 place.id()
         );
     }
@@ -269,6 +262,7 @@ public class ThemeMapService {
                 event.longitude(),
                 event.sourceAttribution(),
                 event.summary(),
+                event.officialUrl(),
                 theme.themeId(),
                 event.relatedPlaceId()
         );
@@ -439,6 +433,7 @@ public class ThemeMapService {
                 event.longitude(),
                 event.summary(),
                 event.sourceAttribution(),
+                event.officialUrl(),
                 event.relatedPlaceId()
         ), referenceDate);
     }
@@ -476,6 +471,27 @@ public class ThemeMapService {
         } catch (DateTimeParseException ignored) {
             return null;
         }
+    }
+
+
+    private String officialUrl(String homepage) {
+        if (homepage == null || homepage.isBlank()) {
+            return null;
+        }
+        String normalized = homepage.trim();
+        java.util.regex.Matcher href = java.util.regex.Pattern
+                .compile("href=[\"']([^\"']+)[\"']", java.util.regex.Pattern.CASE_INSENSITIVE)
+                .matcher(normalized);
+        if (href.find()) {
+            normalized = href.group(1).trim();
+        }
+        if (normalized.startsWith("http://") || normalized.startsWith("https://")) {
+            return normalized;
+        }
+        if (normalized.startsWith("www.")) {
+            return "https://" + normalized;
+        }
+        return null;
     }
 
     private String formatEventDate(LocalDate date) {

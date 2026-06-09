@@ -13,6 +13,7 @@ public record ThemeEventResponse(
         double longitude,
         String sourceAttribution,
         String summary,
+        String officialUrl,
         String themeId,
         String relatedPlaceId
 ) {

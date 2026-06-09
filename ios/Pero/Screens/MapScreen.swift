@@ -17,7 +17,15 @@ struct MapScreen: View {
                 GeometryReader { proxy in
                     KakaoMapView(
                         camera: $camera,
-                        markers: [KakaoMapMarker(id: card.id, latitude: card.latitude, longitude: card.longitude, isSelected: true)]
+                        markers: [
+                            KakaoMapMarker(
+                                id: card.id,
+                                latitude: card.latitude,
+                                longitude: card.longitude,
+                                kind: card.mapMarkerKind,
+                                isSelected: true
+                            )
+                        ]
                     )
                     .frame(width: proxy.size.width, height: proxy.size.height)
                     .ignoresSafeArea()
