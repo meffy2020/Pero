@@ -28,6 +28,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -412,7 +413,9 @@ public class SearchService {
         return switch (normalizedMode) {
             case "cafe", "카페" -> isCafePlace(place);
             case "restaurant", "meal", "food", "식당", "음식", "음식점", "맛집" -> isMealPlace(place);
-            case "festival", "event", "축제", "행사" -> isFestivalPlace(place) && isCurrentOrUpcomingFestival(place);
+            case "festival", "event", "축제", "행사" -> isFestivalPlace(place)
+                    && isCurrentOrUpcomingFestival(place)
+                    && isFestivalDrawCandidate(place);
             case "walk", "walking", "산책" -> hasAnyToken(place, List.of("산책", "공원", "길", "둘레", "거리"));
             case "culture", "문화" -> hasAnyToken(place, List.of("문화", "전시", "미술", "박물관", "공연"));
             case "tour", "place", "spot", "관광", "관광지" -> hasAnyToken(place, List.of("관광", "명소", "유적", "체험", "자연"));
@@ -455,6 +458,43 @@ public class SearchService {
             return false;
         }
         return !end.isBefore(LocalDate.now());
+    }
+
+    private boolean isFestivalDrawCandidate(IndexedPlace place) {
+        String name = normalizer.normalize(place.name());
+        boolean hasSeasonalFestivalToken = List.of(
+                        "축제",
+                        "페스티벌",
+                        "페스타",
+                        "페어",
+                        "박람회",
+                        "문화제",
+                        "영화제",
+                        "마켓",
+                        "주간",
+                        "위크",
+                        "데이"
+                ).stream()
+                .map(normalizer::normalize)
+                .anyMatch(name::contains);
+        if (hasSeasonalFestivalToken) {
+            return true;
+        }
+
+        boolean permanentPerformanceName = List.of("페인터즈", "교대의식", "파수의식", "봉수의식", "상설")
+                .stream()
+                .map(normalizer::normalize)
+                .anyMatch(name::contains);
+        if (permanentPerformanceName) {
+            return false;
+        }
+
+        LocalDate start = parseTourDate(place.tourApi().common().eventStartDate());
+        LocalDate end = parseTourDate(place.tourApi().common().eventEndDate());
+        if (start == null || end == null) {
+            return false;
+        }
+        return ChronoUnit.DAYS.between(start, end) <= 45;
     }
 
     private LocalDate parseTourDate(String value) {

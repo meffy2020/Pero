@@ -1,9 +1,14 @@
 {
   "providerId": "koreaTour",
   "providerName": "한국관광공사 API 동기화 캐시",
-  "generatedAt": "2026-06-09T19:34:49+09:00",
+  "generatedAt": "2026-06-10T00:43:58+09:00",
   "status": "ok",
   "count": 10526,
   "festivalDetailEnrichedAt": "2026-06-09T19:34:49+09:00",
-  "festivalDetailEnrichedCount": 415
+  "festivalDetailEnrichedCount": 415,
+  "festivalSearchRefreshedAt": "2026-06-10T00:43:58+09:00",
+  "festivalSearchEventStartDate": "20260610",
+  "festivalSearchRawCount": 184,
+  "festivalSearchAcceptedCount": 184,
+  "festivalSearchDroppedStaleTitleYear": 0
 }
