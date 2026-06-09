@@ -230,10 +230,7 @@ enum RecommendationPickerMode: String, CaseIterable, Hashable, Identifiable {
     }
 
     var apiActiveFestival: Bool? {
-        switch self {
-        case .festival: true
-        default: nil
-        }
+        nil
     }
 
     func matches(_ card: RecommendationCardModel) -> Bool {
@@ -263,7 +260,7 @@ enum RecommendationState: Equatable {
     var title: String {
         switch self {
         case .ready: "지도 준비"
-        case .loading: "지금 갈 곳 찾는 중"
+        case .loading: ""
         case .results: "추천 결과"
         case .empty: ""
         case .error: "연결 확인 필요"

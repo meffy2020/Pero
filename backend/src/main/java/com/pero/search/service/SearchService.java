@@ -24,7 +24,10 @@ import com.pero.search.repository.PlaceRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -46,6 +49,8 @@ public class SearchService {
     private static final int MAX_PLACES_LIMIT = 500;
     private static final int LOW_ZOOM_MARKER_LIMIT = 80;
     private static final int MAX_RECOMMENDATION_LIMIT = 100;
+    private static final int MIN_FESTIVAL_DRAW_POOL = 8;
+    private static final DateTimeFormatter TOUR_DATE_FORMAT = DateTimeFormatter.BASIC_ISO_DATE;
 
     private final PlaceRepository placeRepository;
     private final TextNormalizer normalizer;
@@ -137,9 +142,13 @@ public class SearchService {
                 .limit(resolvedRecommendationLimit(request.limit()))
                 .toList();
 
-        boolean scopeFallback = boundedCandidates.isEmpty();
+        boolean festivalMode = isFestivalMode(request.mode());
+        boolean sparseFestivalScope = festivalMode
+                && boundedCandidates.size() < Math.min(MIN_FESTIVAL_DRAW_POOL, request.resolvedLimit())
+                && pool.size() > boundedCandidates.size();
+        boolean scopeFallback = boundedCandidates.isEmpty() || sparseFestivalScope;
         List<IndexedPlace> effectiveCandidates = scopeFallback
-                ? nearestPlaces(pool, request, Math.min(5, request.resolvedLimit()))
+                ? nearestPlaces(pool, request, request.resolvedLimit())
                 : boundedCandidates;
         List<IndexedPlace> recentFilteredCandidates = excludeRecentWhenPossible(effectiveCandidates, request.resolvedRecentPlaceIds());
         boolean recentFallback = !request.resolvedRecentPlaceIds().isEmpty()
@@ -314,7 +323,11 @@ public class SearchService {
                 .filter(place -> radiusKm == null || withinRadius(place, latitude, longitude, radiusKm))
                 .toList();
         boolean strictScope = source != null && !source.isBlank();
-        boolean fallbackUsed = !strictScope && boundedCandidates.isEmpty() && !candidates.isEmpty();
+        boolean festivalMode = isFestivalMode(mode);
+        boolean sparseFestivalScope = festivalMode
+                && boundedCandidates.size() < Math.min(MIN_FESTIVAL_DRAW_POOL, resolvedLimit)
+                && candidates.size() > boundedCandidates.size();
+        boolean fallbackUsed = !strictScope && (boundedCandidates.isEmpty() || sparseFestivalScope) && !candidates.isEmpty();
         boolean cacheMiss = strictScope && boundedCandidates.isEmpty();
         List<IndexedPlace> effectiveCandidates = fallbackUsed ? candidates : boundedCandidates;
 
@@ -375,14 +388,14 @@ public class SearchService {
     }
 
     private Boolean activeFestivalForMode(String mode, Boolean requestedActiveFestival) {
+        String normalizedMode = normalizeFreeText(mode);
+        if (Boolean.TRUE.equals(requestedActiveFestival) && isFestivalMode(normalizedMode)) {
+            return null;
+        }
         if (requestedActiveFestival != null) {
             return requestedActiveFestival;
         }
-        String normalizedMode = normalizeFreeText(mode);
-        return switch (normalizedMode) {
-            case "festival", "event", "축제", "행사" -> true;
-            default -> null;
-        };
+        return null;
     }
 
     private List<IndexedPlace> filterByMode(List<IndexedPlace> candidates, String mode) {
@@ -399,7 +412,7 @@ public class SearchService {
         return switch (normalizedMode) {
             case "cafe", "카페" -> isCafePlace(place);
             case "restaurant", "meal", "food", "식당", "음식", "음식점", "맛집" -> isMealPlace(place);
-            case "festival", "event", "축제", "행사" -> isFestivalPlace(place);
+            case "festival", "event", "축제", "행사" -> isFestivalPlace(place) && isCurrentOrUpcomingFestival(place);
             case "walk", "walking", "산책" -> hasAnyToken(place, List.of("산책", "공원", "길", "둘레", "거리"));
             case "culture", "문화" -> hasAnyToken(place, List.of("문화", "전시", "미술", "박물관", "공연"));
             case "tour", "place", "spot", "관광", "관광지" -> hasAnyToken(place, List.of("관광", "명소", "유적", "체험", "자연"));
@@ -423,6 +436,36 @@ public class SearchService {
 
     private boolean isFestivalPlace(IndexedPlace place) {
         return hasAnyToken(place, List.of("축제", "행사", "이벤트", "공연", "전시"));
+    }
+
+    private boolean isFestivalMode(String mode) {
+        String normalizedMode = normalizeFreeText(mode);
+        return switch (normalizedMode) {
+            case "festival", "event", "축제", "행사" -> true;
+            default -> false;
+        };
+    }
+
+    private boolean isCurrentOrUpcomingFestival(IndexedPlace place) {
+        if (place.tourApi() == null || place.tourApi().common() == null) {
+            return false;
+        }
+        LocalDate end = parseTourDate(place.tourApi().common().eventEndDate());
+        if (end == null) {
+            return false;
+        }
+        return !end.isBefore(LocalDate.now());
+    }
+
+    private LocalDate parseTourDate(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(value.trim(), TOUR_DATE_FORMAT);
+        } catch (DateTimeParseException ignored) {
+            return null;
+        }
     }
 
     private boolean withinBounds(IndexedPlace place, Double north, Double south, Double east, Double west) {

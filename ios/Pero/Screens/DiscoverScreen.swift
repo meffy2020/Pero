@@ -270,7 +270,7 @@ struct HomeRecommendationScreen: View {
     private var randomButtonTitle: String {
         switch viewModel.state {
         case .loading:
-            "찾는 중"
+            HomeMapKoreanCopy.rangePickTitle(for: pickerMode.title)
         default:
             if isDrawing {
                 drawPhase.accessibilityTitle
@@ -292,13 +292,6 @@ struct HomeRecommendationScreen: View {
                 card: selectedCard
             )
             .transition(.move(edge: .bottom).combined(with: .opacity))
-        } else if viewModel.state != .results && viewModel.state != .empty {
-            StateMessageView(
-                icon: stateIcon,
-                title: viewModel.state.title,
-                message: stateMessage
-            )
-            .peroBottomSheetSurface()
         }
     }
 
@@ -585,30 +578,6 @@ struct HomeRecommendationScreen: View {
         return expanded
     }
 
-    private var stateIcon: String {
-        switch viewModel.state {
-        case .ready: "location"
-        case .loading: "scope"
-        case .results: "sparkles"
-        case .empty: "tray"
-        case .error: "exclamationmark.triangle"
-        }
-    }
-
-    private var stateMessage: String {
-        switch viewModel.state {
-        case .ready:
-            HomeMapKoreanCopy.readyMessage
-        case .loading:
-            HomeMapKoreanCopy.loadingMessage
-        case .results:
-            "뽑기 결과를 확인하세요."
-        case .empty:
-            pickerMode == .restaurant ? HomeMapKoreanCopy.restaurantEmptyMessage : HomeMapKoreanCopy.emptyMessage
-        case .error(let message):
-            message
-        }
-    }
 }
 
 enum HomeMapKoreanCopy {
@@ -1122,26 +1091,6 @@ private struct MetadataChip: View {
             .padding(.horizontal, 9)
             .frame(height: 28)
             .background(PeroMapStyle.surfaceMuted, in: Capsule())
-    }
-}
-
-struct StateMessageView: View {
-    let icon: String
-    let title: String
-    let message: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label(title, systemImage: icon)
-                .font(.headline)
-                .foregroundStyle(PeroMapStyle.ink)
-            Text(message)
-                .font(.subheadline)
-                .foregroundStyle(PeroMapStyle.inkSoft)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
     }
 }
 

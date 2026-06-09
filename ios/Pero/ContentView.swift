@@ -43,6 +43,26 @@ struct ContentView: View {
     }
 }
 
+struct StateMessageView: View {
+    let icon: String
+    let title: String
+    let message: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(title, systemImage: icon)
+                .font(.headline)
+                .foregroundStyle(PeroMapStyle.ink)
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(PeroMapStyle.inkSoft)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+    }
+}
+
 struct UserCoordinate: Equatable {
     let latitude: Double
     let longitude: Double
