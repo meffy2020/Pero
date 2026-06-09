@@ -337,7 +337,7 @@ public class SearchService {
     }
 
     private int resolvedPlacesLimit(Integer limit, Double zoom, String density) {
-        int requestedLimit = resolvedPlacesLimit(limit);
+        int requestedLimit = limit == null ? MAX_PLACES_LIMIT : Math.max(1, Math.min(limit, MAX_PLACES_LIMIT));
         if (isLowDensityMapRequest(zoom, density)) {
             return Math.min(requestedLimit, LOW_ZOOM_MARKER_LIMIT);
         }
@@ -486,19 +486,6 @@ public class SearchService {
 
     private String normalizeFreeText(String value) {
         return value == null ? "" : value.trim().toLowerCase();
-    }
-
-    private int resolvedPlacesLimit(Integer limit) {
-        return resolvedPlacesLimit(limit, null, null);
-    }
-
-    private int resolvedPlacesLimit(Integer limit, Double zoom, String density) {
-        int requested = limit == null ? MAX_PLACES_LIMIT : Math.max(1, limit);
-        int capped = Math.min(requested, MAX_PLACES_LIMIT);
-        if (isLowDensityMap(zoom, density)) {
-            return Math.min(capped, 120);
-        }
-        return capped;
     }
 
     private PlaceListItemResponse toPlaceListItemResponse(IndexedPlace place, boolean includeTourApi) {
@@ -710,7 +697,7 @@ public class SearchService {
                 place.sourceAttribution(),
                 distanceKm == null ? null : round(distanceKm),
                 reason,
-                toTourApiResponse(place.tourApi())
+                request.shouldIncludeTourApi() ? toTourApiResponse(place.tourApi()) : null
         );
     }
 

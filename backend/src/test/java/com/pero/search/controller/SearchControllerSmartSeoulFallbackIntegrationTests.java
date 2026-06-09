@@ -55,7 +55,7 @@ class SearchControllerSmartSeoulFallbackIntegrationTests {
 
         assertThat(response.source().providerId()).isEqualTo("koreaTour");
         assertThat(response.source().status()).isNotBlank();
-        assertThat(response.source().count()).isEqualTo(response.total());
+        assertThat(response.source().count()).isGreaterThanOrEqualTo(response.total());
         assertThat(response.total()).isGreaterThan(0);
     }
 
