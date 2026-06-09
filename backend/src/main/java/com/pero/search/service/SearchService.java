@@ -488,13 +488,6 @@ public class SearchService {
         return value == null ? "" : value.trim().toLowerCase();
     }
 
-    private int resolvedPlacesLimit(Integer limit) {
-        if (limit == null) {
-            return MAX_PLACES_LIMIT;
-        }
-        return Math.min(limit, MAX_PLACES_LIMIT);
-    }
-
     private PlaceListItemResponse toPlaceListItemResponse(IndexedPlace place, boolean includeTourApi) {
         return new PlaceListItemResponse(
                 place.id(),
