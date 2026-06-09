@@ -50,10 +50,36 @@ public class SearchController {
             @RequestParam(required = false) Double latitude,
             @RequestParam(required = false) Double longitude,
             @RequestParam(required = false) Double radiusKm,
+            @RequestParam(required = false) Double north,
+            @RequestParam(required = false) Double south,
+            @RequestParam(required = false) Double east,
+            @RequestParam(required = false) Double west,
+            @RequestParam(required = false) Double zoom,
+            @RequestParam(required = false) String density,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String mode,
+            @RequestParam(required = false) String source,
+            @RequestParam(required = false) Boolean activeFestival,
             @RequestParam(required = false) Integer limit,
             @RequestParam(defaultValue = "true") boolean includeTourApi
     ) {
-        return searchService.places(latitude, longitude, radiusKm, limit, includeTourApi);
+        return searchService.places(
+                latitude,
+                longitude,
+                radiusKm,
+                north,
+                south,
+                east,
+                west,
+                zoom,
+                density,
+                category,
+                mode,
+                source,
+                activeFestival,
+                limit,
+                includeTourApi
+        );
     }
 
     @GetMapping("/themes")
