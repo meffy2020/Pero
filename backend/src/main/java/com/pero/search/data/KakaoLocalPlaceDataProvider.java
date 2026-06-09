@@ -2,6 +2,8 @@ package com.pero.search.data;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pero.search.model.PlaceSeed;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
@@ -11,6 +13,8 @@ import java.util.Locale;
 
 @Component
 public class KakaoLocalPlaceDataProvider extends AbstractCachedPlaceDataProvider {
+
+    private static final Logger log = LoggerFactory.getLogger(KakaoLocalPlaceDataProvider.class);
 
     private static final String PROVIDER_ID = "kakaoLocal";
     private static final String PROVIDER_NAME = "카카오 로컬 API 캐시";
@@ -43,9 +47,15 @@ public class KakaoLocalPlaceDataProvider extends AbstractCachedPlaceDataProvider
 
     @Override
     protected List<PlaceSeed> sortAndDeduplicate(List<PlaceSeed> places) {
-        return super.sortAndDeduplicate(places).stream()
+        List<PlaceSeed> deduplicated = super.sortAndDeduplicate(places);
+        List<PlaceSeed> filtered = deduplicated.stream()
                 .filter(place -> !looksSynthetic(place))
                 .toList();
+        int removed = deduplicated.size() - filtered.size();
+        if (removed > 0) {
+            log.warn("카카오 로컬 캐시에서 synthetic 후보를 제외했습니다. removed={}", removed);
+        }
+        return filtered;
     }
 
     private boolean looksSynthetic(PlaceSeed place) {

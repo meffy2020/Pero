@@ -350,7 +350,6 @@ struct HomeRecommendationScreen: View {
                 camera: camera,
                 mode: mode
             )
-            try? await Task.sleep(for: .milliseconds(1200))
             applyScreenshotScenarioIfNeeded(cards: viewModel.cards)
         }
     }
@@ -413,6 +412,7 @@ struct HomeRecommendationScreen: View {
         if mode == .restaurant {
             return matchingCards.first {
                 $0.sourceAttribution == "kakaoLocal"
+                && $0.randomSlotKind == .restaurant
                 && !$0.category.localizedCaseInsensitiveContains("카페")
                 && !$0.title.localizedCaseInsensitiveContains("카페")
             }

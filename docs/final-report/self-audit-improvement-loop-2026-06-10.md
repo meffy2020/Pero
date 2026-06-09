@@ -15,6 +15,9 @@
 - `places.kakao.json.meta.json`의 count를 `2163`으로 갱신했다.
 - 회귀 테스트 `SearchControllerKakaoQualityIntegrationTests`를 추가해 synthetic 식당이 `/api/places`에 내려오지 않도록 잠갔다.
 - provider별 통합 테스트에는 `kakaoLocal.enabled=false`를 명시해 테스트 의도를 고정했다.
+- synthetic 후보가 런타임에서 제외되면 로그에 제거 수가 남도록 해 조용한 누락을 피했다.
+- iOS 식당 슬롯 판정은 `kakaoLocal` 출처만으로 강제하지 않고, 식사/업종 signal이 있을 때만 식당으로 분류하게 좁혔다.
+- DEBUG 캡처 부트스트랩의 고정 sleep을 제거하고, API load 완료와 cards 변경 이벤트에 맞춰 시나리오를 적용한다.
 
 ## 검증
 
@@ -23,6 +26,8 @@
 - `python3 -m py_compile scripts/etl/kakao_places_to_pero.py` 성공
 - production 카카오 캐시 검사 결과: `places_kakao_count=2163`, `synthetic_hits=0`
 - `xcodebuild -project ios/Pero.xcodeproj -scheme Pero -destination 'platform=iOS Simulator,id=78867352-14AD-4092-BDF0-46DE89BD3A79' build` 성공
+- WATCH 대응 후 `cd backend && ./gradlew cleanTest test` 재성공
+- WATCH 대응 후 iOS Simulator build 재성공
 
 ## 다음 루프에서 보면 좋은 점
 

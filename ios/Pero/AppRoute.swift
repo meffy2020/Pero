@@ -77,10 +77,31 @@ extension RecommendationCardModel {
         let primarySource = "\(subtitle) \(category)"
         let taggedSource = "\(primarySource) \(tags.joined(separator: " "))"
         let cafeDeniedSource = "\(taggedSource) \(title)"
-        if sourceAttribution == "kakaoLocal",
-           !cafeDeniedSource.localizedCaseInsensitiveContains("카페"),
-           !cafeDeniedSource.localizedCaseInsensitiveContains("커피"),
-           !cafeDeniedSource.localizedCaseInsensitiveContains("디저트") {
+        let containsCafeSignal = cafeDeniedSource.localizedCaseInsensitiveContains("카페")
+            || cafeDeniedSource.localizedCaseInsensitiveContains("커피")
+            || cafeDeniedSource.localizedCaseInsensitiveContains("디저트")
+        let containsMealSignal = taggedSource.contains("식사")
+            || taggedSource.contains("식당")
+            || taggedSource.contains("음식점")
+            || taggedSource.contains("한식")
+            || taggedSource.contains("중식")
+            || taggedSource.contains("일식")
+            || taggedSource.contains("양식")
+            || taggedSource.contains("분식")
+            || taggedSource.contains("육류")
+            || taggedSource.contains("고기")
+            || taggedSource.contains("곱창")
+            || taggedSource.contains("막창")
+            || taggedSource.contains("치킨")
+            || taggedSource.contains("국밥")
+            || taggedSource.contains("찌개")
+            || taggedSource.contains("국수")
+            || taggedSource.contains("구내식")
+            || taggedSource.contains("구내식당")
+            || taggedSource.contains("한정식")
+            || taggedSource.localizedCaseInsensitiveContains("meal")
+            || taggedSource.localizedCaseInsensitiveContains("restaurant")
+        if sourceAttribution == "kakaoLocal", containsMealSignal, !containsCafeSignal {
             return .restaurant
         }
         if taggedSource.contains("축제")
@@ -89,27 +110,7 @@ extension RecommendationCardModel {
             || taggedSource.localizedCaseInsensitiveContains("festival") {
             return .festival
         }
-        if primarySource.contains("식사")
-            || primarySource.contains("식당")
-            || primarySource.contains("음식점")
-            || primarySource.contains("한식")
-            || primarySource.contains("중식")
-            || primarySource.contains("일식")
-            || primarySource.contains("양식")
-            || primarySource.contains("분식")
-            || primarySource.contains("육류")
-            || primarySource.contains("고기")
-            || primarySource.contains("곱창")
-            || primarySource.contains("막창")
-            || primarySource.contains("치킨")
-            || primarySource.contains("국밥")
-            || primarySource.contains("찌개")
-            || primarySource.contains("국수")
-            || primarySource.contains("구내식")
-            || primarySource.contains("구내식당")
-            || primarySource.contains("한정식")
-            || primarySource.localizedCaseInsensitiveContains("meal")
-            || primarySource.localizedCaseInsensitiveContains("restaurant") {
+        if containsMealSignal, !containsCafeSignal {
             return .restaurant
         }
         return .attraction
