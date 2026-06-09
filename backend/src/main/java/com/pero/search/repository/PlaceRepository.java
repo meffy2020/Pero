@@ -10,6 +10,9 @@ import com.pero.search.service.ThemeMetadataSupport;
 import com.pero.search.service.TextNormalizer;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -22,7 +25,13 @@ import java.util.Set;
 public class PlaceRepository {
 
     private final PlaceDataLoadResult dataSource;
+    private static final DateTimeFormatter TOUR_DATE_FORMAT = DateTimeFormatter.BASIC_ISO_DATE;
+
     private final List<IndexedPlace> places;
+    private final Map<String, List<IndexedPlace>> placesByRegion;
+    private final Map<String, List<IndexedPlace>> placesByCategory;
+    private final Map<String, List<IndexedPlace>> placesBySource;
+    private final Map<Boolean, List<IndexedPlace>> placesByActiveFestival;
 
     public PlaceRepository(
             PlaceDataProviderRegistry providerRegistry,
@@ -32,6 +41,10 @@ public class PlaceRepository {
         this.dataSource = providerRegistry.loadActiveData();
         List<PlaceSeed> seeds = dataSource.places();
         this.places = loadPlaces(normalizer, embeddingService, seeds, dataSource.providerId());
+        this.placesByRegion = buildIndex(this.places, place -> normalizeIndexKey(place.district()));
+        this.placesByCategory = buildIndex(this.places, place -> normalizeIndexKey(place.category()));
+        this.placesBySource = buildIndex(this.places, place -> normalizeIndexKey(place.sourceAttribution()));
+        this.placesByActiveFestival = buildActiveFestivalIndex(this.places);
     }
 
     public List<IndexedPlace> findAll() {
@@ -40,6 +53,127 @@ public class PlaceRepository {
 
     public PlaceDataLoadResult source() {
         return dataSource;
+    }
+
+    public List<IndexedPlace> findByRegion(String region) {
+        return findFromIndex(placesByRegion, region);
+    }
+
+    public List<IndexedPlace> findByCategory(String category) {
+        return findFromIndex(placesByCategory, category);
+    }
+
+    public List<IndexedPlace> findBySource(String source) {
+        return findFromIndex(placesBySource, source);
+    }
+
+    public List<IndexedPlace> findByActiveFestival(boolean activeFestival) {
+        return placesByActiveFestival.getOrDefault(activeFestival, List.of());
+    }
+
+    public List<IndexedPlace> indexedCandidates(String region, String category, String source, Boolean activeFestival) {
+        List<IndexedPlace> candidates = findAll();
+        if (region != null && !region.isBlank()) {
+            candidates = intersect(candidates, findByRegion(region));
+        }
+        if (category != null && !category.isBlank()) {
+            candidates = intersect(candidates, findByCategory(category));
+        }
+        if (source != null && !source.isBlank()) {
+            candidates = intersect(candidates, findBySource(source));
+        }
+        if (activeFestival != null) {
+            candidates = intersect(candidates, findByActiveFestival(activeFestival));
+        }
+        return candidates;
+    }
+
+
+    private interface IndexKeyExtractor {
+        String key(IndexedPlace place);
+    }
+
+    private Map<String, List<IndexedPlace>> buildIndex(List<IndexedPlace> indexedPlaces, IndexKeyExtractor extractor) {
+        Map<String, List<IndexedPlace>> mutable = new LinkedHashMap<>();
+        for (IndexedPlace place : indexedPlaces) {
+            String key = extractor.key(place);
+            if (key == null || key.isBlank()) {
+                continue;
+            }
+            mutable.computeIfAbsent(key, ignored -> new ArrayList<>()).add(place);
+        }
+        return copyIndex(mutable);
+    }
+
+    private Map<Boolean, List<IndexedPlace>> buildActiveFestivalIndex(List<IndexedPlace> indexedPlaces) {
+        Map<Boolean, List<IndexedPlace>> mutable = new LinkedHashMap<>();
+        mutable.put(true, new ArrayList<>());
+        mutable.put(false, new ArrayList<>());
+        LocalDate today = LocalDate.now();
+        for (IndexedPlace place : indexedPlaces) {
+            mutable.get(isActiveFestival(place, today)).add(place);
+        }
+        return Map.of(
+                true, List.copyOf(mutable.get(true)),
+                false, List.copyOf(mutable.get(false))
+        );
+    }
+
+    private Map<String, List<IndexedPlace>> copyIndex(Map<String, List<IndexedPlace>> mutable) {
+        Map<String, List<IndexedPlace>> copy = new LinkedHashMap<>();
+        for (Map.Entry<String, List<IndexedPlace>> entry : mutable.entrySet()) {
+            copy.put(entry.getKey(), List.copyOf(entry.getValue()));
+        }
+        return Map.copyOf(copy);
+    }
+
+    private List<IndexedPlace> findFromIndex(Map<String, List<IndexedPlace>> index, String key) {
+        String normalized = normalizeIndexKey(key);
+        if (normalized == null || normalized.isBlank()) {
+            return List.of();
+        }
+        return index.getOrDefault(normalized, List.of());
+    }
+
+    private List<IndexedPlace> intersect(List<IndexedPlace> left, List<IndexedPlace> right) {
+        if (left.isEmpty() || right.isEmpty()) {
+            return List.of();
+        }
+        Set<String> rightIds = new LinkedHashSet<>();
+        right.forEach(place -> rightIds.add(place.id()));
+        return left.stream()
+                .filter(place -> rightIds.contains(place.id()))
+                .toList();
+    }
+
+    private boolean isActiveFestival(IndexedPlace place, LocalDate today) {
+        if (place.tourApi() == null || place.tourApi().common() == null) {
+            return false;
+        }
+        LocalDate start = parseTourDate(place.tourApi().common().eventStartDate());
+        LocalDate end = parseTourDate(place.tourApi().common().eventEndDate());
+        if (start == null && end == null) {
+            return false;
+        }
+        if (start != null && today.isBefore(start)) {
+            return false;
+        }
+        return end == null || !today.isAfter(end);
+    }
+
+    private LocalDate parseTourDate(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(value.trim(), TOUR_DATE_FORMAT);
+        } catch (DateTimeParseException ignored) {
+            return null;
+        }
+    }
+
+    private String normalizeIndexKey(String value) {
+        return value == null ? null : value.trim().toLowerCase();
     }
 
     private List<IndexedPlace> loadPlaces(

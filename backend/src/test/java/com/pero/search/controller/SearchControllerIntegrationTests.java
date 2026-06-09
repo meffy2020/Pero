@@ -93,6 +93,96 @@ class SearchControllerIntegrationTests {
         assertThat(json.path("places").get(0).path("tourApi").isNull()).isTrue();
     }
 
+
+    @Test
+    void placesEndpointSupportsBoundsCategoryLowZoomAndMetadata() throws Exception {
+        String seedBody = mockMvc.perform(get("/api/places")
+                        .param("limit", "1")
+                        .param("includeTourApi", "false"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        JsonNode seed = objectMapper.readTree(seedBody).path("places").get(0);
+        String category = seed.path("category").asText();
+
+        String body = mockMvc.perform(get("/api/places")
+                        .param("north", "38.0")
+                        .param("south", "33.0")
+                        .param("east", "132.0")
+                        .param("west", "124.0")
+                        .param("category", category)
+                        .param("zoom", "8")
+                        .param("limit", "500")
+                        .param("includeTourApi", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.generatedAt").exists())
+                .andExpect(jsonPath("$.fallbackUsed").isBoolean())
+                .andExpect(jsonPath("$.randomScope").exists())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        JsonNode json = objectMapper.readTree(body);
+        PlacesResponse response = objectMapper.readValue(body, PlacesResponse.class);
+
+        assertThat(response.total()).isLessThanOrEqualTo(80);
+        assertThat(response.places()).isNotEmpty();
+        assertThat(response.places()).allSatisfy(place -> assertThat(place.category()).isEqualTo(category));
+        assertThat(json.path("places").get(0).path("tourApi").isNull()).isTrue();
+        assertThat(json.path("randomScope").asText()).contains("낮은 줌");
+    }
+
+    @Test
+    void placesEndpointRejectsPartialBounds() throws Exception {
+        mockMvc.perform(get("/api/places")
+                        .param("north", "38.0")
+                        .param("south", "33.0"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void recommendationsEndpointSupportsLightweightMetadataAndRecentIds() throws Exception {
+        var firstResult = mockMvc.perform(post("/api/recommendations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "latitude": 37.5535,
+                                  "longitude": 126.9221,
+                                  "radiusKm": 50,
+                                  "limit": 20,
+                                  "includeTourApi": false
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.source.providerId").exists())
+                .andExpect(jsonPath("$.randomScope").exists())
+                .andReturn();
+
+        JsonNode firstJson = objectMapper.readTree(firstResult.getResponse().getContentAsByteArray());
+        String recentId = firstJson.path("nearbyPick").path("place").path("id").asText();
+        assertThat(firstJson.path("nearbyPick").path("place").path("tourApi").isNull()).isTrue();
+
+        var secondResult = mockMvc.perform(post("/api/recommendations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "latitude": 37.5535,
+                                  "longitude": 126.9221,
+                                  "radiusKm": 50,
+                                  "limit": 20,
+                                  "recentPlaceIds": ["%s"],
+                                  "includeTourApi": false
+                                }
+                                """.formatted(recentId)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode secondJson = objectMapper.readTree(secondResult.getResponse().getContentAsByteArray());
+        assertThat(secondJson.path("nearbyPick").path("place").path("id").asText()).isNotEqualTo(recentId);
+        assertThat(secondJson.path("nearbyPick").path("place").path("tourApi").isNull()).isTrue();
+    }
+
     @Test
     void placesEndpointRejectsPartialLocation() throws Exception {
         mockMvc.perform(get("/api/places")
