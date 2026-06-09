@@ -38,6 +38,7 @@ class SearchControllerSmartSeoulFallbackIntegrationTests {
     @DynamicPropertySource
     static void registerFallbackProperties(DynamicPropertyRegistry registry) {
         registry.add("pero.providers.order", () -> "smartSeoul,koreaTour");
+        registry.add("pero.providers.kakaoLocal.enabled", () -> "false");
         registry.add("pero.providers.smartSeoul.enabled", () -> "true");
         registry.add("pero.providers.smartSeoul.cache-resource", () -> MISSING_SMART_CACHE_PATH.toUri().toString());
         registry.add("pero.providers.smartSeoul.meta-resource", () -> MISSING_SMART_META_PATH.toUri().toString());

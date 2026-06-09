@@ -1,0 +1,28 @@
+[
+  {
+    "id": "kakao-real-1",
+    "name": "하계동 밥집",
+    "category": "한식",
+    "district": "서울 노원구",
+    "address": "서울 노원구 하계동 1",
+    "roadAddress": "서울 노원구 섬밭로 1",
+    "latitude": 37.6362,
+    "longitude": 127.0679,
+    "summary": "서울 노원구 인근의 한식 식당입니다.",
+    "tags": ["식당", "식사", "한식"],
+    "searchHints": ["하계동 주변에서 한식 유형으로 검색된 장소입니다."]
+  },
+  {
+    "id": "kakao-dummy-1",
+    "name": "더미 광화문본점",
+    "category": "육류,고기",
+    "district": "서울 종로구",
+    "address": "서울 종로구 종로1가 24",
+    "roadAddress": "서울 종로구 종로 19",
+    "latitude": 37.5708,
+    "longitude": 126.9799,
+    "summary": "서울 종로구 인근의 육류,고기 후보입니다.",
+    "tags": ["식당", "식사", "고기"],
+    "searchHints": ["더미 광화문본점의 카테고리와 위치 정보를 기반으로 추천 후보에 포함했습니다."]
+  }
+]

@@ -19,6 +19,9 @@ struct ContentView: View {
                 .navigationDestination(for: AppRoute.self, destination: routeView)
         }
         .task {
+#if DEBUG
+            guard ProcessInfo.processInfo.environment["PERO_SCREENSHOT_SCENARIO"] == nil else { return }
+#endif
             await viewModel.loadGoNowRecommendations()
         }
     }
@@ -392,10 +395,35 @@ final class RecommendationViewModel: ObservableObject {
 
     nonisolated private static func slotTitle(for place: PlaceListItem) -> String {
         let source = "\(place.category) \(place.name) \(place.tags.joined(separator: " ")) \(place.themeTags.joined(separator: " "))"
+        if place.sourceAttribution == "kakaoLocal",
+           !source.localizedCaseInsensitiveContains("카페"),
+           !source.localizedCaseInsensitiveContains("커피"),
+           !source.localizedCaseInsensitiveContains("디저트") {
+            return "식당 추천"
+        }
         if source.contains("축제") || source.contains("행사") || source.contains("공연") {
             return "축제 추천"
         }
-        if source.contains("식사") || source.contains("식당") || source.contains("음식") || source.contains("레스토랑") {
+        if source.contains("식사")
+            || source.contains("식당")
+            || source.contains("음식")
+            || source.contains("레스토랑")
+            || source.contains("한식")
+            || source.contains("중식")
+            || source.contains("일식")
+            || source.contains("양식")
+            || source.contains("분식")
+            || source.contains("육류")
+            || source.contains("고기")
+            || source.contains("곱창")
+            || source.contains("막창")
+            || source.contains("치킨")
+            || source.contains("국밥")
+            || source.contains("찌개")
+            || source.contains("국수")
+            || source.contains("구내식")
+            || source.contains("구내식당")
+            || source.contains("한정식") {
             return "식당 추천"
         }
         if source.contains("코스") || source.contains("전시") || source.contains("문화") || source.contains("관광") || source.contains("체험") {
@@ -425,7 +453,7 @@ final class RecommendationViewModel: ObservableObject {
             "닭", "치킨", "족발", "보쌈", "곱창", "막창", "갈비", "순대", "떡볶이", "돈까스",
             "우동", "삼계탕", "감자탕", "곰탕", "설렁탕", "해장국", "추어", "두부", "피자",
             "버거", "맥도날드", "롯데리아", "맘스터치", "버거킹", "김밥", "만두", "죽", "도시락",
-            "라면", "베트남", "태국", "멕시칸", "이탈리안", "파스타", "구내식당", "한정식"
+            "라면", "베트남", "태국", "멕시칸", "이탈리안", "파스타", "구내식", "구내식당", "한정식"
         ]
         return allowed.contains(where: { haystack.localizedCaseInsensitiveContains($0) })
     }

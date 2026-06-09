@@ -16,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(
         properties = {
                 "pero.providers.order=smartSeoul,koreaTour",
+                "pero.providers.kakaoLocal.enabled=false",
                 "pero.providers.koreaTour.enabled=true",
                 "pero.providers.koreaTour.cache-resource=classpath:test-data/provider-test/places-korea-tour.json",
                 "pero.providers.koreaTour.meta-resource=classpath:test-data/provider-test/places-korea-tour.meta.json",

@@ -68,6 +68,38 @@
 기존 캡처가 같은 기본 화면만 반복되는 문제를 수정했다.
 `DEBUG` 빌드에서만 `PERO_SCREENSHOT_SCENARIO` 환경변수로 캡처 상태를 강제할 수 있게 했다.
 운영 일반 실행에서는 해당 경로가 동작하지 않는다.
+최종 검증 세트는 fixture/dummy 카드를 사용하지 않고, 로컬 백엔드의 실제 캐시 응답을 로드한 뒤 선택 상태를 만든다.
+
+최종 상태별 캡처 파일:
+
+- `docs/final-report/screenshots/varied/verified-20260610/pero-home-ready.png`
+- `docs/final-report/screenshots/varied/verified-20260610/pero-dice-moving.png`
+- `docs/final-report/screenshots/varied/verified-20260610/pero-restaurant-result.png`
+- `docs/final-report/screenshots/varied/verified-20260610/pero-festival-result.png`
+- `docs/final-report/screenshots/varied/verified-20260610/pero-attraction-result.png`
+- `docs/final-report/screenshots/varied/verified-20260610/pero-verified-contact-sheet.png`
+
+최종 해시 검증:
+
+```text
+4fe895953264fc5c05b6e30b7b17bb259ce71ce4  pero-attraction-result.png
+597a24d6a5500dd3307ad2aab4aed7df3acb9e63  pero-dice-moving.png
+8368c252aef5379d77049b6691965e95736dfb3b  pero-festival-result.png
+e3257ff70fe24600988fa610e75715b91eaeeb0c  pero-home-ready.png
+294fce62f6d68a3958aa8e3c45e8682322f05f5c  pero-restaurant-result.png
+2ea0b485921e451e195a3c3139732c947148aaa0  pero-verified-contact-sheet.png
+```
+
+최종 결과:
+
+- 5개 상태 캡처의 SHA-1이 모두 다르다.
+- contact sheet로 육안 검수했다.
+- 식당 결과는 `kakaoLocal` 실제 캐시 장소 `부뚜막`이다.
+- 축제 결과는 실제 축제 캐시 `서울어텀페스타`다.
+- 장소 결과는 실제 장소 캐시 `군기시유적전시실`이다.
+- `ContentView` 기본 자동 로드는 DEBUG 캡처 시나리오에서만 비활성화해 캡처 상태가 기본 화면으로 덮이지 않게 했다.
+
+이전 캡처 파일은 아래 기록처럼 남겨두되, 최종 보고서에는 `verified-20260610` 세트를 사용한다.
 
 상태별 캡처 파일:
 

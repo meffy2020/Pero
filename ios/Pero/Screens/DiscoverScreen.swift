@@ -31,6 +31,7 @@ struct HomeRecommendationScreen: View {
     @State private var lastMapRefreshKey: String?
 #if DEBUG
     @State private var didApplyScreenshotScenario = false
+    @State private var didBootstrapScreenshotScenario = false
 #endif
 
     private var viewportCandidateCards: [RecommendationCardModel] {
@@ -50,13 +51,6 @@ struct HomeRecommendationScreen: View {
         return card
     }
 
-#if DEBUG
-    private var screenshotCard: RecommendationCardModel? {
-        guard let scenario = screenshotScenario, scenario.contains("result") || scenario.contains("lock") else { return nil }
-        return Self.fixtureCard(for: scenario)
-    }
-#endif
-
     private var mapMarkers: [KakaoMapMarker] {
         var markers: [KakaoMapMarker] = []
         if let selectedCard {
@@ -71,20 +65,6 @@ struct HomeRecommendationScreen: View {
                 )
             )
         }
-#if DEBUG
-        if let screenshotCard {
-            markers.append(
-                KakaoMapMarker(
-                    id: screenshotCard.id,
-                    latitude: screenshotCard.latitude,
-                    longitude: screenshotCard.longitude,
-                    kind: screenshotCard.mapMarkerKind,
-                    isSelected: true,
-                    isHighlighted: false
-                )
-            )
-        }
-#endif
         if let currentUserCoordinate {
             markers.append(
                 KakaoMapMarker(
@@ -325,22 +305,12 @@ struct HomeRecommendationScreen: View {
 
     @ViewBuilder
     private var selectedResultSheet: some View {
-#if DEBUG
-        if let screenshotCard {
-            RandomMapResultSheet(card: screenshotCard)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-        } else if let selectedCard {
-            RandomMapResultSheet(card: selectedCard)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-        }
-#else
         if let selectedCard {
             RandomMapResultSheet(
                 card: selectedCard
             )
             .transition(.move(edge: .bottom).combined(with: .opacity))
         }
-#endif
     }
 
 
@@ -363,9 +333,24 @@ struct HomeRecommendationScreen: View {
     }
 
     private func scheduleScreenshotScenarioIfNeeded() {
-        guard screenshotScenario != nil else { return }
+        guard let scenario = screenshotScenario, !didBootstrapScreenshotScenario else { return }
+        didBootstrapScreenshotScenario = true
         Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(900))
+            let mode = screenshotMode(for: scenario)
+            let camera = screenshotCamera(for: mode)
+            let bounds = screenshotBounds(for: mode)
+            pickerMode = mode
+            selectedCardID = nil
+            currentUserCoordinate = UserCoordinate(latitude: camera.latitude, longitude: camera.longitude)
+            self.camera = camera
+            visibleBounds = bounds
+            await viewModel.loadGoNowRecommendations(
+                center: UserCoordinate(latitude: camera.latitude, longitude: camera.longitude),
+                visibleBounds: bounds,
+                camera: camera,
+                mode: mode
+            )
+            try? await Task.sleep(for: .milliseconds(1200))
             applyScreenshotScenarioIfNeeded(cards: viewModel.cards)
         }
     }
@@ -373,16 +358,17 @@ struct HomeRecommendationScreen: View {
     private func applyScreenshotScenarioIfNeeded(cards: [RecommendationCardModel]) {
         guard !didApplyScreenshotScenario, let scenario = screenshotScenario else { return }
         let nextMode = screenshotMode(for: scenario)
-        let card = Self.fixtureCard(for: scenario)
+        guard let card = screenshotTargetCard(from: cards, mode: nextMode) else { return }
         didApplyScreenshotScenario = true
         pickerMode = nextMode
-        selectedCardID = nil
-        camera = KakaoMapCamera(latitude: card.latitude, longitude: card.longitude, level: scenario.contains("close") ? KakaoMapCamera.focusedLevel : camera.level)
+        selectedCardID = scenario.contains("result") || scenario.contains("lock") ? card.id : nil
+        let currentLevel = camera.level
+        camera = KakaoMapCamera(latitude: card.latitude, longitude: card.longitude, level: currentLevel)
         if scenario.contains("dice") {
             isDrawing = true
             drawPhase = .shuffling
             drawPreviewTitle = nil
-            drawCandidateTrail = [card]
+            drawCandidateTrail = Array(cards.filter { nextMode.matches($0) }.prefix(3))
             diceState = DrawDiceAnimationState(
                 normalizedPosition: CGPoint(x: 0.78, y: 0.28),
                 rotation: 318,
@@ -413,61 +399,65 @@ struct HomeRecommendationScreen: View {
     }
 
     private func screenshotMode(for scenario: String) -> RecommendationPickerMode {
-        if scenario.contains("festival") { return .festival }
-        if scenario.contains("place") || scenario.contains("attraction") { return .attraction }
+        let normalized = scenario.lowercased()
+        if normalized.contains("festival") { return .festival }
+        if normalized.contains("place") || normalized.contains("attraction") { return .attraction }
         return .restaurant
     }
 
-    private static func fixtureCard(for scenario: String) -> RecommendationCardModel {
-        if scenario.contains("festival") {
-            return RecommendationCardModel(
-                id: "screenshot-festival",
-                title: "서울거리공연 구석구석 라이브",
-                subtitle: "축제",
-                reason: "현재 진행 중인 서울 문화 행사",
-                category: "행사/공연/축제",
-                district: "서울 중구",
-                roadAddress: "서울 중구 세종대로 110",
-                latitude: 37.5663,
-                longitude: 126.9784,
-                distanceLabel: "현재 지도 안",
-                sourceAttribution: "koreaTour",
-                tags: ["축제", "공연"],
-                eventPeriodLabel: "진행 중",
-                eventSummary: "현재 방문 가능한 행사 후보입니다.",
-                officialURL: URL(string: "https://korean.visitkorea.or.kr")
+    private func screenshotTargetCard(
+        from cards: [RecommendationCardModel],
+        mode: RecommendationPickerMode
+    ) -> RecommendationCardModel? {
+        let matchingCards = cards.filter { mode.matches($0) }
+        if mode == .restaurant {
+            return matchingCards.first {
+                $0.sourceAttribution == "kakaoLocal"
+                && !$0.category.localizedCaseInsensitiveContains("카페")
+                && !$0.title.localizedCaseInsensitiveContains("카페")
+            }
+        }
+        if mode == .festival {
+            return matchingCards.first { $0.hasFestivalDetail } ?? matchingCards.first
+        }
+        return matchingCards.first
+    }
+
+    private func screenshotCamera(for mode: RecommendationPickerMode) -> KakaoMapCamera {
+        switch mode {
+        case .restaurant:
+            KakaoMapCamera(latitude: 37.6377, longitude: 127.0650, level: KakaoMapCamera.focusedLevel)
+        case .festival:
+            KakaoMapCamera(latitude: 37.5665, longitude: 126.9780, level: 8)
+        case .attraction:
+            KakaoMapCamera(latitude: 37.5665, longitude: 126.9780, level: 10)
+        }
+    }
+
+    private func screenshotBounds(for mode: RecommendationPickerMode) -> KakaoMapVisibleBounds {
+        switch mode {
+        case .restaurant:
+            KakaoMapVisibleBounds(
+                minLatitude: 37.61,
+                maxLatitude: 37.66,
+                minLongitude: 127.04,
+                maxLongitude: 127.09
+            )
+        case .festival:
+            KakaoMapVisibleBounds(
+                minLatitude: 37.45,
+                maxLatitude: 37.70,
+                minLongitude: 126.80,
+                maxLongitude: 127.12
+            )
+        case .attraction:
+            KakaoMapVisibleBounds(
+                minLatitude: 37.53,
+                maxLatitude: 37.60,
+                minLongitude: 126.94,
+                maxLongitude: 127.02
             )
         }
-        if scenario.contains("place") || scenario.contains("attraction") {
-            return RecommendationCardModel(
-                id: "screenshot-place",
-                title: "서울광장",
-                subtitle: "장소",
-                reason: "현재 지도 안에서 바로 이동 가능한 장소",
-                category: "관광지",
-                district: "서울 중구",
-                roadAddress: "서울 중구 세종대로 110",
-                latitude: 37.5657,
-                longitude: 126.9780,
-                distanceLabel: "현재 지도 안",
-                sourceAttribution: "koreaTour",
-                tags: ["산책", "광장"]
-            )
-        }
-        return RecommendationCardModel(
-            id: "kakao-screenshot-restaurant",
-            title: "참맛깔곱창",
-            subtitle: "식당",
-            reason: "현재 지도 안 카카오 로컬 캐시 식당 후보",
-            category: "곱창,막창",
-            district: "서울 노원구",
-            roadAddress: "서울 노원구 섬밭로 232",
-            latitude: 37.6377,
-            longitude: 127.0650,
-            distanceLabel: "현재 지도 안",
-            sourceAttribution: "kakaoLocal",
-            tags: ["식당", "카카오 로컬 캐시"]
-        )
     }
 #endif
 
@@ -485,6 +475,9 @@ struct HomeRecommendationScreen: View {
     }
 
     private func scheduleMapScopedRefresh() {
+#if DEBUG
+        guard screenshotScenario == nil else { return }
+#endif
         guard let visibleBounds else { return }
         let refreshKey = mapRefreshKey(bounds: visibleBounds, camera: camera, mode: pickerMode)
         guard refreshKey != lastMapRefreshKey else { return }

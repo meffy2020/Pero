@@ -85,6 +85,7 @@ class SearchControllerSmartSeoulIntegrationTests {
     @DynamicPropertySource
     static void registerSmartSeoulProperties(DynamicPropertyRegistry registry) {
         registry.add("pero.providers.order", () -> "smartSeoul,koreaTour");
+        registry.add("pero.providers.kakaoLocal.enabled", () -> "false");
         registry.add("pero.providers.koreaTour.enabled", () -> "false");
         registry.add("pero.providers.smartSeoul.enabled", () -> "true");
         registry.add("pero.providers.smartSeoul.cache-resource", () -> SMART_CACHE_PATH.toUri().toString());

@@ -76,6 +76,13 @@ extension RecommendationCardModel {
     var randomSlotKind: RecommendationSlotKind {
         let primarySource = "\(subtitle) \(category)"
         let taggedSource = "\(primarySource) \(tags.joined(separator: " "))"
+        let cafeDeniedSource = "\(taggedSource) \(title)"
+        if sourceAttribution == "kakaoLocal",
+           !cafeDeniedSource.localizedCaseInsensitiveContains("카페"),
+           !cafeDeniedSource.localizedCaseInsensitiveContains("커피"),
+           !cafeDeniedSource.localizedCaseInsensitiveContains("디저트") {
+            return .restaurant
+        }
         if taggedSource.contains("축제")
             || taggedSource.contains("행사")
             || taggedSource.contains("공연")
@@ -85,6 +92,22 @@ extension RecommendationCardModel {
         if primarySource.contains("식사")
             || primarySource.contains("식당")
             || primarySource.contains("음식점")
+            || primarySource.contains("한식")
+            || primarySource.contains("중식")
+            || primarySource.contains("일식")
+            || primarySource.contains("양식")
+            || primarySource.contains("분식")
+            || primarySource.contains("육류")
+            || primarySource.contains("고기")
+            || primarySource.contains("곱창")
+            || primarySource.contains("막창")
+            || primarySource.contains("치킨")
+            || primarySource.contains("국밥")
+            || primarySource.contains("찌개")
+            || primarySource.contains("국수")
+            || primarySource.contains("구내식")
+            || primarySource.contains("구내식당")
+            || primarySource.contains("한정식")
             || primarySource.localizedCaseInsensitiveContains("meal")
             || primarySource.localizedCaseInsensitiveContains("restaurant") {
             return .restaurant

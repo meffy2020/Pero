@@ -18,6 +18,7 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT = ROOT_DIR / "backend/src/main/resources/data/places.kakao.json"
 KAKAO_KEYWORD_URL = "https://dapi.kakao.com/v2/local/search/keyword.json"
 KAKAO_MAX_RADIUS_METERS = 20000
+SYNTHETIC_MARKERS = ("더미", "dummy", "fake", "mock", "시뮬레이션", "simulation")
 
 TARGETS = [
     {
@@ -317,6 +318,8 @@ def to_place(document: dict[str, Any], target: dict[str, Any], keyword: str) -> 
     place_name = document.get("place_name", "").strip()
     if not place_name:
         return None
+    if looks_synthetic_text(place_name):
+        return None
 
     category_name = document.get("category_name", "").strip()
     if not is_restaurant_document(place_name, category_name, keyword):
@@ -325,6 +328,11 @@ def to_place(document: dict[str, Any], target: dict[str, Any], keyword: str) -> 
     address = document.get("address_name", "").strip()
     road_address = document.get("road_address_name", "").strip() or address
     kakao_id = document.get("id", "").strip()
+
+    summary = make_summary(place_name, category_name, target["area"], tags)
+    search_hints = make_hints(place_name, category_name, target["area"], tags)
+    if looks_synthetic_text(place_name, summary, *search_hints):
+        return None
 
     return {
         "id": f"kakao-{kakao_id or abs(hash((place_name, latitude, longitude)))}",
@@ -335,10 +343,15 @@ def to_place(document: dict[str, Any], target: dict[str, Any], keyword: str) -> 
         "roadAddress": road_address,
         "latitude": latitude,
         "longitude": longitude,
-        "summary": make_summary(place_name, category_name, target["area"], tags),
+        "summary": summary,
         "tags": tags,
-        "searchHints": make_hints(place_name, category_name, target["area"], tags),
+        "searchHints": search_hints,
     }
+
+
+def looks_synthetic_text(*values: str) -> bool:
+    normalized = " ".join(value or "" for value in values).casefold()
+    return any(marker.casefold() in normalized for marker in SYNTHETIC_MARKERS)
 
 
 def collect(api_key: str, max_places: int, pause_seconds: float) -> list[dict[str, Any]]:
