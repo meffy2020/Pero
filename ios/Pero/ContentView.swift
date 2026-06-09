@@ -395,35 +395,10 @@ final class RecommendationViewModel: ObservableObject {
 
     nonisolated private static func slotTitle(for place: PlaceListItem) -> String {
         let source = "\(place.category) \(place.name) \(place.tags.joined(separator: " ")) \(place.themeTags.joined(separator: " "))"
-        if place.sourceAttribution == "kakaoLocal",
-           !source.localizedCaseInsensitiveContains("카페"),
-           !source.localizedCaseInsensitiveContains("커피"),
-           !source.localizedCaseInsensitiveContains("디저트") {
-            return "식당 추천"
-        }
         if source.contains("축제") || source.contains("행사") || source.contains("공연") {
             return "축제 추천"
         }
-        if source.contains("식사")
-            || source.contains("식당")
-            || source.contains("음식")
-            || source.contains("레스토랑")
-            || source.contains("한식")
-            || source.contains("중식")
-            || source.contains("일식")
-            || source.contains("양식")
-            || source.contains("분식")
-            || source.contains("육류")
-            || source.contains("고기")
-            || source.contains("곱창")
-            || source.contains("막창")
-            || source.contains("치킨")
-            || source.contains("국밥")
-            || source.contains("찌개")
-            || source.contains("국수")
-            || source.contains("구내식")
-            || source.contains("구내식당")
-            || source.contains("한정식") {
+        if isStrictRestaurantPlace(place) {
             return "식당 추천"
         }
         if source.contains("코스") || source.contains("전시") || source.contains("문화") || source.contains("관광") || source.contains("체험") {
