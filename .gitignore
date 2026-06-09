@@ -43,6 +43,7 @@ docs/proposals/
 
 # Swift Package Manager
 **/.build/
+**/.swiftpm/
 
 # Local design research cache
 .lazyweb/
@@ -54,3 +55,4 @@ docs/proposals/
 # Xcode build artifacts
 DerivedData/
 *.xcresult
+**/xcuserdata/
