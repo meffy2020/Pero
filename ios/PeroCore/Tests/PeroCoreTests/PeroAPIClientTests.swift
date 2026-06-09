@@ -29,7 +29,23 @@ import Testing
     let client = PeroAPIClient(baseURL: try #require(URL(string: "https://api.example.test/pero")), transport: transport)
 
     let response = try await client.recommendations(
-        RecommendationRequest(themeId: "go-now", latitude: 35.1796, longitude: 129.0756, radiusKm: 3)
+        RecommendationRequest(
+            themeId: "go-now",
+            latitude: 35.1796,
+            longitude: 129.0756,
+            radiusKm: 3,
+            north: 35.3,
+            south: 35.1,
+            east: 129.2,
+            west: 128.9,
+            zoom: 13,
+            density: "detail",
+            category: "관광지",
+            mode: "tour",
+            limit: 20,
+            recentPlaceIds: ["p-old"],
+            includeTourApi: false
+        )
     )
 
     let sentRequest = try await transport.onlyRequest()
@@ -42,8 +58,21 @@ import Testing
     #expect(bodyObject?["latitude"] as? Double == 35.1796)
     #expect(bodyObject?["longitude"] as? Double == 129.0756)
     #expect(bodyObject?["radiusKm"] as? Double == 3)
+    #expect(bodyObject?["north"] as? Double == 35.3)
+    #expect(bodyObject?["south"] as? Double == 35.1)
+    #expect(bodyObject?["east"] as? Double == 129.2)
+    #expect(bodyObject?["west"] as? Double == 128.9)
+    #expect(bodyObject?["zoom"] as? Double == 13)
+    #expect(bodyObject?["density"] as? String == "detail")
+    #expect(bodyObject?["category"] as? String == "관광지")
+    #expect(bodyObject?["mode"] as? String == "tour")
+    #expect(bodyObject?["limit"] as? Int == 20)
+    #expect(bodyObject?["recentPlaceIds"] as? [String] == ["p-old"])
+    #expect(bodyObject?["includeTourApi"] as? Bool == false)
 
+    #expect(response.source.providerId == "smartSeoul,koreaTour")
     #expect(response.fallbackUsed)
+    #expect(response.randomScope == "현재 지도 안에서 랜덤")
     #expect(response.nearbyPick?.place?.themeTags == ["go-now"])
     #expect(response.mealPick?.place?.name == "도심 간편 식당가")
     #expect(response.dateCourse?.stops.count == 1)
@@ -161,7 +190,15 @@ private let recommendationResponseJSON = Data(
     #"""
     {
       "generatedAt": "2026-06-02T08:00:00.000Z",
+      "source": {
+        "providerId": "smartSeoul,koreaTour",
+        "providerName": "스마트서울맵 캐시 + 한국관광공사 API 동기화 캐시",
+        "status": "loaded",
+        "generatedAt": "2026-06-02T08:00:00.000Z",
+        "count": 100
+      },
       "fallbackUsed": true,
+      "randomScope": "현재 지도 안에서 랜덤",
       "nearbyPick": {
         "key": "nearby",
         "title": "가까운 산책 추천",

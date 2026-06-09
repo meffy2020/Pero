@@ -18,7 +18,7 @@ public struct PreviewPeroAPIProvider: PeroAPIProviding {
     }
 
     public func places() async throws -> PlacesResponse {
-        PlacesResponse(source: source, total: previewPlaces.count, places: previewPlaces)
+        PlacesResponse(source: source, generatedAt: Date(timeIntervalSince1970: 0), fallbackUsed: false, randomScope: "미리보기 후보", total: previewPlaces.count, places: previewPlaces)
     }
 
     public func themes() async throws -> [ThemeSummary] {
@@ -73,7 +73,9 @@ public struct PreviewPeroAPIProvider: PeroAPIProviding {
     public func recommendations(_ request: RecommendationRequest) async throws -> RecommendationResponse {
         RecommendationResponse(
             generatedAt: Date(timeIntervalSince1970: 0),
+            source: source,
             fallbackUsed: true,
+            randomScope: "미리보기 랜덤",
             nearbyPick: RecommendationCard(
                 key: "nearby",
                 title: "가까운 산책 추천",

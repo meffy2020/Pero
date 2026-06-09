@@ -369,7 +369,9 @@ private extension PlaceListItem {
 private extension RecommendationResponse {
     static let previewForTests = RecommendationResponse(
         generatedAt: Date(timeIntervalSince1970: 0),
+        source: SearchSourceMeta(providerId: "test", providerName: "test", status: "loaded", generatedAt: Date(timeIntervalSince1970: 0), count: places.count),
         fallbackUsed: true,
+        randomScope: "테스트 랜덤",
         nearbyPick: RecommendationCard(
             key: "nearby",
             title: "가까운 산책 추천",
@@ -445,7 +447,9 @@ private extension RecommendationResponse {
 
     static let missingNearbyForTests = RecommendationResponse(
         generatedAt: Date(timeIntervalSince1970: 0),
+        source: SearchSourceMeta(providerId: "test", providerName: "test", status: "loaded", generatedAt: Date(timeIntervalSince1970: 0), count: places.count),
         fallbackUsed: false,
+        randomScope: "테스트 랜덤",
         nearbyPick: nil,
         mealPick: RecommendationCard(
             key: "meal",

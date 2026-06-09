@@ -74,6 +74,36 @@ public enum PeroEndpoint: Equatable, Sendable {
             if let radiusKm = query.radiusKm {
                 items.append(URLQueryItem(name: "radiusKm", value: String(radiusKm)))
             }
+            if let north = query.north {
+                items.append(URLQueryItem(name: "north", value: String(north)))
+            }
+            if let south = query.south {
+                items.append(URLQueryItem(name: "south", value: String(south)))
+            }
+            if let east = query.east {
+                items.append(URLQueryItem(name: "east", value: String(east)))
+            }
+            if let west = query.west {
+                items.append(URLQueryItem(name: "west", value: String(west)))
+            }
+            if let zoom = query.zoom {
+                items.append(URLQueryItem(name: "zoom", value: String(zoom)))
+            }
+            if let density = query.density, !density.isEmpty {
+                items.append(URLQueryItem(name: "density", value: density))
+            }
+            if let category = query.category, !category.isEmpty {
+                items.append(URLQueryItem(name: "category", value: category))
+            }
+            if let mode = query.mode, !mode.isEmpty {
+                items.append(URLQueryItem(name: "mode", value: mode))
+            }
+            if let source = query.source, !source.isEmpty {
+                items.append(URLQueryItem(name: "source", value: source))
+            }
+            if let activeFestival = query.activeFestival {
+                items.append(URLQueryItem(name: "activeFestival", value: String(activeFestival)))
+            }
             if let limit = query.limit {
                 items.append(URLQueryItem(name: "limit", value: String(limit)))
             }

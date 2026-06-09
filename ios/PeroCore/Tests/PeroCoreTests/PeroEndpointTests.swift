@@ -19,7 +19,23 @@ import Testing
 
 @Test func placesEndpointBuildsLightweightPoolQuery() throws {
     let request = try PeroEndpoint.places(
-        PlacesQuery(latitude: 37.5665, longitude: 126.978, limit: 360, includeTourApi: false)
+        PlacesQuery(
+            latitude: 37.5665,
+            longitude: 126.978,
+            radiusKm: 3,
+            north: 37.7,
+            south: 37.4,
+            east: 127.1,
+            west: 126.8,
+            zoom: 12,
+            density: "detail",
+            category: "관광지",
+            mode: "tour",
+            source: "koreaTour",
+            activeFestival: true,
+            limit: 360,
+            includeTourApi: false
+        )
     )
     .urlRequest(baseURL: try #require(URL(string: "https://example.com/pero")))
 
@@ -30,6 +46,17 @@ import Testing
     let items = components.queryItems ?? []
     #expect(items.contains(URLQueryItem(name: "latitude", value: "37.5665")))
     #expect(items.contains(URLQueryItem(name: "longitude", value: "126.978")))
+    #expect(items.contains(URLQueryItem(name: "radiusKm", value: "3.0")))
+    #expect(items.contains(URLQueryItem(name: "north", value: "37.7")))
+    #expect(items.contains(URLQueryItem(name: "south", value: "37.4")))
+    #expect(items.contains(URLQueryItem(name: "east", value: "127.1")))
+    #expect(items.contains(URLQueryItem(name: "west", value: "126.8")))
+    #expect(items.contains(URLQueryItem(name: "zoom", value: "12.0")))
+    #expect(items.contains(URLQueryItem(name: "density", value: "detail")))
+    #expect(items.contains(URLQueryItem(name: "category", value: "관광지")))
+    #expect(items.contains(URLQueryItem(name: "mode", value: "tour")))
+    #expect(items.contains(URLQueryItem(name: "source", value: "koreaTour")))
+    #expect(items.contains(URLQueryItem(name: "activeFestival", value: "true")))
     #expect(items.contains(URLQueryItem(name: "limit", value: "360")))
     #expect(items.contains(URLQueryItem(name: "includeTourApi", value: "false")))
 }
