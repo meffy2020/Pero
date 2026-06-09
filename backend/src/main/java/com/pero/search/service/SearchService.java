@@ -1125,7 +1125,19 @@ public class SearchService {
     }
 
     private void validateBounds(Double north, Double south, Double east, Double west) {
-        long count = List.of(north, south, east, west).stream().filter(value -> value != null).count();
+        int count = 0;
+        if (north != null) {
+            count++;
+        }
+        if (south != null) {
+            count++;
+        }
+        if (east != null) {
+            count++;
+        }
+        if (west != null) {
+            count++;
+        }
         if (count > 0 && count < 4) {
             throw new ResponseStatusException(BAD_REQUEST, "north/south/east/west는 함께 전달되어야 합니다.");
         }
