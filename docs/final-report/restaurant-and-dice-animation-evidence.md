@@ -46,3 +46,19 @@
 - 착지/확정 햅틱
 - 시스템 사운드 기반 tick/reveal 효과
 - Reduce Motion 환경에서는 짧은 착지 애니메이션으로 축약
+
+## 2026-06-10 마커/주사위 에셋 교체
+
+사용자 제공 주사위 이미지를 앱용 투명 PNG 에셋으로 변환했다.
+
+- 앱 에셋: `ios/Pero/Assets.xcassets/pero-dice-marker.imageset/pero-dice-marker.png`
+- 지도 선택 마커: 모든 장소/식당/축제 카테고리에서 같은 주사위 에셋 사용
+- 뽑기 애니메이션 주사위: 같은 에셋 사용
+- 뽑기 중 상단 상태 카드: 어두운 글라스 대신 흰색 반투명 애플 글라스 톤으로 조정
+- 시뮬레이터 캡처: `docs/final-report/screenshots/pero-ios-dice-marker-glass-ready.png`
+
+검증:
+
+- `xcodebuild -project ios/Pero.xcodeproj -scheme Pero -destination 'platform=iOS Simulator,id=78867352-14AD-4092-BDF0-46DE89BD3A79' build` 성공
+- iPhone 실기기 빌드/설치 성공
+- iPhone 실기기 실행은 기기 잠금 상태로 iOS가 차단

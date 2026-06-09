@@ -493,22 +493,7 @@ struct KakaoMapView: UIViewRepresentable {
         }
 
         private static func markerAssetName(kind: KakaoMapMarker.Kind) -> String {
-            switch kind {
-            case .attraction:
-                return "marker-attraction"
-            case .restaurant:
-                return "marker-restaurant"
-            case .festival:
-                return "marker-festival"
-            case .shopping:
-                return "marker-shopping"
-            case .lodging:
-                return "marker-lodging"
-            case .activity:
-                return "marker-activity"
-            case .culture:
-                return "marker-culture"
-            }
+            "pero-dice-marker"
         }
 
         private static func markerFillColor(kind: KakaoMapMarker.Kind, selected: Bool, highlighted: Bool) -> UIColor {

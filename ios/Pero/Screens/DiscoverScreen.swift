@@ -865,15 +865,17 @@ private struct DiceMotionTrail: View {
     var body: some View {
         GeometryReader { proxy in
             ForEach(0..<4, id: \.self) { index in
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(PeroMapStyle.accentDeep.opacity(0.08 - Double(index) * 0.014))
-                    .frame(width: 54, height: 54)
+                Image("pero-dice-marker")
+                    .resizable()
+                    .scaledToFit()
+                    .opacity(0.18 - Double(index) * 0.032)
+                    .frame(width: 64, height: 64)
                     .rotationEffect(.degrees(diceState.rotation - Double(index * 18)))
                     .position(
                         x: proxy.size.width * diceState.normalizedPosition.x - CGFloat(index * 13),
                         y: proxy.size.height * diceState.normalizedPosition.y + CGFloat(index * 8)
                     )
-                    .blur(radius: CGFloat(index) + diceState.blur * 0.38)
+                    .blur(radius: CGFloat(index) + diceState.blur * 0.42)
             }
         }
     }
@@ -885,19 +887,11 @@ private struct DiceToken: View {
     let reduceMotion: Bool
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(PeroMapStyle.surface)
-                .frame(width: 64, height: 64)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(PeroMapStyle.ink.opacity(0.84), lineWidth: 2.2)
-                }
-                .shadow(color: .black.opacity(0.24), radius: 14 + state.impact * 6, y: 8)
-
-            DicePips()
-                .frame(width: 42, height: 42)
-        }
+        Image("pero-dice-marker")
+            .resizable()
+            .scaledToFit()
+            .frame(width: 74, height: 74)
+            .shadow(color: .black.opacity(0.22), radius: 14 + state.impact * 6, y: 8)
         .scaleEffect(state.scale)
         .rotationEffect(.degrees(reduceMotion ? 0 : state.rotation))
         .blur(radius: reduceMotion ? 0 : state.blur)
@@ -911,30 +905,6 @@ private struct DiceToken: View {
             }
         }
         .animation(.spring(response: 0.24, dampingFraction: 0.68), value: phase)
-    }
-}
-
-private struct DicePips: View {
-    private let positions: [CGPoint] = [
-        CGPoint(x: 0.24, y: 0.24),
-        CGPoint(x: 0.76, y: 0.24),
-        CGPoint(x: 0.50, y: 0.50),
-        CGPoint(x: 0.24, y: 0.76),
-        CGPoint(x: 0.76, y: 0.76)
-    ]
-
-    var body: some View {
-        GeometryReader { proxy in
-            ForEach(positions.indices, id: \.self) { index in
-                Circle()
-                    .fill(PeroMapStyle.ink)
-                    .frame(width: 8, height: 8)
-                    .position(
-                        x: proxy.size.width * positions[index].x,
-                        y: proxy.size.height * positions[index].y
-                    )
-            }
-        }
     }
 }
 
@@ -977,12 +947,27 @@ private struct DrawTickerCard: View {
         .padding(.horizontal, 18)
         .padding(.vertical, 12)
         .frame(maxWidth: 286)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(Color.white.opacity(0.84))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .overlay(alignment: .topLeading) {
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.55), Color.white.opacity(0.08)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .blendMode(.plusLighter)
+                }
+        }
         .overlay {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(phase == .locking ? PeroMapStyle.accentDeep : PeroMapStyle.line, lineWidth: phase == .locking ? 1.8 : 0.8)
+                .stroke(phase == .locking ? PeroMapStyle.accentDeep.opacity(0.70) : Color.white.opacity(0.76), lineWidth: phase == .locking ? 1.8 : 1.0)
         }
-        .shadow(color: .black.opacity(0.10), radius: 16, y: 7)
+        .shadow(color: .black.opacity(0.08), radius: 18, y: 8)
         .animation(.spring(response: 0.26, dampingFraction: 0.76), value: phase)
     }
 
