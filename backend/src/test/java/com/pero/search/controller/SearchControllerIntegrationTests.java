@@ -133,6 +133,68 @@ class SearchControllerIntegrationTests {
         assertThat(json.path("randomScope").asText()).contains("낮은 줌");
     }
 
+
+    @Test
+    void placesEndpointExpandsScopeWhenVisibleBoundsHaveNoCandidates() throws Exception {
+        String body = mockMvc.perform(get("/api/places")
+                        .param("north", "0.0")
+                        .param("south", "-1.0")
+                        .param("east", "0.0")
+                        .param("west", "-1.0")
+                        .param("limit", "5")
+                        .param("includeTourApi", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fallbackUsed").value(true))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        JsonNode json = objectMapper.readTree(body);
+        PlacesResponse response = objectMapper.readValue(body, PlacesResponse.class);
+
+        assertThat(response.total()).isLessThanOrEqualTo(5);
+        assertThat(response.places()).isNotEmpty();
+        assertThat(response.randomScope()).contains("후보 부족");
+        assertThat(json.path("places").get(0).path("tourApi").isNull()).isTrue();
+    }
+
+    @Test
+    void recommendationsEndpointUsesModePoolAndReportsCachedCafeFallback() throws Exception {
+        var tourResult = mockMvc.perform(post("/api/recommendations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mode": "tour",
+                                  "limit": 10,
+                                  "includeTourApi": false
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode tourJson = objectMapper.readTree(tourResult.getResponse().getContentAsByteArray());
+        assertThat(tourJson.path("fallbackUsed").asBoolean()).isFalse();
+        assertThat(tourJson.path("randomScope").asText()).doesNotContain("mode 후보 부족");
+        assertThat(tourJson.path("nearbyPick").path("place").path("tourApi").isNull()).isTrue();
+
+        var cafeResult = mockMvc.perform(post("/api/recommendations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mode": "cafe",
+                                  "limit": 10,
+                                  "includeTourApi": false
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode cafeJson = objectMapper.readTree(cafeResult.getResponse().getContentAsByteArray());
+        assertThat(cafeJson.path("fallbackUsed").asBoolean()).isTrue();
+        assertThat(cafeJson.path("randomScope").asText()).contains("mode 후보 부족");
+        assertThat(cafeJson.path("nearbyPick").path("place").path("tourApi").isNull()).isTrue();
+    }
+
     @Test
     void placesEndpointRejectsPartialBounds() throws Exception {
         mockMvc.perform(get("/api/places")
