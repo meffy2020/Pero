@@ -46,8 +46,14 @@ public class SearchController {
     }
 
     @GetMapping("/places")
-    public PlacesResponse places() {
-        return searchService.places();
+    public PlacesResponse places(
+            @RequestParam(required = false) Double latitude,
+            @RequestParam(required = false) Double longitude,
+            @RequestParam(required = false) Double radiusKm,
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(defaultValue = "true") boolean includeTourApi
+    ) {
+        return searchService.places(latitude, longitude, radiusKm, limit, includeTourApi);
     }
 
     @GetMapping("/themes")

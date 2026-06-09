@@ -23,11 +23,18 @@ public struct URLSessionHTTPTransport: HTTPTransport {
 public protocol PeroAPIProviding: Sendable {
     func health() async throws -> HealthResponse
     func places() async throws -> PlacesResponse
+    func places(query: PlacesQuery) async throws -> PlacesResponse
     func themes() async throws -> [ThemeSummary]
     func theme(id: String) async throws -> ThemeDetail
     func events(region: String?, themeId: String?, activeOn: String?, limit: Int?) async throws -> EventsResponse
     func search(_ request: SearchRequest) async throws -> SearchResponse
     func recommendations(_ request: RecommendationRequest) async throws -> RecommendationResponse
+}
+
+public extension PeroAPIProviding {
+    func places(query: PlacesQuery) async throws -> PlacesResponse {
+        try await places()
+    }
 }
 
 public enum PeroAPIError: Error, Equatable, Sendable {
@@ -54,7 +61,11 @@ public struct PeroAPIClient: PeroAPIProviding {
     }
 
     public func places() async throws -> PlacesResponse {
-        try await send(endpoint: .places)
+        try await send(endpoint: .places())
+    }
+
+    public func places(query: PlacesQuery) async throws -> PlacesResponse {
+        try await send(endpoint: .places(query))
     }
 
     public func themes() async throws -> [ThemeSummary] {

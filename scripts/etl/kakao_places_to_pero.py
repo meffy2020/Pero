@@ -17,6 +17,7 @@ from typing import Any
 ROOT_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT = ROOT_DIR / "backend/src/main/resources/data/places.json"
 KAKAO_KEYWORD_URL = "https://dapi.kakao.com/v2/local/search/keyword.json"
+KAKAO_MAX_RADIUS_METERS = 20000
 
 TARGETS = [
     {
@@ -97,12 +98,20 @@ def load_env(path: Path) -> None:
         os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 
+def kakao_radius(value: Any) -> str:
+    try:
+        radius = int(value)
+    except (TypeError, ValueError):
+        radius = KAKAO_MAX_RADIUS_METERS
+    return str(max(0, min(radius, KAKAO_MAX_RADIUS_METERS)))
+
+
 def request_keyword(api_key: str, keyword: str, target: dict[str, Any], page: int) -> dict[str, Any]:
     params = {
         "query": keyword,
         "x": str(target["longitude"]),
         "y": str(target["latitude"]),
-        "radius": str(target["radius"]),
+        "radius": kakao_radius(target.get("radius")),
         "size": "15",
         "page": str(page),
         "sort": "distance",
@@ -273,8 +282,8 @@ def main() -> None:
     if not args.no_meta:
         meta_path = output.with_suffix(output.suffix + ".meta.json")
         metadata = {
-            "providerId": "koreaTour",
-            "providerName": "한국관광공사 캐시(임시:카카오 수집)",
+            "providerId": "kakaoLocal",
+            "providerName": "카카오 로컬 API 캐시",
             "generatedAt": datetime.now(timezone(timedelta(hours=9))).isoformat(timespec="seconds"),
             "status": "ok",
             "count": len(places),

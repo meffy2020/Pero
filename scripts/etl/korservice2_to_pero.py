@@ -87,6 +87,7 @@ CONTENT_TYPE_LABELS = {
     38: "쇼핑",
     39: "음식점",
 }
+SUMMARY_MAX_LENGTH = 400
 
 
 @dataclass
@@ -486,7 +487,14 @@ def build_theme_tags(title: str, category: str, district: str, common: dict[str,
     return dedupe_tags(theme_tags, limit=8)
 
 
-def build_summary(title: str, category: str, district: str, theme_tags: list[str]) -> str:
+def trim_summary(value: str | None, max_length: int = SUMMARY_MAX_LENGTH) -> str:
+    summary = normalize_text(value)
+    if len(summary) <= max_length:
+        return summary
+    return summary[:max_length].rstrip()
+
+
+def build_generated_summary(title: str, category: str, district: str, theme_tags: list[str]) -> str:
     if "축제행사" in theme_tags:
         return f"{district} 권역의 {category} 유형으로, 시즌성 행사와 테마 탐색에 활용할 수 있는 대표 후보입니다."
     if "자연산책" in theme_tags:
@@ -498,6 +506,13 @@ def build_summary(title: str, category: str, district: str, theme_tags: list[str
     if "반려동물동반" in theme_tags:
         return f"{district} 권역의 {category} 유형으로, 반려동물 동반 힌트가 있는 관광 후보입니다."
     return f"{district} 권역의 {category} 유형으로, 관광 테마맵 탐색에 활용할 수 있는 대표 후보입니다."
+
+
+def build_summary(title: str, category: str, district: str, theme_tags: list[str], overview: str | None = None) -> str:
+    official_overview = trim_summary(overview)
+    if official_overview:
+        return official_overview
+    return build_generated_summary(title, category, district, theme_tags)
 
 
 def build_search_hints(name: str, category: str, district: str, address: str, theme_tags: list[str], common: dict[str, Any] | None, pet: dict[str, Any] | None) -> list[str]:
@@ -653,7 +668,7 @@ def to_place(item: dict[str, Any], stats: CollectStats, *, endpoint: str, servic
 
     tags = build_tags(title, category, district, common)
     theme_tags = build_theme_tags(title, category, district, common, pet)
-    summary = build_summary(title, category, district, theme_tags)
+    summary = build_summary(title, category, district, theme_tags, overview)
     search_hints = build_search_hints(title, category, district, address, theme_tags, common, pet)
 
     return {

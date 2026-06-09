@@ -13,6 +13,7 @@ struct HomeRecommendationScreen: View {
     @State private var drawPreviewTitle: String?
     @State private var locationFeedback: String?
     @State private var currentUserCoordinate: UserCoordinate?
+    @State private var didCenterOnInitialLocation = false
     @State private var camera = KakaoMapCamera.seoul
     @State private var visibleBounds: KakaoMapVisibleBounds?
 
@@ -82,8 +83,14 @@ struct HomeRecommendationScreen: View {
         .refreshable {
             await viewModel.loadGoNowRecommendations()
         }
+        .onAppear {
+            centerOnInitialLocationIfNeeded(viewModel.activeCenterCoordinate)
+        }
         .onChange(of: viewModel.cards) { _, cards in
             reconcileSelection(with: cards)
+        }
+        .onChange(of: viewModel.activeCenterCoordinate) { _, coordinate in
+            centerOnInitialLocationIfNeeded(coordinate)
         }
         .onChange(of: pickerMode) { _, _ in
             reconcileSelection(with: viewModel.cards)
@@ -291,8 +298,7 @@ struct HomeRecommendationScreen: View {
     private var selectedResultSheet: some View {
         if let selectedCard {
             RandomMapResultSheet(
-                card: selectedCard,
-                mode: pickerMode
+                card: selectedCard
             )
             .transition(.move(edge: .bottom).combined(with: .opacity))
         } else if viewModel.state == .results, viewportCandidateCards.isEmpty {
@@ -312,6 +318,18 @@ struct HomeRecommendationScreen: View {
         }
     }
 
+
+    private func centerOnInitialLocationIfNeeded(_ coordinate: UserCoordinate?) {
+        guard !didCenterOnInitialLocation, let coordinate else { return }
+        didCenterOnInitialLocation = true
+        currentUserCoordinate = coordinate
+        camera = KakaoMapCamera(
+            latitude: coordinate.latitude,
+            longitude: coordinate.longitude,
+            level: KakaoMapCamera.focusedLevel
+        )
+    }
+
     private func rerollRecommendations() {
         rerollTask?.cancel()
         rerollTask = Task {
@@ -323,34 +341,46 @@ struct HomeRecommendationScreen: View {
         guard !isLocating else { return }
         isLocating = true
         selectedCardID = nil
-        withAnimation(.snappy(duration: 0.2)) {
+        withAnimation(.snappy(duration: 0.16)) {
             locationFeedback = "현재 위치 확인 중"
         }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         Task {
-            defer { isLocating = false }
             do {
                 let coordinate = try await viewModel.currentCoordinate()
-                currentUserCoordinate = coordinate
-                withAnimation(.snappy(duration: 0.24)) {
-                    locationFeedback = "현재 위치로 이동"
-                    camera = KakaoMapCamera(latitude: coordinate.latitude, longitude: coordinate.longitude, level: 3)
-                }
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
-                await viewModel.loadGoNowRecommendations(center: coordinate)
-                try? await Task.sleep(for: .milliseconds(1200))
-                withAnimation(.snappy(duration: 0.2)) {
-                    locationFeedback = nil
-                }
+                await moveMapToCurrentLocation(coordinate)
+                await refreshRecommendationsNearCurrentLocation(coordinate)
             } catch {
-                withAnimation(.snappy(duration: 0.2)) {
+                isLocating = false
+                withAnimation(.snappy(duration: 0.16)) {
                     locationFeedback = "위치 권한 확인 필요"
                 }
                 UINotificationFeedbackGenerator().notificationOccurred(.error)
-                try? await Task.sleep(for: .milliseconds(1600))
-                withAnimation(.snappy(duration: 0.2)) {
+                try? await Task.sleep(for: .milliseconds(1400))
+                withAnimation(.snappy(duration: 0.16)) {
                     locationFeedback = nil
                 }
+            }
+        }
+    }
+
+    @MainActor
+    private func moveMapToCurrentLocation(_ coordinate: UserCoordinate) async {
+        currentUserCoordinate = coordinate
+        withAnimation(.snappy(duration: 0.18)) {
+            locationFeedback = "현재 위치로 이동"
+            camera = KakaoMapCamera(latitude: coordinate.latitude, longitude: coordinate.longitude, level: KakaoMapCamera.focusedLevel)
+        }
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        isLocating = false
+    }
+
+    private func refreshRecommendationsNearCurrentLocation(_ coordinate: UserCoordinate) async {
+        await viewModel.loadGoNowRecommendations(center: coordinate)
+        try? await Task.sleep(for: .milliseconds(800))
+        await MainActor.run {
+            withAnimation(.snappy(duration: 0.16)) {
+                locationFeedback = nil
             }
         }
     }
@@ -405,7 +435,7 @@ struct HomeRecommendationScreen: View {
                 drawPreviewTitle = card.title
             }
             impact.impactOccurred(intensity: index == run.indices.last ? 0.75 : 0.38)
-            try? await Task.sleep(for: .milliseconds(index == run.indices.last ? 360 : 180))
+            try? await Task.sleep(for: .milliseconds(index == run.indices.last ? 260 : 120))
         }
 
         guard !Task.isCancelled, let finalCard = run.last else {
@@ -422,7 +452,7 @@ struct HomeRecommendationScreen: View {
 
         withAnimation(.snappy(duration: 0.28)) {
             selectedCardID = finalCard.id
-            camera = KakaoMapCamera(latitude: finalCard.latitude, longitude: finalCard.longitude, level: 3)
+            camera = KakaoMapCamera(latitude: finalCard.latitude, longitude: finalCard.longitude, level: KakaoMapCamera.focusedLevel)
             drawPreviewTitle = nil
             isDrawing = false
         }
@@ -473,13 +503,12 @@ enum HomeMapKoreanCopy {
 
 private struct RandomMapResultSheet: View {
     let card: RecommendationCardModel
-    let mode: RecommendationPickerMode
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Label(mode.title, systemImage: mode.symbolName)
+                    Label(card.category, systemImage: card.categoryIconName)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(PeroMapStyle.muted)
                     Text(card.title)
@@ -492,7 +521,7 @@ private struct RandomMapResultSheet: View {
 
             FlowMetadataRow(card: card)
 
-            if mode == .festival, card.hasFestivalDetail {
+            if card.randomSlotKind == .festival, card.hasFestivalDetail {
                 FestivalInfoPanel(card: card)
             }
 
@@ -518,7 +547,7 @@ private struct RandomMapResultSheet: View {
         .padding(.horizontal, 20)
         .padding(.bottom, 18)
         .peroBottomSheetSurface()
-        .accessibilityLabel("랜덤 \(mode.title) 추천, \(card.title), \(card.district), \(card.category)")
+        .accessibilityLabel("랜덤 \(card.category) 추천, \(card.title), \(card.district)")
     }
 }
 

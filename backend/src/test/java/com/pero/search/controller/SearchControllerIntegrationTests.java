@@ -73,6 +73,34 @@ class SearchControllerIntegrationTests {
     }
 
     @Test
+    void placesEndpointCanReturnLightweightNearbyPool() throws Exception {
+        String body = mockMvc.perform(get("/api/places")
+                        .param("latitude", "37.5665")
+                        .param("longitude", "126.9780")
+                        .param("limit", "12")
+                        .param("includeTourApi", "false"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        JsonNode json = objectMapper.readTree(body);
+        PlacesResponse response = objectMapper.readValue(body, PlacesResponse.class);
+
+        assertThat(response.total()).isLessThanOrEqualTo(12);
+        assertThat(response.places()).hasSize(response.total());
+        assertThat(response.source().count()).isGreaterThanOrEqualTo(response.total());
+        assertThat(json.path("places").get(0).path("tourApi").isNull()).isTrue();
+    }
+
+    @Test
+    void placesEndpointRejectsPartialLocation() throws Exception {
+        mockMvc.perform(get("/api/places")
+                        .param("latitude", "37.5665"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void searchEndpointRejectsPartialLocation() throws Exception {
         mockMvc.perform(post("/api/search")
                         .contentType(MediaType.APPLICATION_JSON)

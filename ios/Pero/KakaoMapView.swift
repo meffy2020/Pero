@@ -8,6 +8,7 @@ struct KakaoMapCamera: Equatable {
     var level: Int
 
     static let seoul = KakaoMapCamera(latitude: 37.5665, longitude: 126.9780, level: 8)
+    static let focusedLevel = 11
 }
 
 struct KakaoMapVisibleBounds: Equatable {
@@ -124,6 +125,7 @@ struct KakaoMapView: UIViewRepresentable {
         private var didMoveInitialCamera = false
         private var didRegisterMarkerStyles = false
         private var lastSyncedMarkers: [KakaoMapMarker] = []
+        private var lastReportedVisibleBounds: KakaoMapVisibleBounds?
         private var currentViewSize: CGSize = .zero
 
         init(
@@ -223,7 +225,7 @@ struct KakaoMapView: UIViewRepresentable {
                     self?.syncVisibleBoundsIfPossible()
                 }
             } else {
-                let options = CameraAnimationOptions(autoElevation: false, consecutive: false, durationInMillis: 240)
+                let options = CameraAnimationOptions(autoElevation: false, consecutive: false, durationInMillis: 160)
                 mapView.animateCamera(cameraUpdate: update, options: options) { [weak self] in
                     self?.syncCameraFromMapIfPossible()
                     self?.syncVisibleBoundsIfPossible()
@@ -275,7 +277,21 @@ struct KakaoMapView: UIViewRepresentable {
                 minLongitude: minLongitude,
                 maxLongitude: maxLongitude
             )
+            guard shouldReportVisibleBounds(bounds) else { return }
+            lastReportedVisibleBounds = bounds
             onVisibleBoundsChanged(bounds)
+        }
+
+        private func shouldReportVisibleBounds(_ next: KakaoMapVisibleBounds) -> Bool {
+            guard let previous = lastReportedVisibleBounds else { return true }
+            let coordinateTolerance = 0.0008
+            let spanTolerance = 0.0012
+            return abs(next.minLatitude - previous.minLatitude) > coordinateTolerance
+                || abs(next.maxLatitude - previous.maxLatitude) > coordinateTolerance
+                || abs(next.minLongitude - previous.minLongitude) > coordinateTolerance
+                || abs(next.maxLongitude - previous.maxLongitude) > coordinateTolerance
+                || abs(next.latitudeSpan - previous.latitudeSpan) > spanTolerance
+                || abs(next.longitudeSpan - previous.longitudeSpan) > spanTolerance
         }
 
         func syncMarkersIfPossible(force: Bool = false) {

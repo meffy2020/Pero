@@ -2,7 +2,7 @@ import Foundation
 
 public enum PeroEndpoint: Equatable, Sendable {
     case health
-    case places
+    case places(PlacesQuery? = nil)
     case themes
     case theme(id: String)
     case events(region: String?, themeId: String?, activeOn: String?, limit: Int?)
@@ -62,6 +62,25 @@ public enum PeroEndpoint: Equatable, Sendable {
 
     private var queryItems: [URLQueryItem]? {
         switch self {
+        case .places(let query):
+            guard let query else { return nil }
+            var items: [URLQueryItem] = []
+            if let latitude = query.latitude {
+                items.append(URLQueryItem(name: "latitude", value: String(latitude)))
+            }
+            if let longitude = query.longitude {
+                items.append(URLQueryItem(name: "longitude", value: String(longitude)))
+            }
+            if let radiusKm = query.radiusKm {
+                items.append(URLQueryItem(name: "radiusKm", value: String(radiusKm)))
+            }
+            if let limit = query.limit {
+                items.append(URLQueryItem(name: "limit", value: String(limit)))
+            }
+            if let includeTourApi = query.includeTourApi {
+                items.append(URLQueryItem(name: "includeTourApi", value: String(includeTourApi)))
+            }
+            return items.isEmpty ? nil : items
         case .events(let region, let themeId, let activeOn, let limit):
             var items: [URLQueryItem] = []
             if let region, !region.isEmpty { items.append(URLQueryItem(name: "region", value: region)) }

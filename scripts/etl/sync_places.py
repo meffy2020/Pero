@@ -85,6 +85,7 @@ def main() -> None:
             output=str(output),
             max_places=args.max_places,
             strict=args.strict,
+            progress=args.progress,
         )
         status = smart_seoul_status(stats, len(places))
 

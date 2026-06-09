@@ -17,7 +17,7 @@ struct NavigationModelTests {
 
         #expect(card.mapFirstSummaryChips == ["0.8km", "중구", "공원"])
         #expect(card.mapFirstAccessibilitySummary == "가까운 산책 추천, 서울 반려 산책 공원, 0.8km, 중구, 공원")
-        #expect(card.mapPrimaryCTATitle == "지도에서 관광지 뽑기")
+        #expect(card.mapPrimaryCTATitle == "지도에서 장소 뽑기")
 
         let url = try #require(card.appleMapsURL)
         let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
@@ -45,7 +45,7 @@ struct NavigationModelTests {
         )
 
         #expect(place.randomSlotKind == .attraction)
-        #expect(place.mapPrimaryCTATitle == "지도에서 관광지 뽑기")
+        #expect(place.mapPrimaryCTATitle == "지도에서 장소 뽑기")
         #expect(restaurant.randomSlotKind == .restaurant)
         #expect(restaurant.mapPrimaryCTATitle == "지도에서 식당 뽑기")
         #expect(festival.randomSlotKind == .festival)
@@ -100,8 +100,57 @@ struct NavigationModelTests {
         #expect(cards.filter(RecommendationPickerMode.attraction.matches).map(\.id) == ["preview-seoul-park", "preview-gallery"])
         #expect(cards.filter(RecommendationPickerMode.restaurant.matches).map(\.id) == ["preview-market"])
         #expect(cards.filter(RecommendationPickerMode.festival.matches).isEmpty)
-        #expect(RecommendationPickerMode.allCases.map(\.title) == ["관광지", "식당", "축제"])
+        #expect(RecommendationPickerMode.allCases.map(\.title) == ["장소", "식당", "축제"])
+        #expect(RecommendationPickerMode.attraction.poolCopy == "장소 핀")
         #expect(RecommendationPickerMode.festival.poolCopy == "축제 핀")
+    }
+
+    @Test func placePoolNormalizerKeepsBackendCategorySeparateFromPickerBucket() throws {
+        let shoppingPlace = PlaceListItem(
+            id: "preview-shopping",
+            name: "아이닥안경",
+            category: "쇼핑",
+            district: "서울 중구",
+            address: "서울특별시 중구 명동",
+            roadAddress: "서울특별시 중구 명동3길 6",
+            summary: "서울 중구 권역의 쇼핑 후보입니다.",
+            tags: ["쇼핑", "실내"],
+            themeTags: ["서울", "가족나들이"],
+            latitude: 37.5637,
+            longitude: 126.9826,
+            sourceAttribution: "한국관광공사 TourAPI",
+            tourApi: nil
+        )
+
+        let card = try #require(RecommendationViewModel.normalize(places: [shoppingPlace], center: StaticLocationProvider.previewCoordinate).first)
+
+        #expect(card.category == "쇼핑")
+        #expect(RecommendationPickerMode(card: card).title == "장소")
+        #expect(card.randomSlotKind == .attraction)
+    }
+
+    @Test func placePoolNormalizerClassifiesEventCategoriesAsFestival() throws {
+        let eventPlace = PlaceListItem(
+            id: "preview-event",
+            name: "서울거리예술축제",
+            category: "행사/공연/축제",
+            district: "서울 중구",
+            address: "서울특별시 중구",
+            roadAddress: "서울특별시 중구 세종대로",
+            summary: "서울 중구 권역의 축제 후보입니다.",
+            tags: ["행사", "축제", "공연"],
+            themeTags: ["서울", "축제행사"],
+            latitude: 37.5665,
+            longitude: 126.9780,
+            sourceAttribution: "한국관광공사 TourAPI",
+            tourApi: nil
+        )
+
+        let card = try #require(RecommendationViewModel.normalize(places: [eventPlace], center: StaticLocationProvider.previewCoordinate).first)
+
+        #expect(card.subtitle == "축제 추천")
+        #expect(card.category == "행사/공연/축제")
+        #expect(card.randomSlotKind == .festival)
     }
 
     @Test @MainActor func viewModelKeepsSlotIdentityWhenEarlierRecommendationIsMissing() async {
@@ -146,6 +195,19 @@ struct NavigationModelTests {
         #expect(viewModel.cards.map(\.id).contains("preview-cafe"))
         #expect(viewModel.card(forSlotTitle: "식당 추천")?.randomSlotKind == .restaurant)
         #expect(viewModel.state == .results)
+    }
+
+    @Test @MainActor func viewModelRequestsLightweightNearbyPlacePoolForMapPins() async {
+        let provider = CapturingRecommendationProvider(placePool: PlaceListItem.previewPoolForTests)
+        let locationProvider = StaticLocationProvider(latitude: 35.1796, longitude: 129.0756)
+        let viewModel = RecommendationViewModel(provider: provider, locationProvider: locationProvider)
+
+        await viewModel.loadGoNowRecommendations()
+
+        #expect(provider.lastPlacesQuery?.latitude == 35.1796)
+        #expect(provider.lastPlacesQuery?.longitude == 129.0756)
+        #expect(provider.lastPlacesQuery?.limit == 360)
+        #expect(provider.lastPlacesQuery?.includeTourApi == false)
     }
 
     @Test @MainActor func viewModelDoesNotUsePreviewCardsAfterBackendFailure() async {
@@ -404,6 +466,7 @@ private extension RecommendationResponse {
 
 private final class CapturingRecommendationProvider: PeroAPIProviding, @unchecked Sendable {
     private(set) var lastRequest: RecommendationRequest?
+    private(set) var lastPlacesQuery: PlacesQuery?
     private(set) var recommendationCallCount = 0
     private(set) var placesCallCount = 0
     private(set) var searchCallCount = 0
@@ -427,6 +490,11 @@ private final class CapturingRecommendationProvider: PeroAPIProviding, @unchecke
             throw URLError(.cannotLoadFromNetwork)
         }
         return PlacesResponse(source: SearchSourceMeta(providerId: "test", providerName: "test", status: "loaded", generatedAt: Date(timeIntervalSince1970: 0), count: placePool.count), total: placePool.count, places: placePool)
+    }
+
+    func places(query: PlacesQuery) async throws -> PlacesResponse {
+        lastPlacesQuery = query
+        return try await places()
     }
 
     func themes() async throws -> [ThemeSummary] { [] }

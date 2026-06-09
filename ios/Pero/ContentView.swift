@@ -73,7 +73,7 @@ final class CoreLocationProvider: NSObject, LocationProviding, CLLocationManager
     override init() {
         super.init()
         manager.delegate = self
-        manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+        manager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
     }
 
     func currentCoordinate() async throws -> UserCoordinate {
@@ -96,7 +96,7 @@ final class CoreLocationProvider: NSObject, LocationProviding, CLLocationManager
             manager.requestWhenInUseAuthorization()
         case .authorizedAlways, .authorizedWhenInUse:
             pendingContinuation = continuation
-            if let location = manager.location, abs(location.timestamp.timeIntervalSinceNow) < 30 {
+            if let location = manager.location, abs(location.timestamp.timeIntervalSinceNow) < 300 {
                 resume(with: location)
             } else {
                 manager.requestLocation()
@@ -163,9 +163,12 @@ final class StaticLocationProvider: LocationProviding, @unchecked Sendable {
 
 @MainActor
 final class RecommendationViewModel: ObservableObject {
+    private static let mapPlacePoolLimit = 360
+
     @Published private(set) var state: RecommendationState = .ready
     @Published private(set) var cards: [RecommendationCardModel] = []
     @Published private(set) var fallbackUsed = false
+    @Published private(set) var activeCenterCoordinate: UserCoordinate?
 
     private var cardsByID: [RecommendationCardModel.ID: RecommendationCardModel] = [:]
 
@@ -196,6 +199,7 @@ final class RecommendationViewModel: ObservableObject {
     }
 
     func loadGoNowRecommendations(center coordinate: UserCoordinate) async {
+        activeCenterCoordinate = coordinate
         state = .loading
         fallbackUsed = false
         do {
@@ -213,9 +217,21 @@ final class RecommendationViewModel: ObservableObject {
             longitude: coordinate.longitude,
             radiusKm: 3
         )
-        let recommendationResponse = try? await provider.recommendations(request)
-        let placesResponse = try await provider.places()
-        let placePool = Self.normalize(places: placesResponse.places, center: coordinate)
+        let placePoolQuery = PlacesQuery(
+            latitude: coordinate.latitude,
+            longitude: coordinate.longitude,
+            limit: Self.mapPlacePoolLimit,
+            includeTourApi: false
+        )
+        async let recommendationResponseTask = provider.recommendations(request)
+        async let placesResponseTask = provider.places(query: placePoolQuery)
+        let recommendationResponse = try? await recommendationResponseTask
+        let placesResponse = try await placesResponseTask
+        let placePool = Self.normalize(
+            places: placesResponse.places,
+            center: coordinate,
+            limit: Self.mapPlacePoolLimit
+        )
 
         if !placePool.isEmpty {
             apply(cards: placePool, fallback: forceFallback || (recommendationResponse?.fallbackUsed ?? false))
@@ -264,8 +280,8 @@ final class RecommendationViewModel: ObservableObject {
 
         return Array(normalized.prefix(3))
     }
-    nonisolated static func normalize(places: [PlaceListItem], center: UserCoordinate) -> [RecommendationCardModel] {
-        places.compactMap { place in
+    nonisolated static func normalize(places: [PlaceListItem], center: UserCoordinate, limit: Int? = nil) -> [RecommendationCardModel] {
+        let normalized: [RecommendationCardModel] = places.compactMap { (place: PlaceListItem) -> RecommendationCardModel? in
             guard place.latitude.isFinite, place.longitude.isFinite else { return nil }
             let distanceKm = center.distanceKm(toLatitude: place.latitude, longitude: place.longitude)
             return RecommendationCardModel(
@@ -288,11 +304,16 @@ final class RecommendationViewModel: ObservableObject {
         .sorted { lhs, rhs in
             lhs.distanceValueForSorting < rhs.distanceValueForSorting
         }
+        guard let limit else { return normalized }
+        return Array(normalized.prefix(limit))
     }
 
 
     nonisolated private static func slotTitle(for place: PlaceListItem) -> String {
         let source = "\(place.category) \(place.name) \(place.tags.joined(separator: " ")) \(place.themeTags.joined(separator: " "))"
+        if source.contains("축제") || source.contains("행사") || source.contains("공연") {
+            return "축제 추천"
+        }
         if source.contains("식사") || source.contains("식당") || source.contains("음식") || source.contains("카페") {
             return "식당 추천"
         }

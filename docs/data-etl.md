@@ -14,10 +14,17 @@
     - `incremental`: `areaBasedSyncList2` + `modifiedtime`
   - 대상 콘텐츠 타입: `12, 14, 15, 28, 32, 38`
   - 제외: `39 음식점`
+  - 설명 필드: `detailCommon2.overview`를 `summary`에 우선 반영하고, 없을 때만 Pero 생성 문장을 fallback으로 사용
 - 서울 보조 공급자: `smartSeoul`
   - 별도 캐시 파일 사용
-  - 입력 소스: `SMART_SEOUL_MAP_SOURCE_PATH` 또는 `SMART_SEOUL_MAP_SOURCE_URL`
-  - JSON, GeoJSON, CSV를 정규화 대상으로 허용
+  - 기본 API: `https://map.seoul.go.kr/openapi/v5/{OpenAPIThemeKey}/public`
+  - 기본 키: `SMART_SEOUL_MAP_THEME_API_KEY`
+  - 보조 입력 소스: `SMART_SEOUL_MAP_SOURCE_PATH` 또는 `SMART_SEOUL_MAP_SOURCE_URL`
+  - JSON, GeoJSON, CSV fallback을 정규화 대상으로 허용
+  - 테마 수집: 관광, 축제, 문화, 산책, 공원, 무장애, 반려 등 서비스 후보 테마만 콘텐츠 조회 대상으로 사용
+  - 테마 제외: 학교, 통학, 병원, 약국, 중개사, 충전기, 편의시설, 출입구, 안전/안심, 행정/복지 등 비관광 테마
+  - 설명 필드: `COT_CONTS_DETAIL`, 설명성 `COT_NAME_01~20/COT_VALUE_01~20`, `THM_THEME_DETAIL` 순으로 `summary`에 반영
+  - 일정 필드: 공식 V5 `themes/contents/ko` 명세에는 날짜 요청 파라미터가 없으므로, `COT_NAME_01~20`이 `일시`, `기간`, `일정`인 값을 파싱해 과거 종료 행사를 ETL에서 제외
 
 ## 캐시 파일
 
@@ -57,6 +64,9 @@
   - 좌표 오류
   - 주소 결손
   - 관광 서비스 성격과 무관한 비관광성 POI
+  - Smart Seoul 관광 후보 키워드가 없는 비관광성 테마
+  - Smart Seoul 행사/축제 중 일정이 없거나 파싱되지 않는 레코드
+  - Smart Seoul 일정 종료일이 캐시 생성일보다 이전인 레코드
 - 테마 태그 공통 규칙
   - `서울`
   - `축제행사`
@@ -83,7 +93,10 @@ python3 scripts/etl/sync_places.py --provider koreaTour --mode full
 # TourAPI 증분 동기화
 python3 scripts/etl/sync_places.py --provider koreaTour --mode incremental
 
-# Smart Seoul 소스 파일 기반 캐시 생성
+# Smart Seoul 공식 V5 API 기반 캐시 생성
+python3 scripts/etl/sync_places.py --provider smartSeoul --mode full
+
+# Smart Seoul 소스 파일 기반 fallback 캐시 생성
 python3 scripts/etl/sync_places.py --provider smartSeoul --mode full --source-path /path/to/source.json
 
 # Smart Seoul 소스 URL 기반 dry-run

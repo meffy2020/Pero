@@ -65,6 +65,28 @@ public struct PlacesResponse: Decodable, Equatable, Sendable {
     public let places: [PlaceListItem]
 }
 
+public struct PlacesQuery: Equatable, Sendable {
+    public let latitude: Double?
+    public let longitude: Double?
+    public let radiusKm: Double?
+    public let limit: Int?
+    public let includeTourApi: Bool?
+
+    public init(
+        latitude: Double? = nil,
+        longitude: Double? = nil,
+        radiusKm: Double? = nil,
+        limit: Int? = nil,
+        includeTourApi: Bool? = nil
+    ) {
+        self.latitude = latitude
+        self.longitude = longitude
+        self.radiusKm = radiusKm
+        self.limit = limit
+        self.includeTourApi = includeTourApi
+    }
+}
+
 public struct EventsResponse: Decodable, Equatable, Sendable {
     public let generatedAt: Date
     public let total: Int

@@ -3,10 +3,6 @@ import SwiftUI
 struct PlaceExplanationDetailScreen: View {
     let card: RecommendationCardModel
 
-    private var mode: RecommendationPickerMode {
-        RecommendationPickerMode(card: card)
-    }
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -27,7 +23,7 @@ struct PlaceExplanationDetailScreen: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(mode.title)
+                    Text(card.category)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(PeroMapStyle.muted)
                     Text(card.title)
@@ -36,7 +32,7 @@ struct PlaceExplanationDetailScreen: View {
                         .lineLimit(2)
                 }
                 Spacer(minLength: 8)
-                Image(systemName: mode.symbolName)
+                Image(systemName: card.categoryIconName)
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(PeroMapStyle.ink)
                     .frame(width: 44, height: 44)

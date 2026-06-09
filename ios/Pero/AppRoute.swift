@@ -62,7 +62,7 @@ extension RecommendationCardModel {
     var mapPrimaryCTATitle: String {
         switch randomSlotKind {
         case .attraction:
-            "지도에서 관광지 뽑기"
+            "지도에서 장소 뽑기"
         case .restaurant:
             "지도에서 식당 뽑기"
         case .festival:
@@ -92,8 +92,16 @@ extension RecommendationCardModel {
 
     var categoryIconName: String {
         switch category {
-        case let value where value.contains("음식") || value.contains("식당"):
+        case let value where value.contains("음식") || value.contains("식당") || value.contains("카페"):
             "fork.knife.circle.fill"
+        case let value where value.contains("행사") || value.contains("축제") || value.contains("공연"):
+            "sparkles"
+        case let value where value.contains("쇼핑"):
+            "bag.circle.fill"
+        case let value where value.contains("숙박"):
+            "bed.double.circle.fill"
+        case let value where value.contains("레포츠") || value.contains("스포츠"):
+            "figure.run.circle.fill"
         case let value where value.contains("전시") || value.contains("문화"):
             "building.columns.circle.fill"
         default:
@@ -143,7 +151,7 @@ enum RecommendationPickerMode: String, CaseIterable, Hashable, Identifiable {
 
     var title: String {
         switch self {
-        case .attraction: "관광지"
+        case .attraction: "장소"
         case .restaurant: "식당"
         case .festival: "축제"
         }
@@ -151,7 +159,7 @@ enum RecommendationPickerMode: String, CaseIterable, Hashable, Identifiable {
 
     var shortTitle: String {
         switch self {
-        case .attraction: "관광지"
+        case .attraction: "장소"
         case .restaurant: "식당"
         case .festival: "축제"
         }
@@ -167,7 +175,7 @@ enum RecommendationPickerMode: String, CaseIterable, Hashable, Identifiable {
 
     var poolCopy: String {
         switch self {
-        case .attraction: "관광지 핀"
+        case .attraction: "장소 핀"
         case .restaurant: "식당 핀"
         case .festival: "축제 핀"
         }

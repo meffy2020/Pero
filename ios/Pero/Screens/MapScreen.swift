@@ -8,11 +8,7 @@ struct MapScreen: View {
 
     init(card: RecommendationCardModel) {
         self.card = card
-        _camera = State(initialValue: KakaoMapCamera(latitude: card.latitude, longitude: card.longitude, level: 5))
-    }
-
-    private var mode: RecommendationPickerMode {
-        RecommendationPickerMode(card: card)
+        _camera = State(initialValue: KakaoMapCamera(latitude: card.latitude, longitude: card.longitude, level: KakaoMapCamera.focusedLevel))
     }
 
     var body: some View {
@@ -59,9 +55,9 @@ struct MapScreen: View {
             .accessibilityLabel("뒤로")
 
             HStack(spacing: 8) {
-                Image(systemName: mode.symbolName)
+                Image(systemName: card.categoryIconName)
                     .foregroundStyle(PeroMapStyle.accentDeep)
-                Text(mode.title)
+                Text(card.category)
                 Text("·")
                     .foregroundStyle(PeroMapStyle.muted)
                 Text(card.distanceLabel)

@@ -17,6 +17,23 @@ import Testing
     #expect(items.contains(URLQueryItem(name: "limit", value: "5")))
 }
 
+@Test func placesEndpointBuildsLightweightPoolQuery() throws {
+    let request = try PeroEndpoint.places(
+        PlacesQuery(latitude: 37.5665, longitude: 126.978, limit: 360, includeTourApi: false)
+    )
+    .urlRequest(baseURL: try #require(URL(string: "https://example.com/pero")))
+
+    #expect(request.httpMethod == "GET")
+    #expect(request.url?.path == "/pero/api/places")
+    let url = try #require(request.url)
+    let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
+    let items = components.queryItems ?? []
+    #expect(items.contains(URLQueryItem(name: "latitude", value: "37.5665")))
+    #expect(items.contains(URLQueryItem(name: "longitude", value: "126.978")))
+    #expect(items.contains(URLQueryItem(name: "limit", value: "360")))
+    #expect(items.contains(URLQueryItem(name: "includeTourApi", value: "false")))
+}
+
 @Test func postEndpointsSetMethodAndAcceptHeader() throws {
     let request = try PeroEndpoint.search.urlRequest(baseURL: try #require(URL(string: "https://api.example.test")))
 

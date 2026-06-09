@@ -43,6 +43,7 @@ public class SearchService {
     private static final double BM25_K1 = 1.5;
     private static final double BM25_B = 0.75;
     private static final double RRF_CONSTANT = 60.0;
+    private static final int MAX_PLACES_LIMIT = 500;
 
     private final PlaceRepository placeRepository;
     private final TextNormalizer normalizer;
@@ -196,28 +197,70 @@ public class SearchService {
 
     public List<PlaceListItemResponse> getPlaces() {
         return placeRepository.findAll().stream()
-                .map(place -> new PlaceListItemResponse(
-                        place.id(),
-                        place.name(),
-                        place.category(),
-                        place.district(),
-                        place.address(),
-                        place.roadAddress(),
-                        place.summary(),
-                        place.tags(),
-                        place.themeTags(),
-                        place.latitude(),
-                        place.longitude(),
-                        place.sourceAttribution(),
-                        toTourApiResponse(place.tourApi())
-                ))
+                .map(place -> toPlaceListItemResponse(place, true))
                 .toList();
     }
 
     public PlacesResponse places() {
+        return places(null, null, null, null, true);
+    }
+
+    public PlacesResponse places(
+            Double latitude,
+            Double longitude,
+            Double radiusKm,
+            Integer limit,
+            boolean includeTourApi
+    ) {
+        validatePlaceListRequest(latitude, longitude, radiusKm, limit);
         SearchSourceMeta sourceMeta = toSourceMeta(placeRepository.source());
-        List<PlaceListItemResponse> places = getPlaces();
+        List<IndexedPlace> indexedPlaces = selectPlaces(latitude, longitude, radiusKm, limit);
+        List<PlaceListItemResponse> places = indexedPlaces.stream()
+                .map(place -> toPlaceListItemResponse(place, includeTourApi))
+                .toList();
         return new PlacesResponse(sourceMeta, places.size(), places);
+    }
+
+    private List<IndexedPlace> selectPlaces(Double latitude, Double longitude, Double radiusKm, Integer limit) {
+        int resolvedLimit = resolvedPlacesLimit(limit);
+        if (latitude == null || longitude == null) {
+            return placeRepository.findAll().stream()
+                    .limit(resolvedLimit)
+                    .toList();
+        }
+
+        return placeRepository.findAll().stream()
+                .map(place -> new PlaceDistance(place, haversineKm(latitude, longitude, place.latitude(), place.longitude())))
+                .filter(candidate -> radiusKm == null || candidate.distanceKm() <= radiusKm)
+                .sorted(Comparator.comparingDouble(PlaceDistance::distanceKm))
+                .limit(resolvedLimit)
+                .map(PlaceDistance::place)
+                .toList();
+    }
+
+    private int resolvedPlacesLimit(Integer limit) {
+        if (limit == null) {
+            return Integer.MAX_VALUE;
+        }
+        return Math.min(limit, MAX_PLACES_LIMIT);
+    }
+
+    private PlaceListItemResponse toPlaceListItemResponse(IndexedPlace place, boolean includeTourApi) {
+        return new PlaceListItemResponse(
+                place.id(),
+                place.name(),
+                place.category(),
+                place.district(),
+                place.address(),
+                place.roadAddress(),
+                place.summary(),
+                place.tags(),
+                place.themeTags(),
+                place.latitude(),
+                place.longitude(),
+                place.sourceAttribution(),
+                includeTourApi ? toTourApiResponse(place.tourApi()) : null
+        );
     }
 
     private DateCourseResponse buildDateCourse(List<IndexedPlace> candidates, RecommendationRequest request) {
@@ -795,6 +838,16 @@ public class SearchService {
         }
     }
 
+    private void validatePlaceListRequest(Double latitude, Double longitude, Double radiusKm, Integer limit) {
+        validateLocation(latitude, longitude);
+        if (radiusKm != null && radiusKm <= 0.0) {
+            throw new ResponseStatusException(BAD_REQUEST, "radiusKm는 양수여야 합니다.");
+        }
+        if (limit != null && limit < 1) {
+            throw new ResponseStatusException(BAD_REQUEST, "limit는 1 이상이어야 합니다.");
+        }
+    }
+
     private double distanceForRecommendation(IndexedPlace place, RecommendationRequest request) {
         if (request.latitude() == null || request.longitude() == null) {
             return 0.0;
@@ -820,6 +873,12 @@ public class SearchService {
             double featureScore,
             double geoScore,
             double finalScore
+    ) {
+    }
+
+    private record PlaceDistance(
+            IndexedPlace place,
+            double distanceKm
     ) {
     }
 }

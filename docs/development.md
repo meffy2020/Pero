@@ -31,8 +31,12 @@
 ## 백엔드 계약
 
 - 현재 사용 API:
+  - `GET /api/places`
   - `POST /api/search`
-- 1차 프런트 단순화에서는 검색 API 하나로 테마 기반 탐색을 구성함.
+- `POST /api/recommendations`
+- `GET /api/events`
+- 상세 JSON 규약은 `docs/api-contract.md`를 기준으로 함.
+- iOS 지도 후보 풀은 `/api/places?latitude={lat}&longitude={lng}&limit=360&includeTourApi=false`를 사용함.
 - 외부 관광 데이터 호출은 계속 백엔드 뒤에 숨김.
 
 ## 지도와 상호작용
