@@ -188,7 +188,9 @@ public class SearchService {
 
         return new RecommendationResponse(
                 OffsetDateTime.now(),
+                toSourceMeta(placeRepository.source()),
                 fallbackUsed,
+                fallbackUsed ? "요청 반경 후보 부족으로 가까운 후보권까지 확장" : "요청 범위 안에서 랜덤",
                 nearbyPick,
                 mealPick,
                 buildDateCourse(effectiveCandidates, request)
@@ -202,7 +204,7 @@ public class SearchService {
     }
 
     public PlacesResponse places() {
-        return places(null, null, null, null, true);
+        return places(null, null, null, null, null, null, null, null, null, null, null, null, null, null, true);
     }
 
     public PlacesResponse places(
@@ -212,26 +214,76 @@ public class SearchService {
             Integer limit,
             boolean includeTourApi
     ) {
+        return places(latitude, longitude, radiusKm, null, null, null, null, null, null, null, null, null, null, limit, includeTourApi);
+    }
+
+    public PlacesResponse places(
+            Double latitude,
+            Double longitude,
+            Double radiusKm,
+            Double north,
+            Double south,
+            Double east,
+            Double west,
+            Double zoom,
+            String density,
+            String category,
+            String mode,
+            String source,
+            Boolean activeFestival,
+            Integer limit,
+            boolean includeTourApi
+    ) {
         validatePlaceListRequest(latitude, longitude, radiusKm, limit);
+        validateBounds(north, south, east, west);
         SearchSourceMeta sourceMeta = toSourceMeta(placeRepository.source());
-        List<IndexedPlace> indexedPlaces = selectPlaces(latitude, longitude, radiusKm, limit);
+        List<IndexedPlace> indexedPlaces = selectPlaces(
+                latitude,
+                longitude,
+                radiusKm,
+                north,
+                south,
+                east,
+                west,
+                zoom,
+                density,
+                category,
+                mode,
+                source,
+                activeFestival,
+                limit
+        );
         List<PlaceListItemResponse> places = indexedPlaces.stream()
                 .map(place -> toPlaceListItemResponse(place, includeTourApi))
                 .toList();
-        return new PlacesResponse(sourceMeta, places.size(), places);
+        return new PlacesResponse(sourceMeta, OffsetDateTime.now(), false, placesRandomScope(north, south, east, west, zoom, category, mode), places.size(), places);
     }
 
-    private List<IndexedPlace> selectPlaces(Double latitude, Double longitude, Double radiusKm, Integer limit) {
-        int resolvedLimit = resolvedPlacesLimit(limit);
-        if (latitude == null || longitude == null) {
-            return placeRepository.findAll().stream()
-                    .limit(resolvedLimit)
-                    .toList();
-        }
-
+    private List<IndexedPlace> selectPlaces(
+            Double latitude,
+            Double longitude,
+            Double radiusKm,
+            Double north,
+            Double south,
+            Double east,
+            Double west,
+            Double zoom,
+            String density,
+            String category,
+            String mode,
+            String source,
+            Boolean activeFestival,
+            Integer limit
+    ) {
+        int resolvedLimit = resolvedPlacesLimit(limit, zoom, density);
         return placeRepository.findAll().stream()
-                .map(place -> new PlaceDistance(place, haversineKm(latitude, longitude, place.latitude(), place.longitude())))
-                .filter(candidate -> radiusKm == null || candidate.distanceKm() <= radiusKm)
+                .filter(place -> withinBounds(place, north, south, east, west))
+                .filter(place -> radiusKm == null || withinRadius(place, latitude, longitude, radiusKm))
+                .filter(place -> matchesTextFilter(place.category(), category))
+                .filter(place -> matchesRandomMode(place, mode))
+                .filter(place -> matchesTextFilter(place.sourceAttribution(), source))
+                .filter(place -> matchesActiveFestival(place, activeFestival))
+                .map(place -> new PlaceDistance(place, latitude == null || longitude == null ? 0.0 : haversineKm(latitude, longitude, place.latitude(), place.longitude())))
                 .sorted(Comparator.comparingDouble(PlaceDistance::distanceKm))
                 .limit(resolvedLimit)
                 .map(PlaceDistance::place)
@@ -239,10 +291,16 @@ public class SearchService {
     }
 
     private int resolvedPlacesLimit(Integer limit) {
-        if (limit == null) {
-            return Integer.MAX_VALUE;
+        return resolvedPlacesLimit(limit, null, null);
+    }
+
+    private int resolvedPlacesLimit(Integer limit, Double zoom, String density) {
+        int requested = limit == null ? MAX_PLACES_LIMIT : Math.max(1, limit);
+        int capped = Math.min(requested, MAX_PLACES_LIMIT);
+        if (isLowDensityMap(zoom, density)) {
+            return Math.min(capped, 120);
         }
-        return Math.min(limit, MAX_PLACES_LIMIT);
+        return capped;
     }
 
     private PlaceListItemResponse toPlaceListItemResponse(IndexedPlace place, boolean includeTourApi) {
@@ -846,6 +904,107 @@ public class SearchService {
         if (limit != null && limit < 1) {
             throw new ResponseStatusException(BAD_REQUEST, "limit는 1 이상이어야 합니다.");
         }
+    }
+
+    private void validateBounds(Double north, Double south, Double east, Double west) {
+        boolean any = north != null || south != null || east != null || west != null;
+        boolean all = north != null && south != null && east != null && west != null;
+        if (any && !all) {
+            throw new ResponseStatusException(BAD_REQUEST, "지도 bounds는 north/south/east/west를 함께 보내야 합니다.");
+        }
+        if (all && north < south) {
+            throw new ResponseStatusException(BAD_REQUEST, "north는 south 이상이어야 합니다.");
+        }
+    }
+
+    private boolean withinBounds(IndexedPlace place, Double north, Double south, Double east, Double west) {
+        if (north == null || south == null || east == null || west == null) {
+            return true;
+        }
+        return place.latitude() <= north
+                && place.latitude() >= south
+                && place.longitude() <= east
+                && place.longitude() >= west;
+    }
+
+    private boolean matchesTextFilter(String value, String requested) {
+        if (requested == null || requested.isBlank()) {
+            return true;
+        }
+        String normalizedValue = normalizer.normalize(value);
+        String normalizedRequest = normalizer.normalize(requested);
+        return normalizedValue.contains(normalizedRequest) || normalizedRequest.contains(normalizedValue);
+    }
+
+    private boolean matchesRandomMode(IndexedPlace place, String mode) {
+        if (mode == null || mode.isBlank()) {
+            return true;
+        }
+        String normalizedMode = normalizer.normalize(mode);
+        if (normalizedMode.contains("카페")) {
+            return isCafePlace(place);
+        }
+        if (normalizedMode.contains("축제") || normalizedMode.contains("행사")) {
+            return matchesAnyPlaceToken(place, "축제", "행사", "공연");
+        }
+        if (normalizedMode.contains("산책") || normalizedMode.contains("공원")) {
+            return matchesAnyPlaceToken(place, "산책", "공원", "자연");
+        }
+        if (normalizedMode.contains("문화")) {
+            return matchesAnyPlaceToken(place, "문화", "전시", "공연", "미술", "박물관");
+        }
+        if (normalizedMode.contains("관광") || normalizedMode.contains("장소")) {
+            return true;
+        }
+        return matchesAnyPlaceToken(place, normalizedMode);
+    }
+
+    private boolean matchesAnyPlaceToken(IndexedPlace place, String... tokens) {
+        List<String> values = new ArrayList<>();
+        values.add(place.category());
+        values.add(place.name());
+        values.add(place.summary());
+        values.addAll(place.tags());
+        values.addAll(place.themeTags());
+        String haystack = normalizer.normalize(String.join(" ", values));
+        for (String token : tokens) {
+            if (haystack.contains(normalizer.normalize(token))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean matchesActiveFestival(IndexedPlace place, Boolean activeFestival) {
+        if (activeFestival == null || !activeFestival) {
+            return true;
+        }
+        return matchesAnyPlaceToken(place, "축제", "행사", "공연");
+    }
+
+    private boolean isLowDensityMap(Double zoom, String density) {
+        if (density != null && (density.equalsIgnoreCase("low") || density.equalsIgnoreCase("summary") || density.equalsIgnoreCase("cluster"))) {
+            return true;
+        }
+        return zoom != null && zoom < 12.0;
+    }
+
+    private String placesRandomScope(Double north, Double south, Double east, Double west, Double zoom, String category, String mode) {
+        List<String> parts = new ArrayList<>();
+        if (north != null && south != null && east != null && west != null) {
+            parts.add("현재 지도 안");
+        }
+        if (mode != null && !mode.isBlank()) {
+            parts.add(mode + " 후보");
+        } else if (category != null && !category.isBlank()) {
+            parts.add(category + " 후보");
+        } else {
+            parts.add("지도 후보");
+        }
+        if (zoom != null && zoom < 12.0) {
+            parts.add("낮은 줌 marker 제한");
+        }
+        return String.join(" · ", parts);
     }
 
     private double distanceForRecommendation(IndexedPlace place, RecommendationRequest request) {
