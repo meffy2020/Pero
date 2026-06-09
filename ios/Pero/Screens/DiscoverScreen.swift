@@ -567,7 +567,7 @@ struct HomeRecommendationScreen: View {
             drawRevealedCardID = finalCard.id
             drawHighlightedCardIDs = []
             viewModel.recordRecentPick(cardID: finalCard.id)
-            camera = KakaoMapCamera(latitude: finalCard.latitude, longitude: finalCard.longitude, level: KakaoMapCamera.focusedLevel)
+            camera = KakaoMapCamera(latitude: finalCard.latitude, longitude: finalCard.longitude, level: camera.level)
             drawPhase = .revealed
             diceState.scale = 0.82
             diceState.impact = 0
@@ -869,7 +869,7 @@ private struct DiceMotionTrail: View {
                     .resizable()
                     .scaledToFit()
                     .opacity(0.18 - Double(index) * 0.032)
-                    .frame(width: 64, height: 64)
+                    .frame(width: 48, height: 48)
                     .rotationEffect(.degrees(diceState.rotation - Double(index * 18)))
                     .position(
                         x: proxy.size.width * diceState.normalizedPosition.x - CGFloat(index * 13),
@@ -890,7 +890,7 @@ private struct DiceToken: View {
         Image("pero-dice-marker")
             .resizable()
             .scaledToFit()
-            .frame(width: 74, height: 74)
+            .frame(width: 56, height: 56)
             .shadow(color: .black.opacity(0.22), radius: 14 + state.impact * 6, y: 8)
         .scaleEffect(state.scale)
         .rotationEffect(.degrees(reduceMotion ? 0 : state.rotation))

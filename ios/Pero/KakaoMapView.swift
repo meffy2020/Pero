@@ -388,7 +388,7 @@ struct KakaoMapView: UIViewRepresentable {
             if let assetImage = UIImage(named: markerAssetName(kind: kind)) {
                 return composedMarkerImage(assetImage: assetImage, kind: kind, selected: selected, highlighted: highlighted)
             }
-            let size = CGSize(width: selected ? 42 : (highlighted ? 36 : 30), height: selected ? 50 : (highlighted ? 44 : 38))
+            let size = CGSize(width: selected ? 32 : (highlighted ? 29 : 24), height: selected ? 40 : (highlighted ? 36 : 30))
             let renderer = UIGraphicsImageRenderer(size: size)
             return renderer.image { context in
                 let cgContext = context.cgContext
@@ -452,20 +452,20 @@ struct KakaoMapView: UIViewRepresentable {
         }
 
         private static func composedMarkerImage(assetImage: UIImage, kind: KakaoMapMarker.Kind, selected: Bool, highlighted: Bool) -> UIImage {
-            let size = CGSize(width: selected ? 42 : (highlighted ? 36 : 30), height: selected ? 50 : (highlighted ? 44 : 38))
+            let size = CGSize(width: selected ? 32 : (highlighted ? 29 : 24), height: selected ? 40 : (highlighted ? 36 : 30))
             let renderer = UIGraphicsImageRenderer(size: size)
             return renderer.image { context in
                 let cgContext = context.cgContext
-                let shadowRect = CGRect(x: size.width / 2 - 8, y: size.height - 7, width: 16, height: 5)
+                let shadowRect = CGRect(x: size.width / 2 - 6, y: size.height - 5, width: 12, height: 4)
                 UIColor.black.withAlphaComponent(selected ? 0.22 : (highlighted ? 0.20 : 0.15)).setFill()
                 UIBezierPath(ovalIn: shadowRect).fill()
 
                 if selected || highlighted {
-                    let ringRect = CGRect(x: 1.5, y: 1.5, width: size.width - 3, height: size.height - 4)
+                    let ringRect = CGRect(x: 1.2, y: 1.2, width: size.width - 2.4, height: size.height - 3)
                     cgContext.setShadow(offset: CGSize(width: 0, height: selected ? 4 : 3), blur: selected ? 8 : 6, color: UIColor.black.withAlphaComponent(0.24).cgColor)
                     UIColor.white.setStroke()
                     let ringPath = UIBezierPath(roundedRect: ringRect, cornerRadius: size.width / 2)
-                    ringPath.lineWidth = selected ? 3 : 2.4
+                    ringPath.lineWidth = selected ? 2.2 : 1.8
                     ringPath.stroke()
                     cgContext.setShadow(offset: .zero, blur: 0, color: nil)
                 }
