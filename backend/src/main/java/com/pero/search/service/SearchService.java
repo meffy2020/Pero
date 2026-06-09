@@ -316,12 +316,16 @@ public class SearchService {
             Boolean activeFestival,
             Integer limit
     ) {
-        int resolvedLimit = resolvedPlacesLimit(limit, zoom, density);
+        int resolvedLimit = resolvedPlacesLimit(limit, zoom, density, mode, source);
         List<IndexedPlace> candidates = indexedCandidates(null, category, source, activeFestivalForMode(mode, activeFestival));
         candidates = filterByMode(candidates, mode);
+        boolean boundsProvided = hasBounds(north, south, east, west);
+        boolean mapWideRestaurantScope = isRestaurantMode(mode)
+                && "kakaoLocal".equalsIgnoreCase(normalizeFreeText(source))
+                && boundsProvided;
         List<IndexedPlace> boundedCandidates = candidates.stream()
                 .filter(place -> withinBounds(place, north, south, east, west))
-                .filter(place -> radiusKm == null || withinRadius(place, latitude, longitude, radiusKm))
+                .filter(place -> mapWideRestaurantScope || radiusKm == null || withinRadius(place, latitude, longitude, radiusKm))
                 .toList();
         boolean strictScope = source != null && !source.isBlank();
         boolean festivalMode = isFestivalMode(mode);
@@ -354,8 +358,11 @@ public class SearchService {
         );
     }
 
-    private int resolvedPlacesLimit(Integer limit, Double zoom, String density) {
+    private int resolvedPlacesLimit(Integer limit, Double zoom, String density, String mode, String source) {
         int requestedLimit = limit == null ? MAX_PLACES_LIMIT : Math.max(1, Math.min(limit, MAX_PLACES_LIMIT));
+        if (isRestaurantMode(mode) && "kakaoLocal".equalsIgnoreCase(normalizeFreeText(source))) {
+            return requestedLimit;
+        }
         if (isLowDensityMapRequest(zoom, density)) {
             return Math.min(requestedLimit, LOW_ZOOM_MARKER_LIMIT);
         }
@@ -441,6 +448,14 @@ public class SearchService {
         return hasAnyToken(place, List.of("축제", "행사", "이벤트", "공연", "전시"));
     }
 
+    private boolean isRestaurantMode(String mode) {
+        String normalizedMode = normalizeFreeText(mode);
+        return switch (normalizedMode) {
+            case "restaurant", "meal", "food", "식당", "음식", "음식점", "맛집" -> true;
+            default -> false;
+        };
+    }
+
     private boolean isFestivalMode(String mode) {
         String normalizedMode = normalizeFreeText(mode);
         return switch (normalizedMode) {
@@ -509,7 +524,7 @@ public class SearchService {
     }
 
     private boolean withinBounds(IndexedPlace place, Double north, Double south, Double east, Double west) {
-        if (north == null || south == null || east == null || west == null) {
+        if (!hasBounds(north, south, east, west)) {
             return true;
         }
         return place.latitude() <= north
@@ -527,6 +542,10 @@ public class SearchService {
                 .filter(place -> !recentIds.contains(place.id()))
                 .toList();
         return filtered.isEmpty() ? candidates : filtered;
+    }
+
+    private boolean hasBounds(Double north, Double south, Double east, Double west) {
+        return north != null && south != null && east != null && west != null;
     }
 
     private String placesScope(
@@ -548,7 +567,7 @@ public class SearchService {
         if (fallbackUsed) {
             base = "현재 지도 안 후보 부족으로 캐시 후보권 확장";
         }
-        if (isLowDensityMapRequest(zoom, density)) {
+        if (isLowDensityMapRequest(zoom, density) && !isRestaurantMode(mode)) {
             base += " · 낮은 줌 마커 제한";
         }
         if (category != null && !category.isBlank()) {

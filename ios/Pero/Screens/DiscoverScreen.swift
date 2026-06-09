@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import AudioToolbox
 import PeroCore
 import KakaoSDKShare
 import KakaoSDKTemplate
@@ -18,6 +19,9 @@ struct HomeRecommendationScreen: View {
     @State private var drawCandidateTrail: [RecommendationCardModel] = []
     @State private var drawHighlightedCardIDs: Set<RecommendationCardModel.ID> = []
     @State private var drawRevealedCardID: RecommendationCardModel.ID?
+    @State private var diceState = DrawDiceAnimationState()
+    @State private var mapImpactOffset: CGSize = .zero
+    @State private var mapImpactRotation: Double = 0
     @State private var locationFeedback: String?
     @State private var currentUserCoordinate: UserCoordinate?
     @State private var didCenterOnInitialLocation = false
@@ -127,6 +131,9 @@ struct HomeRecommendationScreen: View {
                 visibleBounds = bounds
             }
                 .frame(width: proxy.size.width, height: proxy.size.height)
+                .offset(mapImpactOffset)
+                .rotationEffect(.degrees(mapImpactRotation))
+                .scaleEffect(isDrawing && !reduceMotion ? 1.004 : 1)
                 .ignoresSafeArea()
         }
         .ignoresSafeArea()
@@ -149,6 +156,7 @@ struct HomeRecommendationScreen: View {
                 previewTitle: drawPreviewTitle,
                 candidateTrail: drawCandidateTrail,
                 modeTitle: pickerMode.title,
+                diceState: diceState,
                 reduceMotion: reduceMotion
             )
             .transition(.opacity.combined(with: .scale(scale: reduceMotion ? 1 : 0.94)))
@@ -449,6 +457,8 @@ struct HomeRecommendationScreen: View {
         drawCandidateTrail = []
         drawHighlightedCardIDs = []
         drawRevealedCardID = nil
+        diceState = DrawDiceAnimationState()
+        resetMapImpact()
 
         let tickImpact = UIImpactFeedbackGenerator(style: .light)
         let lockImpact = UIImpactFeedbackGenerator(style: .medium)
@@ -463,19 +473,21 @@ struct HomeRecommendationScreen: View {
             return
         }
 
-        withAnimation(.snappy(duration: reduceMotion ? 0.12 : 0.22)) {
+        withAnimation(.snappy(duration: reduceMotion ? 0.12 : 0.18)) {
             drawPhase = .scanning
             drawPreviewTitle = HomeMapKoreanCopy.drawScanningTitle
             drawHighlightedCardIDs = []
+            diceState = DrawDiceAnimationState(
+                normalizedPosition: CGPoint(x: 0.50, y: 0.46),
+                rotation: -18,
+                scale: 0.94,
+                blur: 0,
+                impact: 0
+            )
         }
+        playDrawTickSound()
         tickImpact.impactOccurred(intensity: 0.35)
-        try? await Task.sleep(for: .milliseconds(reduceMotion ? 120 : 330))
-        if !reduceMotion {
-            withAnimation(.snappy(duration: 0.18)) {
-                drawHighlightedCardIDs = []
-            }
-            try? await Task.sleep(for: .milliseconds(190))
-        }
+        try? await Task.sleep(for: .milliseconds(reduceMotion ? 120 : 220))
 
         guard !Task.isCancelled else {
             resetDrawState()
@@ -487,26 +499,39 @@ struct HomeRecommendationScreen: View {
                 drawPhase = .locking
                 drawPreviewTitle = finalCard.title
                 drawCandidateTrail = [finalCard]
+                diceState.normalizedPosition = targetPoint(for: finalCard)
             }
             try? await Task.sleep(for: .milliseconds(180))
         } else {
-            withAnimation(.snappy(duration: 0.16)) {
+            withAnimation(.snappy(duration: 0.12)) {
                 drawPhase = .shuffling
             }
-            let intervals: [Int] = [54, 58, 64, 72, 84, 98, 116, 138, 166, 202, 246, 304]
+            let intervals: [Int] = [56, 48, 44, 50, 58, 66, 74, 84, 98, 116, 140, 176, 230]
+            let points = diceBouncePath(target: targetPoint(for: finalCard), count: intervals.count)
             let shuffledRun = expandedDrawRun(from: run, targetCount: intervals.count)
             for (index, card) in shuffledRun.enumerated() {
                 guard !Task.isCancelled else {
                     resetDrawState()
                     return
                 }
-                withAnimation(.snappy(duration: 0.13)) {
-                    drawPreviewTitle = card.title
+                let point = points[min(index, points.count - 1)]
+                let isFinalStep = index == shuffledRun.indices.last
+                withAnimation(.interpolatingSpring(stiffness: isFinalStep ? 210 : 360, damping: isFinalStep ? 18 : 12)) {
+                    drawPreviewTitle = isFinalStep ? card.title : nil
                     drawCandidateTrail = Array(shuffledRun.prefix(index + 1).suffix(3))
                     drawHighlightedCardIDs = [card.id]
+                    diceState = DrawDiceAnimationState(
+                        normalizedPosition: point,
+                        rotation: Double((index + 1) * 137),
+                        scale: isFinalStep ? 1.10 : (index.isMultiple(of: 3) ? 1.03 : 0.96),
+                        blur: isFinalStep ? 0 : CGFloat(max(0, 6 - index / 2)),
+                        impact: isFinalStep ? 1 : 0.55
+                    )
                 }
-                if index % 2 == 0 || index == shuffledRun.indices.last {
-                    tickImpact.impactOccurred(intensity: index == shuffledRun.indices.last ? 0.7 : 0.36)
+                if isWallBounce(point) || isFinalStep {
+                    triggerMapImpact(from: point, intensity: isFinalStep ? 1.15 : 0.72)
+                    playDrawTickSound()
+                    tickImpact.impactOccurred(intensity: isFinalStep ? 0.8 : 0.42)
                 }
                 try? await Task.sleep(for: .milliseconds(intervals[min(index, intervals.count - 1)]))
             }
@@ -522,7 +547,13 @@ struct HomeRecommendationScreen: View {
             drawPreviewTitle = finalCard.title
             drawCandidateTrail = Array(drawCandidateTrail.suffix(2)) + [finalCard]
             drawHighlightedCardIDs = [finalCard.id]
+            diceState.normalizedPosition = targetPoint(for: finalCard)
+            diceState.rotation += 92
+            diceState.scale = 1.18
+            diceState.blur = 0
         }
+        triggerMapImpact(from: targetPoint(for: finalCard), intensity: 1.25)
+        playDrawRevealSound()
         lockImpact.impactOccurred(intensity: 0.85)
         try? await Task.sleep(for: .milliseconds(reduceMotion ? 120 : 260))
 
@@ -538,7 +569,10 @@ struct HomeRecommendationScreen: View {
             viewModel.recordRecentPick(cardID: finalCard.id)
             camera = KakaoMapCamera(latitude: finalCard.latitude, longitude: finalCard.longitude, level: KakaoMapCamera.focusedLevel)
             drawPhase = .revealed
+            diceState.scale = 0.82
+            diceState.impact = 0
         }
+        playDrawRevealSound()
         success.notificationOccurred(.success)
 
         try? await Task.sleep(for: .milliseconds(reduceMotion ? 120 : 520))
@@ -554,6 +588,8 @@ struct HomeRecommendationScreen: View {
         drawRevealedCardID = nil
         drawPhase = .idle
         isDrawing = false
+        diceState = DrawDiceAnimationState()
+        resetMapImpact()
     }
 
     private func drawRun(from pool: [RecommendationCardModel]) -> [RecommendationCardModel] {
@@ -563,6 +599,67 @@ struct HomeRecommendationScreen: View {
             return shuffled
         }
         return Array(shuffled.prefix(count))
+    }
+
+
+    private func targetPoint(for card: RecommendationCardModel) -> CGPoint {
+        guard let visibleBounds else { return CGPoint(x: 0.50, y: 0.42) }
+        let longitudeRange = max(visibleBounds.maxLongitude - visibleBounds.minLongitude, 0.000_001)
+        let latitudeRange = max(visibleBounds.maxLatitude - visibleBounds.minLatitude, 0.000_001)
+        let x = (card.longitude - visibleBounds.minLongitude) / longitudeRange
+        let y = 1 - ((card.latitude - visibleBounds.minLatitude) / latitudeRange)
+        return CGPoint(x: min(max(x, 0.12), 0.88), y: min(max(y, 0.14), 0.78))
+    }
+
+    private func diceBouncePath(target: CGPoint, count: Int) -> [CGPoint] {
+        let wallPoints: [CGPoint] = [
+            CGPoint(x: 0.18, y: 0.16),
+            CGPoint(x: 0.84, y: 0.22),
+            CGPoint(x: 0.76, y: 0.72),
+            CGPoint(x: 0.12, y: 0.64),
+            CGPoint(x: 0.28, y: 0.28),
+            CGPoint(x: 0.88, y: 0.52),
+            CGPoint(x: 0.44, y: 0.76),
+            CGPoint(x: 0.16, y: 0.34),
+            CGPoint(x: 0.72, y: 0.18)
+        ].shuffled()
+        var path = Array(wallPoints.prefix(max(0, count - 4)))
+        path.append(CGPoint(x: (target.x + 0.18) / 2, y: min(0.80, max(0.16, target.y + 0.20))))
+        path.append(CGPoint(x: min(0.88, max(0.12, target.x - 0.10)), y: min(0.78, max(0.14, target.y - 0.12))))
+        path.append(CGPoint(x: min(0.88, max(0.12, target.x + 0.04)), y: min(0.78, max(0.14, target.y + 0.05))))
+        path.append(target)
+        return Array(path.prefix(count))
+    }
+
+    private func isWallBounce(_ point: CGPoint) -> Bool {
+        point.x < 0.20 || point.x > 0.80 || point.y < 0.20 || point.y > 0.68
+    }
+
+    private func triggerMapImpact(from point: CGPoint, intensity: CGFloat) {
+        let xDirection: CGFloat = point.x < 0.5 ? 1 : -1
+        let yDirection: CGFloat = point.y < 0.5 ? 1 : -1
+        withAnimation(.interpolatingSpring(stiffness: 520, damping: 18)) {
+            mapImpactOffset = CGSize(width: xDirection * 7 * intensity, height: yDirection * 5 * intensity)
+            mapImpactRotation = Double(xDirection * 0.32 * intensity)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+            resetMapImpact()
+        }
+    }
+
+    private func resetMapImpact() {
+        withAnimation(.interpolatingSpring(stiffness: 420, damping: 20)) {
+            mapImpactOffset = .zero
+            mapImpactRotation = 0
+        }
+    }
+
+    private func playDrawTickSound() {
+        AudioServicesPlaySystemSound(1104)
+    }
+
+    private func playDrawRevealSound() {
+        AudioServicesPlaySystemSound(1025)
     }
 
     private func expandedDrawRun(from run: [RecommendationCardModel], targetCount: Int) -> [RecommendationCardModel] {
@@ -707,26 +804,46 @@ private struct RangePickButtonStyle: ButtonStyle {
     }
 }
 
+private struct DrawDiceAnimationState: Equatable {
+    var normalizedPosition: CGPoint = CGPoint(x: 0.50, y: 0.46)
+    var rotation: Double = 0
+    var scale: CGFloat = 0.92
+    var blur: CGFloat = 0
+    var impact: CGFloat = 0
+}
+
 private struct DrawExperienceOverlay: View {
     let phase: DrawPhase
     let previewTitle: String?
     let candidateTrail: [RecommendationCardModel]
     let modeTitle: String
+    let diceState: DrawDiceAnimationState
     let reduceMotion: Bool
 
     var body: some View {
-        ZStack {
-            if !reduceMotion {
-                DrawRadarPulse(phase: phase)
-                    .allowsHitTesting(false)
+        GeometryReader { proxy in
+            ZStack {
+                if !reduceMotion {
+                    DiceMotionTrail(diceState: diceState)
+                        .allowsHitTesting(false)
+                }
+
+                DiceToken(phase: phase, state: diceState, reduceMotion: reduceMotion)
+                    .position(
+                        x: proxy.size.width * diceState.normalizedPosition.x,
+                        y: proxy.size.height * diceState.normalizedPosition.y
+                    )
+
+                DrawTickerCard(
+                    phase: phase,
+                    previewTitle: previewTitle,
+                    candidateTrail: candidateTrail,
+                    modeTitle: modeTitle,
+                    reduceMotion: reduceMotion
+                )
+                .position(x: proxy.size.width * 0.5, y: proxy.size.height * 0.20)
             }
-            DrawTickerCard(
-                phase: phase,
-                previewTitle: previewTitle,
-                candidateTrail: candidateTrail,
-                modeTitle: modeTitle,
-                reduceMotion: reduceMotion
-            )
+            .frame(width: proxy.size.width, height: proxy.size.height)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .combine)
@@ -742,33 +859,82 @@ private struct DrawExperienceOverlay: View {
     }
 }
 
-private struct DrawRadarPulse: View {
-    let phase: DrawPhase
+private struct DiceMotionTrail: View {
+    let diceState: DrawDiceAnimationState
 
     var body: some View {
-        TimelineView(.animation) { timeline in
-            let base = timeline.date.timeIntervalSinceReferenceDate
-            ZStack {
-                ForEach(0..<3, id: \.self) { index in
-                    let progress = (base * 0.82 + Double(index) * 0.34).truncatingRemainder(dividingBy: 1)
-                    Circle()
-                        .stroke(PeroMapStyle.accentDeep.opacity(opacity(for: progress)), lineWidth: 2)
-                        .frame(width: 116 + CGFloat(progress) * 190, height: 116 + CGFloat(progress) * 190)
-                        .scaleEffect(phase == .locking ? 0.76 : 1)
-                }
-                Circle()
-                    .fill(PeroMapStyle.accent.opacity(0.12))
-                    .frame(width: phase == .locking ? 86 : 72, height: phase == .locking ? 86 : 72)
-                Image(systemName: phase == .locking ? "mappin.and.ellipse" : "scope")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(PeroMapStyle.accentDeep)
+        GeometryReader { proxy in
+            ForEach(0..<4, id: \.self) { index in
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(PeroMapStyle.accentDeep.opacity(0.08 - Double(index) * 0.014))
+                    .frame(width: 54, height: 54)
+                    .rotationEffect(.degrees(diceState.rotation - Double(index * 18)))
+                    .position(
+                        x: proxy.size.width * diceState.normalizedPosition.x - CGFloat(index * 13),
+                        y: proxy.size.height * diceState.normalizedPosition.y + CGFloat(index * 8)
+                    )
+                    .blur(radius: CGFloat(index) + diceState.blur * 0.38)
             }
-            .animation(.snappy(duration: 0.22), value: phase)
         }
     }
+}
 
-    private func opacity(for progress: Double) -> Double {
-        max(0.04, 0.32 * (1 - progress))
+private struct DiceToken: View {
+    let phase: DrawPhase
+    let state: DrawDiceAnimationState
+    let reduceMotion: Bool
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(PeroMapStyle.surface)
+                .frame(width: 64, height: 64)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(PeroMapStyle.ink.opacity(0.84), lineWidth: 2.2)
+                }
+                .shadow(color: .black.opacity(0.24), radius: 14 + state.impact * 6, y: 8)
+
+            DicePips()
+                .frame(width: 42, height: 42)
+        }
+        .scaleEffect(state.scale)
+        .rotationEffect(.degrees(reduceMotion ? 0 : state.rotation))
+        .blur(radius: reduceMotion ? 0 : state.blur)
+        .overlay {
+            if phase == .locking || phase == .revealed {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(PeroMapStyle.accentDeep.opacity(0.34), lineWidth: 8)
+                    .frame(width: 78, height: 78)
+                    .scaleEffect(phase == .revealed ? 1.22 : 0.96)
+                    .opacity(phase == .revealed ? 0.0 : 1.0)
+            }
+        }
+        .animation(.spring(response: 0.24, dampingFraction: 0.68), value: phase)
+    }
+}
+
+private struct DicePips: View {
+    private let positions: [CGPoint] = [
+        CGPoint(x: 0.24, y: 0.24),
+        CGPoint(x: 0.76, y: 0.24),
+        CGPoint(x: 0.50, y: 0.50),
+        CGPoint(x: 0.24, y: 0.76),
+        CGPoint(x: 0.76, y: 0.76)
+    ]
+
+    var body: some View {
+        GeometryReader { proxy in
+            ForEach(positions.indices, id: \.self) { index in
+                Circle()
+                    .fill(PeroMapStyle.ink)
+                    .frame(width: 8, height: 8)
+                    .position(
+                        x: proxy.size.width * positions[index].x,
+                        y: proxy.size.height * positions[index].y
+                    )
+            }
+        }
     }
 }
 
@@ -780,13 +946,13 @@ private struct DrawTickerCard: View {
     let reduceMotion: Bool
 
     var body: some View {
-        VStack(spacing: 10) {
-            Label(phase.overlayTitle, systemImage: phase.systemImage)
+        VStack(spacing: 8) {
+            Text(phase.overlayTitle)
                 .font(.caption.weight(.bold))
                 .foregroundStyle(PeroMapStyle.muted)
 
             Text(displayTitle)
-                .font(.title3.weight(.bold))
+                .font(.headline.weight(.bold))
                 .foregroundStyle(PeroMapStyle.ink)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
@@ -794,30 +960,29 @@ private struct DrawTickerCard: View {
                 .transition(.opacity.combined(with: .scale(scale: reduceMotion ? 1 : 0.95)))
 
             if !candidateTrail.isEmpty && !reduceMotion {
-                HStack(spacing: -7) {
+                HStack(spacing: 4) {
                     ForEach(candidateTrail.suffix(3)) { card in
-                        Text(card.category.prefix(2))
-                            .font(.caption2.weight(.black))
+                        Text(card.category.prefix(3))
+                            .font(.caption2.weight(.bold))
                             .foregroundStyle(PeroMapStyle.inkSoft)
-                            .frame(width: 34, height: 34)
-                            .background(PeroMapStyle.accentPale, in: Circle())
-                            .overlay { Circle().stroke(PeroMapStyle.surface, lineWidth: 2) }
-                            .shadow(color: PeroMapStyle.ink.opacity(0.08), radius: 5, y: 2)
+                            .lineLimit(1)
+                            .padding(.horizontal, 8)
+                            .frame(height: 24)
+                            .background(PeroMapStyle.accentPale, in: Capsule())
                     }
                 }
-                .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                .transition(.opacity)
             }
         }
-        .padding(.horizontal, 22)
-        .padding(.vertical, 18)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 12)
         .frame(maxWidth: 286)
-        .background(PeroMapStyle.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(phase == .locking ? PeroMapStyle.accentDeep : PeroMapStyle.accent, lineWidth: phase == .locking ? 2 : 1.4)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(phase == .locking ? PeroMapStyle.accentDeep : PeroMapStyle.line, lineWidth: phase == .locking ? 1.8 : 0.8)
         }
-        .shadow(color: .black.opacity(0.15), radius: 20, y: 9)
-        .scaleEffect(phase == .locking && !reduceMotion ? 1.04 : 1)
+        .shadow(color: .black.opacity(0.10), radius: 16, y: 7)
         .animation(.spring(response: 0.26, dampingFraction: 0.76), value: phase)
     }
 
@@ -825,7 +990,7 @@ private struct DrawTickerCard: View {
         if let previewTitle, !previewTitle.isEmpty {
             return previewTitle
         }
-        return "\(modeTitle) 확인 중"
+        return "\(modeTitle) 뽑는 중"
     }
 }
 

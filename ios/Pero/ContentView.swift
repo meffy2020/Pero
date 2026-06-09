@@ -183,7 +183,7 @@ final class StaticLocationProvider: LocationProviding, @unchecked Sendable {
 
 @MainActor
 final class RecommendationViewModel: ObservableObject {
-    private static let mapPlacePoolLimit = 360
+    private static let mapPlacePoolLimit = 500
 
     @Published private(set) var state: RecommendationState = .ready
     @Published private(set) var cards: [RecommendationCardModel] = []
