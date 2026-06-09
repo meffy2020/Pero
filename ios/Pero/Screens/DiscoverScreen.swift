@@ -29,6 +29,9 @@ struct HomeRecommendationScreen: View {
     @State private var visibleBounds: KakaoMapVisibleBounds?
     @State private var mapRefreshTask: Task<Void, Never>?
     @State private var lastMapRefreshKey: String?
+#if DEBUG
+    @State private var didApplyScreenshotScenario = false
+#endif
 
     private var viewportCandidateCards: [RecommendationCardModel] {
         viewportCandidates(for: pickerMode)
@@ -47,6 +50,13 @@ struct HomeRecommendationScreen: View {
         return card
     }
 
+#if DEBUG
+    private var screenshotCard: RecommendationCardModel? {
+        guard let scenario = screenshotScenario, scenario.contains("result") || scenario.contains("lock") else { return nil }
+        return Self.fixtureCard(for: scenario)
+    }
+#endif
+
     private var mapMarkers: [KakaoMapMarker] {
         var markers: [KakaoMapMarker] = []
         if let selectedCard {
@@ -61,6 +71,20 @@ struct HomeRecommendationScreen: View {
                 )
             )
         }
+#if DEBUG
+        if let screenshotCard {
+            markers.append(
+                KakaoMapMarker(
+                    id: screenshotCard.id,
+                    latitude: screenshotCard.latitude,
+                    longitude: screenshotCard.longitude,
+                    kind: screenshotCard.mapMarkerKind,
+                    isSelected: true,
+                    isHighlighted: false
+                )
+            )
+        }
+#endif
         if let currentUserCoordinate {
             markers.append(
                 KakaoMapMarker(
@@ -98,9 +122,15 @@ struct HomeRecommendationScreen: View {
         }
         .onAppear {
             centerOnInitialLocationIfNeeded(viewModel.activeCenterCoordinate)
+#if DEBUG
+            scheduleScreenshotScenarioIfNeeded()
+#endif
         }
         .onChange(of: viewModel.cards) { _, cards in
             reconcileSelection(with: cards)
+#if DEBUG
+            applyScreenshotScenarioIfNeeded(cards: cards)
+#endif
         }
         .onChange(of: viewModel.activeCenterCoordinate) { _, coordinate in
             centerOnInitialLocationIfNeeded(coordinate)
@@ -295,12 +325,22 @@ struct HomeRecommendationScreen: View {
 
     @ViewBuilder
     private var selectedResultSheet: some View {
+#if DEBUG
+        if let screenshotCard {
+            RandomMapResultSheet(card: screenshotCard)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+        } else if let selectedCard {
+            RandomMapResultSheet(card: selectedCard)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
+#else
         if let selectedCard {
             RandomMapResultSheet(
                 card: selectedCard
             )
             .transition(.move(edge: .bottom).combined(with: .opacity))
         }
+#endif
     }
 
 
@@ -314,6 +354,122 @@ struct HomeRecommendationScreen: View {
             level: KakaoMapCamera.focusedLevel
         )
     }
+
+
+#if DEBUG
+    private var screenshotScenario: String? {
+        let value = ProcessInfo.processInfo.environment["PERO_SCREENSHOT_SCENARIO"]?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return value?.isEmpty == false ? value : nil
+    }
+
+    private func scheduleScreenshotScenarioIfNeeded() {
+        guard screenshotScenario != nil else { return }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(900))
+            applyScreenshotScenarioIfNeeded(cards: viewModel.cards)
+        }
+    }
+
+    private func applyScreenshotScenarioIfNeeded(cards: [RecommendationCardModel]) {
+        guard !didApplyScreenshotScenario, let scenario = screenshotScenario else { return }
+        let nextMode = screenshotMode(for: scenario)
+        let card = Self.fixtureCard(for: scenario)
+        didApplyScreenshotScenario = true
+        pickerMode = nextMode
+        selectedCardID = nil
+        camera = KakaoMapCamera(latitude: card.latitude, longitude: card.longitude, level: scenario.contains("close") ? KakaoMapCamera.focusedLevel : camera.level)
+        if scenario.contains("dice") {
+            isDrawing = true
+            drawPhase = .shuffling
+            drawPreviewTitle = nil
+            drawCandidateTrail = [card]
+            diceState = DrawDiceAnimationState(
+                normalizedPosition: CGPoint(x: 0.78, y: 0.28),
+                rotation: 318,
+                scale: 1.02,
+                blur: 2.0,
+                impact: 0.7
+            )
+            triggerMapImpact(from: diceState.normalizedPosition, intensity: 0.62)
+        } else if scenario.contains("lock") {
+            isDrawing = true
+            drawPhase = .locking
+            drawPreviewTitle = card.title
+            drawCandidateTrail = [card]
+            diceState = DrawDiceAnimationState(
+                normalizedPosition: CGPoint(x: 0.52, y: 0.42),
+                rotation: 92,
+                scale: 1.06,
+                blur: 0,
+                impact: 0.9
+            )
+        } else {
+            isDrawing = false
+            drawPhase = .idle
+            drawPreviewTitle = nil
+            drawCandidateTrail = []
+            diceState = DrawDiceAnimationState()
+        }
+    }
+
+    private func screenshotMode(for scenario: String) -> RecommendationPickerMode {
+        if scenario.contains("festival") { return .festival }
+        if scenario.contains("place") || scenario.contains("attraction") { return .attraction }
+        return .restaurant
+    }
+
+    private static func fixtureCard(for scenario: String) -> RecommendationCardModel {
+        if scenario.contains("festival") {
+            return RecommendationCardModel(
+                id: "screenshot-festival",
+                title: "서울거리공연 구석구석 라이브",
+                subtitle: "축제",
+                reason: "현재 진행 중인 서울 문화 행사",
+                category: "행사/공연/축제",
+                district: "서울 중구",
+                roadAddress: "서울 중구 세종대로 110",
+                latitude: 37.5663,
+                longitude: 126.9784,
+                distanceLabel: "현재 지도 안",
+                sourceAttribution: "koreaTour",
+                tags: ["축제", "공연"],
+                eventPeriodLabel: "진행 중",
+                eventSummary: "현재 방문 가능한 행사 후보입니다.",
+                officialURL: URL(string: "https://korean.visitkorea.or.kr")
+            )
+        }
+        if scenario.contains("place") || scenario.contains("attraction") {
+            return RecommendationCardModel(
+                id: "screenshot-place",
+                title: "서울광장",
+                subtitle: "장소",
+                reason: "현재 지도 안에서 바로 이동 가능한 장소",
+                category: "관광지",
+                district: "서울 중구",
+                roadAddress: "서울 중구 세종대로 110",
+                latitude: 37.5657,
+                longitude: 126.9780,
+                distanceLabel: "현재 지도 안",
+                sourceAttribution: "koreaTour",
+                tags: ["산책", "광장"]
+            )
+        }
+        return RecommendationCardModel(
+            id: "kakao-screenshot-restaurant",
+            title: "참맛깔곱창",
+            subtitle: "식당",
+            reason: "현재 지도 안 카카오 로컬 캐시 식당 후보",
+            category: "곱창,막창",
+            district: "서울 노원구",
+            roadAddress: "서울 노원구 섬밭로 232",
+            latitude: 37.6377,
+            longitude: 127.0650,
+            distanceLabel: "현재 지도 안",
+            sourceAttribution: "kakaoLocal",
+            tags: ["식당", "카카오 로컬 캐시"]
+        )
+    }
+#endif
 
     private func rerollRecommendations() {
         rerollTask?.cancel()

@@ -62,3 +62,30 @@
 - `xcodebuild -project ios/Pero.xcodeproj -scheme Pero -destination 'platform=iOS Simulator,id=78867352-14AD-4092-BDF0-46DE89BD3A79' build` 성공
 - iPhone 실기기 빌드/설치 성공
 - iPhone 실기기 실행은 기기 잠금 상태로 iOS가 차단
+
+## 2026-06-10 중복 없는 상태별 스크린샷 검증
+
+기존 캡처가 같은 기본 화면만 반복되는 문제를 수정했다.
+`DEBUG` 빌드에서만 `PERO_SCREENSHOT_SCENARIO` 환경변수로 캡처 상태를 강제할 수 있게 했다.
+운영 일반 실행에서는 해당 경로가 동작하지 않는다.
+
+상태별 캡처 파일:
+
+- `docs/final-report/screenshots/varied-v2/pero-restaurant-ready.png`
+- `docs/final-report/screenshots/varied-v2/pero-restaurant-dice.png`
+- `docs/final-report/screenshots/varied-v2/pero-restaurant-result.png`
+- `docs/final-report/screenshots/varied-v2/pero-festival-result.png`
+- `docs/final-report/screenshots/varied-v2/pero-place-result.png`
+- `docs/final-report/screenshots/varied-v2/pero-varied-v2-contact-sheet.png`
+
+해시 검증:
+
+```text
+restaurant-ready ae7fd112bfcad0c6763919314376c7f61f445c4d0a273987d7aef5c129edc093
+restaurant-dice 5beab2c8b32bd8c40f04d9936f6fc177c9a81d748dc14608f41243def9b40495
+restaurant-result b95cb568b734b3e7332a22f5511c804549a1d2135881bce2e1ea701b8330c796
+festival-result 2ce685efc28fb62de334f592eedc66857b0b375dfdc190aab5d8bc185da971ca
+place-result 75e03e387d535983e946f309bc3ea4b655944a8702bf08bd39d7dac1d7b2325b
+```
+
+결과: 5개 중 5개 고유 해시. 같은 화면 반복 아님.
