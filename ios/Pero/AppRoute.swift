@@ -208,6 +208,18 @@ extension RecommendationCardModel {
         return URL(string: "https://map.kakao.com/link/to/\(destination)")!
     }
 
+    var kakaoMapDirectionsMobileWebURL: URL {
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = "m.map.kakao.com"
+        components.path = "/scheme/route"
+        components.queryItems = [
+            URLQueryItem(name: "ep", value: mapCoordinateQueryValue),
+            URLQueryItem(name: "by", value: "foot")
+        ]
+        return components.url ?? kakaoMapDirectionsWebURL
+    }
+
     private var mapCoordinateQueryValue: String {
         "\(latitude),\(longitude)"
     }

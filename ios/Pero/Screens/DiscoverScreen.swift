@@ -1228,7 +1228,7 @@ private struct KakaoTalkShareButton: View {
     }
 
     private func makeTemplate(imageURL: URL?) -> FeedTemplate {
-        let kakaoDirectionsURL = card.kakaoMapDirectionsWebURL
+        let kakaoDirectionsURL = card.kakaoMapDirectionsMobileWebURL
         let kakaoMapLink = Link(webUrl: kakaoDirectionsURL, mobileWebUrl: kakaoDirectionsURL)
         return FeedTemplate(
             content: Content(
