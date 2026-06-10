@@ -2,6 +2,8 @@ import SwiftUI
 import UIKit
 import AudioToolbox
 import PeroCore
+import KakaoSDKShare
+import KakaoSDKTemplate
 
 struct HomeRecommendationScreen: View {
     @ObservedObject var viewModel: RecommendationViewModel
@@ -1177,43 +1179,78 @@ private struct RandomMapResultSheet: View {
 
 private struct KakaoTalkShareButton: View {
     let card: RecommendationCardModel
-    @State private var shareItems: [Any] = []
-    @State private var isPresentingShareSheet = false
+    @State private var shareErrorMessage: String?
 
     var body: some View {
-        Button(action: presentShareSheet) {
+        Button(action: shareToKakaoTalk) {
             Label("카톡", systemImage: "message.fill")
                 .frame(maxWidth: .infinity)
         }
-        .sheet(isPresented: $isPresentingShareSheet) {
-            ShareSheet(activityItems: shareItems)
+        .alert("카카오톡 공유 실패", isPresented: Binding(
+            get: { shareErrorMessage != nil },
+            set: { if !$0 { shareErrorMessage = nil } }
+        )) {
+            Button("확인", role: .cancel) { shareErrorMessage = nil }
+        } message: {
+            Text(shareErrorMessage ?? "")
         }
     }
 
-    private func presentShareSheet() {
-        let directionsURL = card.kakaoMapDirectionsWebURL
-        let shareText = """
-        \(card.title)
-        카카오맵 길찾기
-        \(directionsURL.absoluteString)
-        """
-        shareItems = [
-            card.makeKakaoShareCardImage(),
-            shareText,
-            directionsURL
-        ]
-        isPresentingShareSheet = true
-    }
-}
+    private func shareToKakaoTalk() {
+        guard ShareApi.isKakaoTalkSharingAvailable() else {
+            shareErrorMessage = "이 기기에 카카오톡이 설치되어 있지 않습니다."
+            return
+        }
 
-private struct ShareSheet: UIViewControllerRepresentable {
-    let activityItems: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+        let shareImage = card.makeKakaoShareCardImage()
+        ShareApi.shared.imageUpload(image: shareImage, secureResource: true) { result, _ in
+            DispatchQueue.main.async {
+                share(templateImageURL: result?.infos.original.url ?? card.kakaoShareImageURL)
+            }
+        }
     }
 
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+    private func share(templateImageURL: URL?) {
+        let template = makeTemplate(imageURL: templateImageURL)
+        ShareApi.shared.shareDefault(templatable: template, shareType: .default, limit: 5) { sharingResult, error in
+            DispatchQueue.main.async {
+                if let error {
+                    shareErrorMessage = error.localizedDescription
+                    return
+                }
+                guard let url = sharingResult?.url else {
+                    shareErrorMessage = "공유 링크를 만들지 못했습니다."
+                    return
+                }
+                #if DEBUG
+                print("KakaoTalk share launch URL=\(url.absoluteString)")
+                #endif
+                UIApplication.shared.open(url)
+            }
+        }
+    }
+
+    private func makeTemplate(imageURL: URL?) -> FeedTemplate {
+        let contentLinkURL = imageURL ?? card.kakaoShareImageURL
+        let contentLink = Link(webUrl: contentLinkURL, mobileWebUrl: contentLinkURL)
+        let kakaoMapLink = Link(
+            webUrl: card.kakaoMapDirectionsWebURL,
+            mobileWebUrl: card.kakaoMapDirectionsMobileWebURL
+        )
+        return FeedTemplate(
+            content: Content(
+                title: nil,
+                imageUrl: imageURL,
+                imageWidth: 1200,
+                imageHeight: 680,
+                description: nil,
+                link: contentLink
+            ),
+            buttons: [
+                Button(title: "카카오맵 길찾기", link: kakaoMapLink)
+            ]
+        )
+    }
 }
 
 private struct FestivalInfoPanel: View {
