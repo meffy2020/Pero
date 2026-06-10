@@ -1228,21 +1228,16 @@ private struct KakaoTalkShareButton: View {
     }
 
     private func makeTemplate(imageURL: URL?) -> FeedTemplate {
-        let kakaoMapURL = card.kakaoMapMobileWebURL
-        let peroLink = Link(
-            webUrl: kakaoMapURL,
-            mobileWebUrl: kakaoMapURL,
-            iosExecutionParams: ["placeId": card.id]
-        )
-        let kakaoMapLink = Link(webUrl: kakaoMapURL, mobileWebUrl: kakaoMapURL)
+        let kakaoDirectionsURL = card.kakaoMapDirectionsWebURL
+        let kakaoMapLink = Link(webUrl: kakaoDirectionsURL, mobileWebUrl: kakaoDirectionsURL)
         return FeedTemplate(
             content: Content(
-                title: card.kakaoShareTitle,
+                title: nil,
                 imageUrl: imageURL,
-                imageWidth: 1024,
-                imageHeight: 1024,
-                description: card.kakaoShareDescription,
-                link: peroLink
+                imageWidth: 1200,
+                imageHeight: 680,
+                description: nil,
+                link: kakaoMapLink
             ),
             buttons: [
                 Button(title: "카카오맵 길찾기", link: kakaoMapLink)
@@ -1307,19 +1302,8 @@ private extension RecommendationCardModel {
         eventPeriodLabel != nil || eventSummary != nil || officialURL != nil
     }
 
-    var kakaoShareTitle: String { title }
-
-    var kakaoShareDescription: String? { nil }
-
     func makeKakaoShareCardImage() -> UIImage {
         PeroShareCardRenderer.render(placeName: title, logo: UIImage(named: "pero-brand-logo"))
-    }
-
-    var kakaoMapMobileWebURL: URL {
-        if let placeID = kakaoPlaceID {
-            return URL(string: "https://m.map.kakao.com/scheme/place?id=\(placeID)")!
-        }
-        return kakaoMapDirectionsWebURL
     }
 
     var kakaoShareImageURL: URL? {
@@ -1330,11 +1314,6 @@ private extension RecommendationCardModel {
         return baseURL.appendingPathComponent("assets/share/pero-random.png")
     }
 
-    private var kakaoPlaceID: String? {
-        guard id.hasPrefix("kakao-") else { return nil }
-        let placeID = String(id.dropFirst("kakao-".count))
-        return placeID.isEmpty ? nil : placeID
-    }
 }
 
 
@@ -1347,38 +1326,44 @@ private enum PeroShareCardRenderer {
         let renderer = UIGraphicsImageRenderer(size: size, format: format)
         return renderer.image { context in
             let cg = context.cgContext
-            UIColor(red: 0.969, green: 0.965, blue: 0.949, alpha: 1).setFill()
+            UIColor(red: 1.0, green: 0.996, blue: 0.98, alpha: 1).setFill()
             cg.fill(CGRect(origin: .zero, size: size))
 
-            let cardRect = CGRect(x: 58, y: 54, width: size.width - 116, height: size.height - 108)
-            let cardPath = UIBezierPath(roundedRect: cardRect, cornerRadius: 54)
-            UIColor(red: 1.0, green: 0.996, blue: 0.98, alpha: 1).setFill()
-            cardPath.fill()
-            UIColor(red: 0.871, green: 0.875, blue: 0.863, alpha: 1).setStroke()
-            cardPath.lineWidth = 3
-            cardPath.stroke()
-
+            let cardRect = CGRect(origin: .zero, size: size).insetBy(dx: 24, dy: 20)
             drawCelebration(in: cardRect, context: cg)
 
             if let logo = logo?.croppedNearWhiteBorder() {
-                drawAspectFit(image: logo, in: CGRect(x: 390, y: 82, width: 420, height: 128))
+                drawAspectFit(image: logo, in: CGRect(x: 426, y: 42, width: 348, height: 102))
             }
 
             let title = placeName.trimmingCharacters(in: .whitespacesAndNewlines)
             let paragraph = NSMutableParagraphStyle()
             paragraph.alignment = .center
-            paragraph.lineBreakMode = .byWordWrapping
-            let font = bestFont(for: title, maxWidth: 880, maxLines: 2)
+            paragraph.lineBreakMode = .byCharWrapping
+            let nameArea = CGRect(x: 104, y: 186, width: 992, height: 356)
+            let font = bestFont(for: title, maxWidth: nameArea.width, maxLines: 3)
             let attributes: [NSAttributedString.Key: Any] = [
                 .font: font,
                 .foregroundColor: UIColor(red: 0.090, green: 0.102, blue: 0.114, alpha: 1),
                 .paragraphStyle: paragraph,
-                .kern: -1.2
+                .kern: -1.35
             ]
-            let nameRect = CGRect(x: 150, y: 268, width: 900, height: 230)
-            title.draw(with: nameRect, options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: attributes, context: nil)
+            let measuredName = (title as NSString).boundingRect(
+                with: CGSize(width: nameArea.width, height: nameArea.height),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                attributes: attributes,
+                context: nil
+            )
+            let nameHeight = min(ceil(measuredName.height), nameArea.height)
+            let nameRect = CGRect(
+                x: nameArea.minX,
+                y: nameArea.midY - nameHeight / 2,
+                width: nameArea.width,
+                height: nameHeight + 8
+            )
+            title.draw(with: nameRect, options: [.usesLineFragmentOrigin, .usesFontLeading, .truncatesLastVisibleLine], attributes: attributes, context: nil)
 
-            let bottomRect = CGRect(x: 492, y: 544, width: 216, height: 8)
+            let bottomRect = CGRect(x: 492, y: 564, width: 216, height: 8)
             UIColor(red: 0.608, green: 0.718, blue: 0.831, alpha: 1).setFill()
             UIBezierPath(roundedRect: bottomRect, cornerRadius: 4).fill()
         }
@@ -1434,19 +1419,20 @@ private enum PeroShareCardRenderer {
     private static func bestFont(for text: String, maxWidth: CGFloat, maxLines: Int) -> UIFont {
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = .center
-        for size in stride(from: CGFloat(92), through: CGFloat(54), by: CGFloat(-2)) {
+        paragraph.lineBreakMode = .byCharWrapping
+        for size in stride(from: CGFloat(84), through: CGFloat(34), by: CGFloat(-2)) {
             let font = UIFont.systemFont(ofSize: size, weight: .heavy)
             let rect = (text as NSString).boundingRect(
                 with: CGSize(width: maxWidth, height: .greatestFiniteMagnitude),
                 options: [.usesLineFragmentOrigin, .usesFontLeading],
-                attributes: [.font: font, .paragraphStyle: paragraph],
+                attributes: [.font: font, .paragraphStyle: paragraph, .kern: -1.35],
                 context: nil
             )
             if rect.height <= font.lineHeight * CGFloat(maxLines) + 12 {
                 return font
             }
         }
-        return UIFont.systemFont(ofSize: 54, weight: .heavy)
+        return UIFont.systemFont(ofSize: 34, weight: .heavy)
     }
 
     private static func drawAspectFit(image: UIImage, in rect: CGRect) {
