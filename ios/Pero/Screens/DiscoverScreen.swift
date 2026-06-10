@@ -1222,14 +1222,21 @@ private struct KakaoTalkShareButton: View {
                     shareErrorMessage = "공유 링크를 만들지 못했습니다."
                     return
                 }
+                #if DEBUG
+                print("KakaoTalk share launch URL=\(url.absoluteString)")
+                #endif
                 UIApplication.shared.open(url)
             }
         }
     }
 
     private func makeTemplate(imageURL: URL?) -> FeedTemplate {
-        let kakaoDirectionsURL = card.kakaoMapDirectionsMobileWebURL
-        let kakaoMapLink = Link(webUrl: kakaoDirectionsURL, mobileWebUrl: kakaoDirectionsURL)
+        let contentLinkURL = imageURL ?? card.kakaoShareImageURL
+        let contentLink = Link(webUrl: contentLinkURL, mobileWebUrl: contentLinkURL)
+        let kakaoMapLink = Link(
+            webUrl: card.kakaoMapDirectionsWebURL,
+            mobileWebUrl: card.kakaoMapDirectionsMobileWebURL
+        )
         return FeedTemplate(
             content: Content(
                 title: nil,
@@ -1237,7 +1244,7 @@ private struct KakaoTalkShareButton: View {
                 imageWidth: 1200,
                 imageHeight: 680,
                 description: nil,
-                link: kakaoMapLink
+                link: contentLink
             ),
             buttons: [
                 Button(title: "카카오맵 길찾기", link: kakaoMapLink)
