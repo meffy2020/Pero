@@ -1202,12 +1202,8 @@ private struct KakaoTalkShareButton: View {
             return
         }
 
-        guard let logoImage = UIImage(named: "pero-brand-logo") else {
-            share(templateImageURL: card.kakaoShareImageURL)
-            return
-        }
-
-        ShareApi.shared.imageUpload(image: logoImage, secureResource: true) { result, _ in
+        let shareImage = card.makeKakaoShareCardImage()
+        ShareApi.shared.imageUpload(image: shareImage, secureResource: true) { result, _ in
             DispatchQueue.main.async {
                 share(templateImageURL: result?.infos.original.url ?? card.kakaoShareImageURL)
             }
@@ -1248,17 +1244,8 @@ private struct KakaoTalkShareButton: View {
                 description: card.kakaoShareDescription,
                 link: peroLink
             ),
-            itemContent: ItemContent(
-                profileText: "Pero",
-                titleImageText: card.kakaoShareBadge,
-                titleImageCategory: card.category,
-                items: card.kakaoShareItems,
-                sum: "카카오맵에서 바로 보기"
-            ),
-            social: Social(sharedCount: 1),
             buttons: [
-                Button(title: "카카오맵 길찾기", link: kakaoMapLink),
-                Button(title: "Pero에서 다시 뽑기", link: peroLink)
+                Button(title: "카카오맵 길찾기", link: kakaoMapLink)
             ]
         )
     }
@@ -1320,40 +1307,12 @@ private extension RecommendationCardModel {
         eventPeriodLabel != nil || eventSummary != nil || officialURL != nil
     }
 
-    var kakaoShareTitle: String {
-        "Pero가 뽑은 장소"
-    }
+    var kakaoShareTitle: String { title }
 
-    var kakaoShareBadge: String {
-        switch randomSlotKind {
-        case .restaurant:
-            "오늘의 식당"
-        case .festival:
-            "지금 갈 축제"
-        case .attraction:
-            "근처 장소"
-        }
-    }
+    var kakaoShareDescription: String? { nil }
 
-    var kakaoShareDescription: String {
-        let placeLine = "\(title) · \(category)"
-        let addressLine = !roadAddress.isEmpty ? roadAddress : district
-        if addressLine.isEmpty {
-            return placeLine
-        }
-        return "\(placeLine)\n\(addressLine)"
-    }
-
-    var kakaoShareItems: [ItemInfo] {
-        var items = [
-            ItemInfo(item: "뽑기 결과", itemOp: title),
-            ItemInfo(item: "카테고리", itemOp: category)
-        ]
-        let address = !roadAddress.isEmpty ? roadAddress : district
-        if !address.isEmpty {
-            items.append(ItemInfo(item: "위치", itemOp: address))
-        }
-        return Array(items.prefix(4))
+    func makeKakaoShareCardImage() -> UIImage {
+        PeroShareCardRenderer.render(placeName: title, logo: UIImage(named: "pero-brand-logo"))
     }
 
     var kakaoMapMobileWebURL: URL {
@@ -1375,6 +1334,175 @@ private extension RecommendationCardModel {
         guard id.hasPrefix("kakao-") else { return nil }
         let placeID = String(id.dropFirst("kakao-".count))
         return placeID.isEmpty ? nil : placeID
+    }
+}
+
+
+private enum PeroShareCardRenderer {
+    static func render(placeName: String, logo: UIImage?) -> UIImage {
+        let size = CGSize(width: 1200, height: 680)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
+        return renderer.image { context in
+            let cg = context.cgContext
+            UIColor(red: 0.969, green: 0.965, blue: 0.949, alpha: 1).setFill()
+            cg.fill(CGRect(origin: .zero, size: size))
+
+            let cardRect = CGRect(x: 58, y: 54, width: size.width - 116, height: size.height - 108)
+            let cardPath = UIBezierPath(roundedRect: cardRect, cornerRadius: 54)
+            UIColor(red: 1.0, green: 0.996, blue: 0.98, alpha: 1).setFill()
+            cardPath.fill()
+            UIColor(red: 0.871, green: 0.875, blue: 0.863, alpha: 1).setStroke()
+            cardPath.lineWidth = 3
+            cardPath.stroke()
+
+            drawCelebration(in: cardRect, context: cg)
+
+            if let logo = logo?.croppedNearWhiteBorder() {
+                drawAspectFit(image: logo, in: CGRect(x: 390, y: 82, width: 420, height: 128))
+            }
+
+            let title = placeName.trimmingCharacters(in: .whitespacesAndNewlines)
+            let paragraph = NSMutableParagraphStyle()
+            paragraph.alignment = .center
+            paragraph.lineBreakMode = .byWordWrapping
+            let font = bestFont(for: title, maxWidth: 880, maxLines: 2)
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: font,
+                .foregroundColor: UIColor(red: 0.090, green: 0.102, blue: 0.114, alpha: 1),
+                .paragraphStyle: paragraph,
+                .kern: -1.2
+            ]
+            let nameRect = CGRect(x: 150, y: 268, width: 900, height: 230)
+            title.draw(with: nameRect, options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: attributes, context: nil)
+
+            let bottomRect = CGRect(x: 492, y: 544, width: 216, height: 8)
+            UIColor(red: 0.608, green: 0.718, blue: 0.831, alpha: 1).setFill()
+            UIBezierPath(roundedRect: bottomRect, cornerRadius: 4).fill()
+        }
+    }
+
+    private static func drawCelebration(in rect: CGRect, context cg: CGContext) {
+        cg.saveGState()
+        cg.setLineCap(.round)
+        cg.setStrokeColor(UIColor(red: 0.090, green: 0.102, blue: 0.114, alpha: 1).cgColor)
+        cg.setLineWidth(5)
+        let center = CGPoint(x: rect.midX, y: rect.minY + 102)
+        let rays: [(CGFloat, CGFloat, CGFloat)] = [
+            (-120, -58, 56), (-74, -88, 62), (0, -102, 66), (74, -88, 62), (120, -58, 56),
+            (-172, 2, 46), (172, 2, 46)
+        ]
+        for ray in rays {
+            let start = CGPoint(x: center.x + ray.0 * 0.58, y: center.y + ray.1 * 0.58)
+            let end = CGPoint(x: center.x + ray.0, y: center.y + ray.1)
+            cg.move(to: start)
+            cg.addLine(to: end)
+            cg.strokePath()
+        }
+
+        cg.setStrokeColor(UIColor(red: 0.435, green: 0.573, blue: 0.706, alpha: 1).cgColor)
+        cg.setLineWidth(4)
+        let arcs = [
+            CGRect(x: rect.midX - 336, y: rect.maxY - 132, width: 260, height: 86),
+            CGRect(x: rect.midX + 76, y: rect.maxY - 132, width: 260, height: 86)
+        ]
+        for arc in arcs {
+            cg.addArc(center: CGPoint(x: arc.midX, y: arc.midY), radius: arc.width / 2, startAngle: .pi * 0.18, endAngle: .pi * 0.82, clockwise: false)
+            cg.strokePath()
+        }
+
+        let sparkleColor = UIColor(red: 0.435, green: 0.573, blue: 0.706, alpha: 1)
+        drawSparkle(center: CGPoint(x: rect.midX, y: rect.maxY - 84), radius: 29, color: sparkleColor)
+        drawSparkle(center: CGPoint(x: rect.minX + 168, y: rect.minY + 170), radius: 19, color: sparkleColor.withAlphaComponent(0.72))
+        drawSparkle(center: CGPoint(x: rect.maxX - 176, y: rect.minY + 178), radius: 19, color: sparkleColor.withAlphaComponent(0.72))
+        cg.restoreGState()
+    }
+
+    private static func drawSparkle(center: CGPoint, radius: CGFloat, color: UIColor) {
+        let path = UIBezierPath()
+        path.move(to: CGPoint(x: center.x, y: center.y - radius))
+        path.addQuadCurve(to: CGPoint(x: center.x + radius, y: center.y), controlPoint: CGPoint(x: center.x + radius * 0.28, y: center.y - radius * 0.28))
+        path.addQuadCurve(to: CGPoint(x: center.x, y: center.y + radius), controlPoint: CGPoint(x: center.x + radius * 0.28, y: center.y + radius * 0.28))
+        path.addQuadCurve(to: CGPoint(x: center.x - radius, y: center.y), controlPoint: CGPoint(x: center.x - radius * 0.28, y: center.y + radius * 0.28))
+        path.addQuadCurve(to: CGPoint(x: center.x, y: center.y - radius), controlPoint: CGPoint(x: center.x - radius * 0.28, y: center.y - radius * 0.28))
+        color.setFill()
+        path.fill()
+    }
+
+    private static func bestFont(for text: String, maxWidth: CGFloat, maxLines: Int) -> UIFont {
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .center
+        for size in stride(from: CGFloat(92), through: CGFloat(54), by: CGFloat(-2)) {
+            let font = UIFont.systemFont(ofSize: size, weight: .heavy)
+            let rect = (text as NSString).boundingRect(
+                with: CGSize(width: maxWidth, height: .greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                attributes: [.font: font, .paragraphStyle: paragraph],
+                context: nil
+            )
+            if rect.height <= font.lineHeight * CGFloat(maxLines) + 12 {
+                return font
+            }
+        }
+        return UIFont.systemFont(ofSize: 54, weight: .heavy)
+    }
+
+    private static func drawAspectFit(image: UIImage, in rect: CGRect) {
+        let scale = min(rect.width / image.size.width, rect.height / image.size.height)
+        let drawSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+        let drawRect = CGRect(
+            x: rect.midX - drawSize.width / 2,
+            y: rect.midY - drawSize.height / 2,
+            width: drawSize.width,
+            height: drawSize.height
+        )
+        image.draw(in: drawRect)
+    }
+}
+
+private extension UIImage {
+    func croppedNearWhiteBorder() -> UIImage {
+        guard let cgImage else { return self }
+        let width = cgImage.width
+        let height = cgImage.height
+        guard let dataProvider = cgImage.dataProvider, let data = dataProvider.data else { return self }
+        let bytes = CFDataGetBytePtr(data)
+        let bytesPerPixel = cgImage.bitsPerPixel / 8
+        let bytesPerRow = cgImage.bytesPerRow
+        guard bytesPerPixel >= 3 else { return self }
+
+        var minX = width
+        var minY = height
+        var maxX = 0
+        var maxY = 0
+        let threshold = 238
+        let step = max(1, min(width, height) / 320)
+        for y in stride(from: 0, to: height, by: step) {
+            for x in stride(from: 0, to: width, by: step) {
+                let offset = y * bytesPerRow + x * bytesPerPixel
+                let r = Int(bytes![offset])
+                let g = Int(bytes![offset + 1])
+                let b = Int(bytes![offset + 2])
+                if r < threshold || g < threshold || b < threshold {
+                    minX = min(minX, x)
+                    minY = min(minY, y)
+                    maxX = max(maxX, x)
+                    maxY = max(maxY, y)
+                }
+            }
+        }
+        guard minX < maxX, minY < maxY else { return self }
+        let padding = 14
+        let crop = CGRect(
+            x: max(0, minX - padding),
+            y: max(0, minY - padding),
+            width: min(width - max(0, minX - padding), maxX - minX + padding * 2),
+            height: min(height - max(0, minY - padding), maxY - minY + padding * 2)
+        )
+        guard let cropped = cgImage.cropping(to: crop) else { return self }
+        return UIImage(cgImage: cropped, scale: scale, orientation: imageOrientation)
     }
 }
 
