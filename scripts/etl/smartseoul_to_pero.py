@@ -84,7 +84,11 @@ NON_TOURISM_THEME_KEYWORDS = (
     "파출소", "소방서", "주민센터", "대피소", "도시계획", "CCTV", "기후동행카드", "판매처",
     "학교", "통학", "중개사", "충전기", "편의시설", "출입구", "안전", "안심", "GIS",
     "나눔", "공유", "위탁소", "키움센터", "상담", "레스토랑", "음식점", "부동산",
+    "이동약자 산책로 지도", "이동약자", "보행약자",
 )
+EXCLUDED_NON_TOURISM_THEME_NAMES = {
+    "이동약자 산책로 지도",
+}
 ID_KEYS = ["COT_CONTS_ID", "id", "poiId", "contentId", "sourceId", "OBJECTID", "gid", "pk"]
 LAT_KEYS = ["COT_COORD_Y", "latitude", "lat", "y", "coord_y", "mapy", "pointY", "POINT_Y", "Y"]
 LNG_KEYS = ["COT_COORD_X", "longitude", "lon", "lng", "x", "coord_x", "mapx", "pointX", "POINT_X", "X"]
@@ -564,6 +568,17 @@ def is_event_like_place(name: str, category: str, theme_name: str, summary: str)
     return any(keyword in haystack for keyword in EVENT_KEYWORDS)
 
 
+def is_non_tourism_accessibility_trail_layer(name: str, category: str, theme_name: str, summary: str) -> bool:
+    haystack = f"{name} {category} {theme_name} {summary}"
+    return (
+        category in EXCLUDED_NON_TOURISM_THEME_NAMES
+        or theme_name in EXCLUDED_NON_TOURISM_THEME_NAMES
+        or "이동약자 산책로 지도" in haystack
+        or ("보행약자" in haystack and "추천 길" in haystack)
+        or ("휠체어" in haystack and "유모차" in haystack and "산책" in haystack)
+    )
+
+
 def is_past_event_schedule(event_schedule: EventSchedule, today: date | None = None) -> bool:
     current_date = today or date.today()
     return event_schedule.end < current_date
@@ -709,6 +724,10 @@ def normalize_item(raw_item: dict[str, Any], theme: ThemeSeed, stats: CollectSta
         return None
 
     summary_seed = extract_summary_seed(raw_item)
+    if is_non_tourism_accessibility_trail_layer(name, category, theme.theme_name, summary_seed or theme.theme_detail):
+        stats.record_drop("non-tourism-accessibility-trail-layer")
+        return None
+
     event_like = is_event_like_place(name, category, theme.theme_name, summary_seed or theme.theme_detail)
     event_schedule = extract_event_schedule(raw_item, theme, name, summary_seed or theme.theme_detail)
     if event_schedule and is_past_event_schedule(event_schedule):

@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -62,5 +63,23 @@ class SearchControllerProviderSmartPrimaryIntegrationTests {
         assertThat(searchResponse.results())
                 .extracting(result -> result.sourceAttribution())
                 .contains("smartSeoul");
+    }
+
+    @Test
+    void placesEndpointExcludesSmartSeoulAccessibilityTrailMapLayer() throws Exception {
+        String body = mockMvc.perform(
+                        get("/api/places")
+                                .queryParam("source", "smartSeoul")
+                                .queryParam("limit", "20")
+                )
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertThat(body)
+                .doesNotContain("이동약자 산책로 지도")
+                .doesNotContain("smart-seoul-accessibility-trail")
+                .doesNotContain("보행약자");
     }
 }

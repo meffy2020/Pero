@@ -24,5 +24,19 @@
     "summary": "야간 산책과 브런치 이동 동선 테스트를 위한 Smart Seoul 데이터입니다.",
     "tags": ["산책", "야간", "공원", "동선"],
     "searchHints": ["Smart Seoul 토글 켜짐 상태에서 우선 노출 검증용 데이터입니다."]
+  },
+  {
+    "id": "smart-seoul-accessibility-trail",
+    "name": "중랑캠핑장_우수",
+    "category": "이동약자 산책로 지도",
+    "district": "서울",
+    "address": "서울특별시 중랑구 망우동",
+    "roadAddress": "서울특별시 중랑구 망우동",
+    "latitude": 37.6041,
+    "longitude": 127.1091,
+    "summary": "우수: 생활환경(BF) 인증 기준을 만족하며, 수동/전동 휠체어, 유모차 등 모든 보행약자의 편안한 이동이 가능한 추천 길",
+    "tags": ["이동약자 산책로 지도", "무장애"],
+    "themeTags": ["무장애여행"],
+    "searchHints": ["관광지나 놀거리 추천 후보가 아닌 행정성 접근성 지도 레이어입니다."]
   }
 ]

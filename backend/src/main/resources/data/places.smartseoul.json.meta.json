@@ -3,5 +3,9 @@
   "providerName": "스마트서울맵 캐시",
   "generatedAt": "2026-06-09T14:27:13+09:00",
   "status": "partial",
-  "count": 13943
+  "count": 11867,
+  "removedNonTourism": 2076,
+  "excludedThemes": [
+    "이동약자 산책로 지도"
+  ]
 }
