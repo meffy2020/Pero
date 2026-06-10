@@ -22,6 +22,7 @@
 		A10000000000000000000014 /* KakaoSDKCommon in Frameworks */ = {isa = PBXBuildFile; productRef = C20000000000000000000004 /* KakaoSDKCommon */; };
 		A10000000000000000000015 /* KakaoSDKShare in Frameworks */ = {isa = PBXBuildFile; productRef = C20000000000000000000005 /* KakaoSDKShare */; };
 		A10000000000000000000016 /* KakaoSDKTemplate in Frameworks */ = {isa = PBXBuildFile; productRef = C20000000000000000000006 /* KakaoSDKTemplate */; };
+		A10000000000000000000017 /* PeroActionControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000017 /* PeroActionControls.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -48,6 +49,7 @@
 		A20000000000000000000012 /* PeroTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PeroTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000000000000000000013 /* KakaoMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KakaoMapView.swift; sourceTree = "<group>"; };
 		A20000000000000000000014 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A20000000000000000000017 /* PeroActionControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeroActionControls.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -120,6 +122,7 @@
 				A20000000000000000000005 /* DiscoverScreen.swift */,
 				A20000000000000000000006 /* MapScreen.swift */,
 				A20000000000000000000008 /* PlaceholderDetailScreen.swift */,
+				A20000000000000000000017 /* PeroActionControls.swift */,
 			);
 			path = Screens;
 			sourceTree = "<group>";
@@ -244,6 +247,7 @@
 				A10000000000000000000007 /* PeroMapStyle.swift in Sources */,
 				A10000000000000000000013 /* KakaoMapView.swift in Sources */,
 				A10000000000000000000008 /* PlaceholderDetailScreen.swift in Sources */,
+				A10000000000000000000017 /* PeroActionControls.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

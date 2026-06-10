@@ -1154,22 +1154,16 @@ private struct RandomMapResultSheet: View {
 
             HStack(spacing: 10) {
                 KakaoTalkShareButton(card: card)
-                    .buttonStyle(.bordered)
+                    .buttonStyle(PeroActionButtonStyle())
 
-                if let appleMapsURL = card.appleMapsURL {
-                    Link(destination: appleMapsURL) {
-                        Label("길찾기", systemImage: "arrow.triangle.turn.up.right.circle")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                }
+                KakaoDirectionsButton(card: card)
+                    .buttonStyle(PeroActionButtonStyle())
 
                 NavigationLink(value: AppRoute.recommendationDetail(cardID: card.id)) {
                     Label("상세", systemImage: "info.circle")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(PeroMapStyle.accentDeep)
+                .buttonStyle(PeroActionButtonStyle())
             }
             .font(.subheadline.weight(.semibold))
         }
@@ -1277,7 +1271,7 @@ private struct FestivalInfoPanel: View {
                     Label("공식 사이트", systemImage: "safari")
                         .font(.caption.weight(.bold))
                 }
-                .foregroundStyle(PeroMapStyle.accentDeep)
+                .foregroundStyle(PeroMapStyle.ink)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

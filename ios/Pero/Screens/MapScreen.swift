@@ -106,20 +106,14 @@ struct MapScreen: View {
             .foregroundStyle(PeroMapStyle.inkSoft)
 
             HStack(spacing: 10) {
-                if let appleMapsURL = card.appleMapsURL {
-                    Link(destination: appleMapsURL) {
-                        Label("길찾기", systemImage: "arrow.triangle.turn.up.right.circle")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(PeroMapStyle.accentDeep)
-                }
+                KakaoDirectionsButton(card: card)
+                    .buttonStyle(PeroActionButtonStyle())
 
                 NavigationLink(value: AppRoute.recommendationDetail(cardID: card.id)) {
                     Label("상세", systemImage: "info.circle")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(PeroActionButtonStyle())
             }
             .font(.subheadline.weight(.semibold))
         }

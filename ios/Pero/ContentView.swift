@@ -382,7 +382,8 @@ final class RecommendationViewModel: ObservableObject {
                 tags: Array((place.tags + place.themeTags).uniqued().prefix(4)),
                 eventPeriodLabel: Self.eventPeriodLabel(from: place.tourApi),
                 eventSummary: Self.eventSummary(summary: place.summary, tourApi: place.tourApi),
-                officialURL: Self.officialURL(from: place.tourApi)
+                officialURL: Self.officialURL(from: place.tourApi),
+                detail: Self.detailSnapshot(summary: place.summary, tourApi: place.tourApi)
             )
         }
         .sorted { lhs, rhs in
@@ -471,15 +472,22 @@ final class RecommendationViewModel: ObservableObject {
             let cleaned = fragment
                 .replacingOccurrences(of: #"href=[\"']"#, with: "", options: .regularExpression)
                 .replacingOccurrences(of: #"[\"']$"#, with: "", options: .regularExpression)
-            return URL(string: cleaned)
+            return URL(string: cleaned).flatMap(Self.webURL)
         }
         if let url = URL(string: homepage), url.scheme != nil {
-            return url
+            return Self.webURL(url)
         }
         if homepage.hasPrefix("www.") {
             return URL(string: "https://\(homepage)")
         }
         return nil
+    }
+
+    nonisolated private static func webURL(_ url: URL) -> URL? {
+        guard let scheme = url.scheme?.lowercased(), ["http", "https"].contains(scheme) else {
+            return nil
+        }
+        return url
     }
 
     nonisolated private static func eventSummary(summary: String, tourApi: TourAPI?) -> String? {
@@ -527,9 +535,60 @@ final class RecommendationViewModel: ObservableObject {
                 tags: Array(place.tags.prefix(4)),
                 eventPeriodLabel: Self.eventPeriodLabel(from: place.tourApi),
                 eventSummary: Self.eventSummary(summary: place.summary, tourApi: place.tourApi),
-                officialURL: Self.officialURL(from: place.tourApi)
+                officialURL: Self.officialURL(from: place.tourApi),
+                detail: Self.detailSnapshot(summary: place.summary, tourApi: place.tourApi)
             )
         )
+    }
+
+    nonisolated private static func detailSnapshot(summary: String, tourApi: TourAPI?) -> PlaceDetailSnapshot? {
+        var fields: [PlaceDetailField] = []
+        let common = tourApi?.common
+
+        appendField(&fields, icon: "phone", title: "문의", value: common?.tel ?? common?.infoCenter)
+        appendField(&fields, icon: "clock", title: "운영", value: common?.useTime ?? common?.playTime)
+        appendField(&fields, icon: "calendar.badge.clock", title: "휴무", value: common?.restDate)
+        appendField(&fields, icon: "car", title: "주차", value: common?.parking)
+        appendField(&fields, icon: "creditcard", title: "이용요금", value: common?.useFee ?? common?.parkingFee)
+        appendField(&fields, icon: "timer", title: "소요시간", value: common?.spendTime)
+        appendField(&fields, icon: "person.2", title: "대상", value: common?.ageLimit)
+        appendField(&fields, icon: "pawprint", title: "반려동물", value: tourApi?.pet?.petTursmInfo ?? tourApi?.pet?.etcAcmpyInfo)
+        appendField(&fields, icon: "photo", title: "사진", value: imageCountLabel(tourApi?.images.count ?? 0))
+
+        let overview = cleanDetailText(common?.overview) ?? cleanDetailText(summary)
+        guard overview != nil || !fields.isEmpty else { return nil }
+        return PlaceDetailSnapshot(
+            overview: overview,
+            fields: fields,
+            imageCount: tourApi?.images.count ?? 0
+        )
+    }
+
+    nonisolated private static func appendField(
+        _ fields: inout [PlaceDetailField],
+        icon: String,
+        title: String,
+        value: String?
+    ) {
+        guard let cleaned = cleanDetailText(value), !cleaned.isEmpty else { return }
+        fields.append(PlaceDetailField(icon: icon, title: title, value: cleaned))
+    }
+
+    nonisolated private static func imageCountLabel(_ count: Int) -> String? {
+        count > 0 ? "\(count)장" : nil
+    }
+
+    nonisolated private static func cleanDetailText(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let cleaned = value
+            .replacingOccurrences(of: "<br>", with: " ")
+            .replacingOccurrences(of: "<br/>", with: " ")
+            .replacingOccurrences(of: "<br />", with: " ")
+            .replacingOccurrences(of: "&nbsp;", with: " ")
+            .replacingOccurrences(of: #"<[^>]+>"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? nil : cleaned
     }
 }
 

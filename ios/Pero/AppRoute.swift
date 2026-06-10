@@ -17,6 +17,7 @@ struct RecommendationCardModel: Identifiable, Hashable {
     let eventPeriodLabel: String?
     let eventSummary: String?
     let officialURL: URL?
+    let detail: PlaceDetailSnapshot?
 
     init(
         id: String,
@@ -33,7 +34,8 @@ struct RecommendationCardModel: Identifiable, Hashable {
         tags: [String],
         eventPeriodLabel: String? = nil,
         eventSummary: String? = nil,
-        officialURL: URL? = nil
+        officialURL: URL? = nil,
+        detail: PlaceDetailSnapshot? = nil
     ) {
         self.id = id
         self.title = title
@@ -50,6 +52,37 @@ struct RecommendationCardModel: Identifiable, Hashable {
         self.eventPeriodLabel = eventPeriodLabel
         self.eventSummary = eventSummary
         self.officialURL = officialURL
+        self.detail = detail
+    }
+}
+
+struct PlaceDetailSnapshot: Hashable {
+    let overview: String?
+    let fields: [PlaceDetailField]
+    let imageCount: Int
+
+    init(
+        overview: String? = nil,
+        fields: [PlaceDetailField] = [],
+        imageCount: Int = 0
+    ) {
+        self.overview = overview
+        self.fields = fields
+        self.imageCount = imageCount
+    }
+}
+
+struct PlaceDetailField: Hashable, Identifiable {
+    let id: String
+    let icon: String
+    let title: String
+    let value: String
+
+    init(icon: String, title: String, value: String) {
+        self.id = "\(title)-\(value)"
+        self.icon = icon
+        self.title = title
+        self.value = value
     }
 }
 
@@ -158,15 +191,21 @@ extension RecommendationCardModel {
         return .attraction
     }
 
-    var appleMapsURL: URL? {
+    var kakaoMapDirectionsAppURL: URL? {
         var components = URLComponents()
-        components.scheme = "http"
-        components.host = "maps.apple.com"
+        components.scheme = "kakaomap"
+        components.host = "route"
         components.queryItems = [
-            URLQueryItem(name: "ll", value: mapCoordinateQueryValue),
-            URLQueryItem(name: "q", value: title)
+            URLQueryItem(name: "ep", value: mapCoordinateQueryValue),
+            URLQueryItem(name: "by", value: "foot")
         ]
         return components.url
+    }
+
+    var kakaoMapDirectionsWebURL: URL {
+        let destination = "\(title),\(latitude),\(longitude)"
+            .addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? "\(latitude),\(longitude)"
+        return URL(string: "https://map.kakao.com/link/to/\(destination)")!
     }
 
     private var mapCoordinateQueryValue: String {

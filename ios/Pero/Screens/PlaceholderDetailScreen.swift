@@ -51,16 +51,10 @@ struct PlaceExplanationDetailScreen: View {
                 Label("지도", systemImage: "map")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(PeroMapStyle.accentDeep)
+            .buttonStyle(PeroActionButtonStyle())
 
-            if let appleMapsURL = card.appleMapsURL {
-                Link(destination: appleMapsURL) {
-                    Label("길찾기", systemImage: "arrow.triangle.turn.up.right.circle")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-            }
+            KakaoDirectionsButton(card: card)
+                .buttonStyle(PeroActionButtonStyle())
         }
         .font(.subheadline.weight(.semibold))
         .controlSize(.large)
@@ -75,15 +69,26 @@ struct PlaceExplanationDetailScreen: View {
             if let eventPeriodLabel = card.eventPeriodLabel {
                 InfoLine(icon: "calendar", title: "일정", value: eventPeriodLabel)
             }
-            if let eventSummary = card.eventSummary {
-                InfoLine(icon: "text.alignleft", title: "축제 설명", value: eventSummary)
+            if card.randomSlotKind == .festival, let eventSummary = card.eventSummary {
+                InfoLine(icon: "text.alignleft", title: "행사 요약", value: eventSummary)
+            }
+            if let overview = card.detail?.overview, overview != card.eventSummary {
+                InfoLine(icon: "doc.plaintext", title: "설명", value: overview)
+            }
+            if let fields = card.detail?.fields, !fields.isEmpty {
+                ForEach(fields) { field in
+                    InfoLine(icon: field.icon, title: field.title, value: field.value)
+                }
+            }
+            if !card.tags.isEmpty {
+                FlowTagRow(tags: card.tags)
             }
             if let officialURL = card.officialURL {
                 Link(destination: officialURL) {
                     Label("공식 사이트", systemImage: "safari")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(PeroActionButtonStyle())
             }
         }
         .padding(18)

@@ -19,12 +19,14 @@ struct NavigationModelTests {
         #expect(card.mapFirstAccessibilitySummary == "가까운 산책 추천, 서울 반려 산책 공원, 0.8km, 중구, 공원")
         #expect(card.mapPrimaryCTATitle == "이 범위에서 장소 뽑기")
 
-        let url = try #require(card.appleMapsURL)
+        let url = try #require(card.kakaoMapDirectionsAppURL)
         let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
         let queryItems = components.queryItems ?? []
-        #expect(components.host == "maps.apple.com")
-        #expect(queryItems.contains(URLQueryItem(name: "ll", value: "37.5665,126.978")))
-        #expect(queryItems.contains(URLQueryItem(name: "q", value: "서울 반려 산책 공원")))
+        #expect(components.scheme == "kakaomap")
+        #expect(components.host == "route")
+        #expect(queryItems.contains(URLQueryItem(name: "ep", value: "37.5665,126.978")))
+        #expect(queryItems.contains(URLQueryItem(name: "by", value: "foot")))
+        #expect(card.kakaoMapDirectionsWebURL.absoluteString.contains("map.kakao.com/link/to"))
     }
 
     @Test func recommendationSlotKindDrivesMapPrimaryCTACopy() {
@@ -60,16 +62,16 @@ struct NavigationModelTests {
 
     @Test func recommendationStatesExposeKoreanCopy() {
         #expect(RecommendationState.ready.title == "지도 준비")
-        #expect(RecommendationState.loading.title == "지금 갈 곳 찾는 중")
+        #expect(RecommendationState.loading.title == "")
         #expect(RecommendationState.results.title == "추천 결과")
-        #expect(RecommendationState.empty.title == "추천 후보 없음")
+        #expect(RecommendationState.empty.title == "")
         #expect(RecommendationState.error("x").title == "연결 확인 필요")
     }
 
     @Test func homeMapKoreanCopyExplainsViewportRandomPick() {
-        #expect(HomeMapKoreanCopy.readyMessage.contains("지도 후보"))
-        #expect(HomeMapKoreanCopy.loadingMessage == "지도 안 후보를 불러오고 있습니다.")
-        #expect(HomeMapKoreanCopy.emptyMessage.contains("추천 후보"))
+        #expect(HomeMapKoreanCopy.readyMessage == "위치를 확인하고 있습니다.")
+        #expect(HomeMapKoreanCopy.loadingMessage == "가까운 장소를 불러오고 있습니다.")
+        #expect(HomeMapKoreanCopy.emptyMessage == "")
     }
 
     @Test func recommendationNormalizerPrefersCardsBeforeCourseStopsAndLimitsToThree() {
@@ -87,8 +89,8 @@ struct NavigationModelTests {
 
         #expect(cards.count == 4)
         #expect(cards.map(\.id).contains("preview-cafe"))
-        #expect(cards.filter(RecommendationPickerMode.attraction.matches).count == 2)
-        #expect(cards.filter(RecommendationPickerMode.restaurant.matches).count == 2)
+        #expect(cards.filter(RecommendationPickerMode.attraction.matches).count == 3)
+        #expect(cards.filter(RecommendationPickerMode.restaurant.matches).count == 1)
         #expect(cards.filter(RecommendationPickerMode.festival.matches).count == 0)
         #expect(cards.first?.distanceLabel.hasSuffix("km") == true)
     }
@@ -110,7 +112,7 @@ struct NavigationModelTests {
         #expect(RecommendationPickerMode.restaurant.apiSource == "kakaoLocal")
         #expect(RecommendationPickerMode.restaurant.apiActiveFestival == nil)
         #expect(RecommendationPickerMode.festival.apiCategory == "행사/공연/축제")
-        #expect(RecommendationPickerMode.festival.apiActiveFestival == true)
+        #expect(RecommendationPickerMode.festival.apiActiveFestival == nil)
     }
 
     @Test func placePoolNormalizerKeepsBackendCategorySeparateFromPickerBucket() throws {
@@ -187,7 +189,7 @@ struct NavigationModelTests {
         #expect(provider.recommendationCallCount == 1)
         #expect(provider.searchCallCount == 0)
         #expect(provider.lastRequest?.radiusKm == 3)
-        #expect(provider.lastRequest?.limit == 360)
+        #expect(provider.lastRequest?.limit == 500)
         #expect(provider.lastRequest?.includeTourApi == false)
         #expect(viewModel.cards.count == 3)
         #expect(viewModel.dataStatusMessage == "테스트 랜덤")
@@ -217,7 +219,7 @@ struct NavigationModelTests {
 
         #expect(provider.lastPlacesQuery?.latitude == 35.1796)
         #expect(provider.lastPlacesQuery?.longitude == 129.0756)
-        #expect(provider.lastPlacesQuery?.limit == 360)
+        #expect(provider.lastPlacesQuery?.limit == 500)
         #expect(provider.lastPlacesQuery?.includeTourApi == false)
     }
 
@@ -264,7 +266,7 @@ struct NavigationModelTests {
         #expect(viewModel.cards.map(\.id) == ["preview-seoul-park", "preview-market", "preview-gallery"])
         #expect(viewModel.fallbackUsed == false)
         if case .error(let message) = viewModel.state {
-            #expect(message.contains("백엔드에서 장소 후보를 불러오지 못했습니다."))
+            #expect(message.contains("장소를 불러오지 못했습니다."))
         } else {
             #expect(Bool(false), "Expected backend error state")
         }
