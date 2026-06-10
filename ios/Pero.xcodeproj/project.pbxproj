@@ -23,6 +23,7 @@
 		A10000000000000000000015 /* KakaoSDKShare in Frameworks */ = {isa = PBXBuildFile; productRef = C20000000000000000000005 /* KakaoSDKShare */; };
 		A10000000000000000000016 /* KakaoSDKTemplate in Frameworks */ = {isa = PBXBuildFile; productRef = C20000000000000000000006 /* KakaoSDKTemplate */; };
 		A10000000000000000000017 /* PeroActionControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000017 /* PeroActionControls.swift */; };
+		A10000000000000000000018 /* PeroBrandLogoMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000018 /* PeroBrandLogoMark.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -50,6 +51,7 @@
 		A20000000000000000000013 /* KakaoMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KakaoMapView.swift; sourceTree = "<group>"; };
 		A20000000000000000000014 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A20000000000000000000017 /* PeroActionControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeroActionControls.swift; sourceTree = "<group>"; };
+		A20000000000000000000018 /* PeroBrandLogoMark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeroBrandLogoMark.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -123,6 +125,7 @@
 				A20000000000000000000006 /* MapScreen.swift */,
 				A20000000000000000000008 /* PlaceholderDetailScreen.swift */,
 				A20000000000000000000017 /* PeroActionControls.swift */,
+				A20000000000000000000018 /* PeroBrandLogoMark.swift */,
 			);
 			path = Screens;
 			sourceTree = "<group>";
@@ -248,6 +251,7 @@
 				A10000000000000000000013 /* KakaoMapView.swift in Sources */,
 				A10000000000000000000008 /* PlaceholderDetailScreen.swift in Sources */,
 				A10000000000000000000017 /* PeroActionControls.swift in Sources */,
+				A10000000000000000000018 /* PeroBrandLogoMark.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

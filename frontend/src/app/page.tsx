@@ -35,22 +35,6 @@ const HTML_ENTITY_MAP: Record<string, string> = {
   "&gt;": ">",
 };
 
-function sourceLabel(sourceAttribution: string | null | undefined): string {
-  if (!sourceAttribution) {
-    return "출처 미확인";
-  }
-  if (sourceAttribution === "merged") {
-    return "스마트서울맵 + 한국관광공사";
-  }
-  if (sourceAttribution === "smartSeoul") {
-    return "스마트서울맵";
-  }
-  if (sourceAttribution === "koreaTour") {
-    return "한국관광공사";
-  }
-  return sourceAttribution;
-}
-
 function buildMapUrl(latitude: number, longitude: number): string {
   return `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
 }
@@ -113,7 +97,6 @@ function toComparisonItem(place: ThemePlace | PlaceResult): PlaceComparisonItem 
     distanceKm: "distanceKm" in place ? place.distanceKm : null,
     reason: "reason" in place ? place.reason : null,
     evidence: "evidence" in place ? place.evidence : null,
-    sourceLabel: sourceLabel(place.sourceAttribution),
     tourApi: place.tourApi,
   };
 }
@@ -157,7 +140,7 @@ function buildSelectionChips(place: ThemePlace | PlaceResult | null): string[] {
 
   const common = place.tourApi?.common;
   const pet = place.tourApi?.pet;
-  const chips = [`지역 ${sanitizeRichText(place.district)}`, `출처 ${sourceLabel(place.sourceAttribution)}`];
+  const chips = [`지역 ${sanitizeRichText(place.district)}`];
 
   if ("distanceKm" in place && place.distanceKm != null) {
     chips.push(`거리 ${place.distanceKm.toFixed(2)}km`);

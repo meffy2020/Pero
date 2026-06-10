@@ -244,7 +244,6 @@ export type PlaceComparisonItem = {
   distanceKm?: number | null;
   reason?: string | null;
   evidence?: string | null;
-  sourceLabel: string;
   tourApi?: TourApiDetail | null;
 };
 

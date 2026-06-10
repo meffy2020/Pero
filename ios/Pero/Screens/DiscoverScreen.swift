@@ -1144,6 +1144,7 @@ private struct RandomMapResultSheet: View {
                         .lineLimit(2)
                 }
                 Spacer(minLength: 8)
+                PeroBrandLogoMark(size: 46)
             }
 
             FlowMetadataRow(card: card)
@@ -1207,13 +1208,13 @@ private struct KakaoTalkShareButton: View {
             content: Content(
                 title: card.kakaoShareTitle,
                 imageUrl: card.kakaoShareImageURL,
-                imageWidth: 800,
-                imageHeight: 400,
+                imageWidth: 1024,
+                imageHeight: 1024,
                 description: card.kakaoShareDescription,
                 link: peroLink
             ),
             itemContent: ItemContent(
-                profileText: "Pero 랜덤 뽑기",
+                profileText: "Pero",
                 titleImageText: card.kakaoShareBadge,
                 titleImageCategory: card.category,
                 items: card.kakaoShareItems,
@@ -1221,7 +1222,7 @@ private struct KakaoTalkShareButton: View {
             ),
             social: Social(sharedCount: 1),
             buttons: [
-                Button(title: "카카오맵에서 보기", link: kakaoMapLink),
+                Button(title: "카카오맵 길찾기", link: kakaoMapLink),
                 Button(title: "Pero에서 다시 뽑기", link: peroLink)
             ]
         )
@@ -1304,7 +1305,7 @@ private extension RecommendationCardModel {
     }
 
     var kakaoShareTitle: String {
-        "Pero가 랜덤으로 뽑은 곳"
+        "Pero가 뽑은 장소"
     }
 
     var kakaoShareBadge: String {
@@ -1336,9 +1337,6 @@ private extension RecommendationCardModel {
         if !address.isEmpty {
             items.append(ItemInfo(item: "위치", itemOp: address))
         }
-        if sourceAttribution == "kakaoLocal" || id.hasPrefix("kakao-") {
-            items.append(ItemInfo(item: "출처", itemOp: "카카오 로컬 캐시"))
-        }
         return Array(items.prefix(4))
     }
 
@@ -1346,8 +1344,7 @@ private extension RecommendationCardModel {
         if let placeID = kakaoPlaceID {
             return URL(string: "https://m.map.kakao.com/scheme/place?id=\(placeID)")!
         }
-        let query = "\(title) \(roadAddress.isEmpty ? district : roadAddress)".trimmedForURLQuery
-        return URL(string: "https://m.map.kakao.com/scheme/search?q=\(query)&p=\(latitude),\(longitude)")!
+        return kakaoMapDirectionsWebURL
     }
 
     var kakaoShareImageURL: URL? {

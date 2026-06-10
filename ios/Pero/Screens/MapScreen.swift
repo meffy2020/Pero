@@ -98,12 +98,11 @@ struct MapScreen: View {
 
             FlowMetadataRow(card: card)
 
-            VStack(alignment: .leading, spacing: 8) {
+            if !card.roadAddress.isEmpty {
                 Label(card.roadAddress, systemImage: "road.lanes")
-                Label("출처: \(card.sourceAttribution)", systemImage: "doc.text")
+                    .font(.caption)
+                    .foregroundStyle(PeroMapStyle.inkSoft)
             }
-            .font(.caption)
-            .foregroundStyle(PeroMapStyle.inkSoft)
 
             HStack(spacing: 10) {
                 KakaoDirectionsButton(card: card)

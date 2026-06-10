@@ -32,11 +32,7 @@ struct PlaceExplanationDetailScreen: View {
                         .lineLimit(2)
                 }
                 Spacer(minLength: 8)
-                Image(systemName: card.categoryIconName)
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(PeroMapStyle.ink)
-                    .frame(width: 44, height: 44)
-                    .background(PeroMapStyle.accentPale, in: Circle())
+                PeroBrandLogoMark(size: 48)
             }
 
             FlowMetadataRow(card: card)
