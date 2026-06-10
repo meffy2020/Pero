@@ -1197,6 +1197,41 @@ private struct KakaoTalkShareButton: View {
     }
 
     private func shareToKakaoTalk() {
+        guard ShareApi.isKakaoTalkSharingAvailable() else {
+            shareErrorMessage = "이 기기에 카카오톡이 설치되어 있지 않습니다."
+            return
+        }
+
+        guard let logoImage = UIImage(named: "pero-brand-logo") else {
+            share(templateImageURL: card.kakaoShareImageURL)
+            return
+        }
+
+        ShareApi.shared.imageUpload(image: logoImage, secureResource: true) { result, _ in
+            DispatchQueue.main.async {
+                share(templateImageURL: result?.infos.original.url ?? card.kakaoShareImageURL)
+            }
+        }
+    }
+
+    private func share(templateImageURL: URL?) {
+        let template = makeTemplate(imageURL: templateImageURL)
+        ShareApi.shared.shareDefault(templatable: template, shareType: .default, limit: 5) { sharingResult, error in
+            DispatchQueue.main.async {
+                if let error {
+                    shareErrorMessage = error.localizedDescription
+                    return
+                }
+                guard let url = sharingResult?.url else {
+                    shareErrorMessage = "공유 링크를 만들지 못했습니다."
+                    return
+                }
+                UIApplication.shared.open(url)
+            }
+        }
+    }
+
+    private func makeTemplate(imageURL: URL?) -> FeedTemplate {
         let kakaoMapURL = card.kakaoMapMobileWebURL
         let peroLink = Link(
             webUrl: kakaoMapURL,
@@ -1204,10 +1239,10 @@ private struct KakaoTalkShareButton: View {
             iosExecutionParams: ["placeId": card.id]
         )
         let kakaoMapLink = Link(webUrl: kakaoMapURL, mobileWebUrl: kakaoMapURL)
-        let template = FeedTemplate(
+        return FeedTemplate(
             content: Content(
                 title: card.kakaoShareTitle,
-                imageUrl: card.kakaoShareImageURL,
+                imageUrl: imageURL,
                 imageWidth: 1024,
                 imageHeight: 1024,
                 description: card.kakaoShareDescription,
@@ -1226,25 +1261,6 @@ private struct KakaoTalkShareButton: View {
                 Button(title: "Pero에서 다시 뽑기", link: peroLink)
             ]
         )
-
-        guard ShareApi.isKakaoTalkSharingAvailable() else {
-            shareErrorMessage = "이 기기에 카카오톡이 설치되어 있지 않습니다."
-            return
-        }
-
-        ShareApi.shared.shareDefault(templatable: template, shareType: .default, limit: 5) { sharingResult, error in
-            DispatchQueue.main.async {
-                if let error {
-                    shareErrorMessage = error.localizedDescription
-                    return
-                }
-                guard let url = sharingResult?.url else {
-                    shareErrorMessage = "공유 링크를 만들지 못했습니다."
-                    return
-                }
-                UIApplication.shared.open(url)
-            }
-        }
     }
 }
 
