@@ -52,12 +52,19 @@
 				<key>NSIncludesSubdomains</key>
 				<true/>
 			</dict>
+			<key>192.210.6.205</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
 		</dict>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Pero uses your current location to recommend nearby places to visit now.</string>
 	<key>PERO_API_BASE_URL</key>
-	<string>https://cold-teams-marry.loca.lt</string>
+	<string>http://192.210.6.205:8080</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>
